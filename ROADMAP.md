@@ -317,7 +317,46 @@ galeria só aceita fotos por URL) e criar o repositório GitHub privado
 `marble-backoffice`. **Próximo do lado da app:** galeria no Detalhe
 (`media[]`, deslizável + vídeo), foto de perfil do cliente (preset
 `marble-avatars`, `clients/{uid}.avatarUrl`, subir `LEGAL_VERSION`), e
-fotos reais em vez do ícone de linha nos cartões do Início.
+fotos reais em vez do ícone de linha nos cartões do Início — tudo na
+Secção 5b, abaixo.
+
+### Secção 5b — Galeria e foto de perfil na app
+**Estado:** Por fazer (escolhida pelo Fábio como próximo passo, 2026-09-04)
+**Depende de:** Secção 5 (alojamento Cloudinary e `works.media[]` já
+preenchidos pelo backoffice)
+**Objetivo:** Fechar o ciclo das fotos do lado da app do cliente, agora que
+o backoffice carrega média para o Cloudinary:
+- **Galeria no Detalhe** (`src/screens/WorkDetailScreen.tsx`): a foto
+  grande do topo passa a ser uma galeria deslizável com `works.media[]`
+  (ordenado por `order`), pontos de posição, e vídeo com miniatura
+  (`thumbnailUrl`) que só carrega o vídeo ao tocar (`expo-video`). Sem
+  `media`, mostra só a capa como hoje. Contador "3 / 7" em texto, sem
+  ícones decorativos.
+- **Foto de perfil do cliente** (`src/screens/ProfileScreen.tsx`): tocar no
+  avatar abre o seletor de imagem (`expo-image-picker`), reduz a imagem
+  (`expo-image-manipulator`, máx. 1024px) e faz upload unsigned para o
+  Cloudinary com o preset `marble-avatars` (pasta `avatars`; cloud name em
+  `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME` no `.env`). Guarda o URL de entrega
+  em `clients/{uid}.avatarUrl` (as regras já deixam o próprio escrever no
+  seu doc). Remover foto = `avatarUrl: ''`. Apagar conta já limpa o campo.
+- **Política de privacidade:** acrescentar "foto de perfil (opcional)" aos
+  dados pessoais em `src/legal/texts.ts`, subir `LEGAL_VERSION` e correr
+  `npm run build:legal`. O Perfil vai pedir nova aceitação a todos (é o
+  comportamento previsto na Secção 3).
+- **Fotos reais no Início:** os cartões Automotive/Epoxy/Graphic passam a
+  mostrar a capa do trabalho mais recente publicado de cada categoria em
+  vez do ícone de linha (decisão da Secção 4). Fallback: gradiente.
+- **Limpeza:** quando a foto real do Jaguar estiver carregada no backoffice,
+  apagar `src/data/localPhotos.ts` e os `fallback=` nos três ecrãs.
+**Notas:** o backoffice gera URLs já otimizados (`c_limit,w_1600,q_auto,
+f_auto` para fotos, `.mp4` com `q_auto` para vídeo, miniatura `.jpg` do
+vídeo) — a app não precisa de saber que é Cloudinary, só mostra `url` e
+`thumbnailUrl`. Para testar precisa do cloud name do Cloudinary (pedido ao
+Fábio na Secção 5); sem ele, a galeria testa-se com fotos por URL público
+juntadas no backoffice. O preset `marble-avatars` deve ter incoming
+transformation `c_limit,w_1024,h_1024` e formatos `jpg,png,webp,heic`
+(qualquer pessoa com o cloud name pode fazer upload para esse preset — o
+limite de tamanho no preset é a proteção contra abuso).
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
