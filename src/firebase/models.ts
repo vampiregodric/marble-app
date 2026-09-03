@@ -13,10 +13,24 @@ export const COLLECTIONS = {
 // Categorias tal como usadas no filtro do Portfólio (PortfolioScreen).
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
 
+// Prova de consentimento (RGPD, Secção 3). Guardamos QUANDO e QUE VERSÃO o
+// cliente aceitou — sem isto não há como demonstrar o consentimento.
+export interface ClientConsent {
+  // Versão dos textos legais aceite (LEGAL_VERSION em src/legal/texts.ts).
+  // Se for diferente da atual, o Perfil pede nova aceitação.
+  termsVersion: string;
+  termsAcceptedAt: Timestamp;
+  // Opt-in explícito para ofertas e novidades. Desligado por defeito; o
+  // cliente liga/desliga no Perfil. A Secção 6 só envia `offer`, `new_work`
+  // e `event_reminder` a quem tem isto a true.
+  marketing: boolean;
+  marketingUpdatedAt: Timestamp | null;
+}
+
 export interface Client {
   // IMPORTANTE: o ID do documento em `clients` TEM de ser o `uid` do Firebase
   // Auth (não um ID aleatório). As regras em firestore.rules dependem disso
-  // (request.auth.uid == clientId). A Secção 2 deve criar o doc com
+  // (request.auth.uid == clientId). A Secção 2 cria o doc com
   // setDoc(doc(db, 'clients', user.uid), ...).
   id: string;
   name: string;
@@ -24,13 +38,22 @@ export interface Client {
   phone?: string;
   avatarUrl?: string;
   clientSince: Timestamp;
-  // Preferências operacionais por categoria (ProfileScreen).
-  // Consentimento de marketing é separado — ver Secção 3 (RGPD).
+  // Sub-preferências de MARKETING por categoria: que novidades do portfólio
+  // interessam ao cliente. Só contam quando `consent.marketing` é true —
+  // sem esse opt-in não se envia nada de marketing, seja qual for o valor
+  // aqui. Lembretes de checkup são operacionais e não passam por isto.
   notificationPrefs: {
     automotive: boolean;
     epoxy: boolean;
     graphic: boolean;
   };
+  // Ausente em contas criadas antes da Secção 3 — a app trata a ausência
+  // como "ainda não aceitou" e pede aceitação no Perfil.
+  consent?: ClientConsent;
+  // Presente quando o cliente apagou a conta: name/email/phone ficam vazios,
+  // o utilizador Auth já não existe, e o doc fica só para manter a ligação
+  // (anónima) a vehicles/works. Ver AuthContext.deleteAccount.
+  deletedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -84,11 +107,18 @@ export interface MarbleEvent {
 }
 
 export type NotificationType =
-  | 'checkup_reminder' // +1 semana após trabalho
-  | 'offer' // +1 mês, lavagem grátis
-  | 'new_work' // novo trabalho na categoria com opt-in do cliente
-  | 'event_reminder'
+  | 'checkup_reminder' // +1 semana após trabalho — OPERACIONAL, não depende de consentimento
+  | 'offer' // +1 mês, lavagem grátis — MARKETING, exige consent.marketing
+  | 'new_work' // novo trabalho na categoria com opt-in — MARKETING, exige consent.marketing
+  | 'event_reminder' // MARKETING, exige consent.marketing
   | 'team_alert'; // alerta interno à equipa (cliente não confirmou checkup) — Secção 6
+
+// Tipos que só podem ser enviados com consent.marketing === true.
+export const MARKETING_NOTIFICATION_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  'offer',
+  'new_work',
+  'event_reminder',
+]);
 
 export interface AppNotification {
   id: string;

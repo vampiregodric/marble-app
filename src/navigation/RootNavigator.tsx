@@ -12,6 +12,8 @@ import AlertsScreen from '../screens/AlertsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import WorkDetailScreen from '../screens/WorkDetailScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
+import LegalScreen from '../screens/LegalScreen';
+import DeleteAccountScreen from '../screens/DeleteAccountScreen';
 import AuthGate from '../components/AuthGate';
 import { RootStackParamList, TabParamList } from './types';
 
@@ -109,6 +111,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       },
       WorkDetail: 'work/:workId',
       PersonalData: 'profile/personal-data',
+      Legal: 'legal/:doc',
+      DeleteAccount: 'profile/delete-account',
     },
   },
 };
@@ -120,6 +124,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

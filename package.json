@@ -35,7 +35,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "seed": "node scripts/seed-firestore.mjs",
-    "check:firestore": "node scripts/check-firestore.mjs"
+    "check:firestore": "node scripts/check-firestore.mjs",
+    "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "private": true
 }

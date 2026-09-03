@@ -58,11 +58,44 @@ screen). Ainda não há ligação real à base de dados.
   Templates. Nos projetos novos a "proteção contra enumeração de emails" está
   ligada, por isso a app nunca revela se um email tem conta.
 - Conta de teste criada no **dev** durante a Secção 2:
-  `teste.seccao2@example.com` / `Teste1234!` (podes apagá-la em
-  Authentication > Users; o doc `clients/<uid>` fica órfão — apaga-o também
-  no Firestore, ou deixa até a Secção 3 construir o "apagar conta").
-- Por fazer na Secção 3 (RGPD): checkbox de aceitação de termos no registo
-  (não pré-marcada) e "apagar a minha conta" no Perfil.
+  `teste.seccao2@example.com` / `Teste1234!`. Para a apagar, usa a própria
+  app: Perfil > Apagar a minha conta e dados (fica um doc anonimizado em
+  `clients/<uid>`, que podes apagar à mão no Firestore se quiseres).
+
+## RGPD (Secção 3)
+
+- **Textos legais** vivem em `src/legal/texts.ts` — política de privacidade
+  e termos, em português, mais `COMPANY` (dados da empresa) e
+  `LEGAL_VERSION`. Esse ficheiro não importa nada de propósito: é lido pela
+  app (ecrã `LegalScreen`) e pelo script `npm run build:legal`, que gera
+  `docs/legal/*.html` (política, termos e "apagar conta" — a Apple e o
+  Google pedem estes URLs públicos; ver Secção 11). Nunca edites os HTML à
+  mão. Enquanto houver `[A PREENCHER` em `COMPANY`, o script avisa.
+- **Subir a `LEGAL_VERSION`** (data) sempre que o texto muda de forma
+  material. O Perfil passa a mostrar um cartão "Termos e privacidade
+  atualizados" a todos os clientes até aceitarem; contas antigas sem
+  `consent` recebem o mesmo cartão. Correr `npm run build:legal` depois.
+- **Prova de consentimento** em `clients/{uid}.consent`: `termsVersion`,
+  `termsAcceptedAt`, `marketing` (opt-in, false por defeito),
+  `marketingUpdatedAt`. Ver `ClientConsent` em `src/firebase/models.ts`.
+- **Marketing vs operacional.** `consent.marketing` é o interruptor
+  "Ofertas e novidades" do Perfil; `notificationPrefs` (categorias) são
+  sub-preferências que só contam quando `consent.marketing` é true. Os tipos
+  `offer`, `new_work` e `event_reminder` são marketing
+  (`MARKETING_NOTIFICATION_TYPES` em `models.ts`); `checkup_reminder` é
+  operacional e não depende de consentimento. A Secção 6 tem de respeitar
+  isto ao enviar.
+- **Apagar conta** (`AuthContext.deleteAccount`) não usa Cloud Functions
+  nem `delete` nas regras: re-autentica com a password, anonimiza o doc
+  (name/email/phone vazios, `deletedAt`, marketing off) e apaga o utilizador
+  do Auth. `vehicles`/`works` ficam a apontar a um cliente sem dados
+  pessoais (política de retenção: histórico anonimizado fica; contas sem
+  atividade há 3 anos são apagadas por um job da Secção 6, ainda por
+  fazer). As regras do Firestore **não mudaram** nesta secção.
+- **Pedidos por email** (acesso, portabilidade, apagar sem a app): chegam ao
+  `COMPANY.privacyEmail`. Não há automatização; a equipa responde à mão
+  (prazo legal: um mês). Para apagar por esse caminho, o Admin SDK ou o
+  backoffice faz o mesmo que a app: anonimiza o doc e apaga o utilizador.
 
 ## Firebase: os dois projetos
 

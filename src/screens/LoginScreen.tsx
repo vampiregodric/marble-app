@@ -11,11 +11,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import FormField from '../components/FormField';
+import Checkbox from '../components/Checkbox';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { validateEmail, validateName, validatePassword, validatePhone } from '../auth/validation';
+import { RootStackParamList } from '../navigation/types';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -43,15 +47,19 @@ const COPY: Record<Mode, { eyebrow: string; title: string; lead: string; cta: st
 // Ecrã de login / registo / recuperação de password. Aparece no lugar dos tabs
 // Perfil e Alertas quando não há sessão (ver components/AuthGate.tsx).
 // Só email/password por agora — Google/Apple ficam para depois da conta de
-// developer (Secção 11). A aceitação explícita de termos entra na Secção 3.
+// developer (Secção 11). O registo exige aceitar os termos numa checkbox
+// que nunca vem pré-marcada (RGPD). O consentimento de marketing NÃO se pede
+// aqui — decisão do Fábio (Secção 3): liga-se depois, no Perfil.
 export default function LoginScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<Partial<Record<'name' | 'email' | 'phone' | 'password', string>>>({});
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<'name' | 'email' | 'phone' | 'password' | 'terms', string>>>({});
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -70,6 +78,7 @@ export default function LoginScreen() {
     if (mode === 'register') {
       next.name = validateName(name);
       next.phone = validatePhone(phone);
+      if (!acceptedTerms) next.terms = 'Tens de aceitar os termos e a política de privacidade para criar conta.';
     }
     setErrors(next);
     if (Object.values(next).some(Boolean)) return;
@@ -80,7 +89,7 @@ export default function LoginScreen() {
       if (mode === 'login') {
         await signIn(email, password);
       } else if (mode === 'register') {
-        await signUp({ name, email, phone, password });
+        await signUp({ name, email, phone, password, acceptedTerms });
       } else {
         await resetPassword(email);
         setMessage({ kind: 'ok', text: 'Se existir conta com esse email, vais receber o link nos próximos minutos.' });
@@ -156,6 +165,27 @@ export default function LoginScreen() {
               />
             )}
 
+            {mode === 'register' && (
+              <Checkbox
+                checked={acceptedTerms}
+                onChange={(v) => {
+                  setAcceptedTerms(v);
+                  if (v) setErrors((e) => ({ ...e, terms: undefined }));
+                }}
+                error={errors.terms}
+              >
+                Li e aceito os{' '}
+                <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'terms' })}>
+                  Termos de utilização
+                </Text>{' '}
+                e a{' '}
+                <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
+                  Política de privacidade
+                </Text>
+                .
+              </Checkbox>
+            )}
+
             {message && (
               <Text style={[styles.message, message.kind === 'error' ? styles.messageError : styles.messageOk]}>
                 {message.text}
@@ -216,6 +246,7 @@ const styles = StyleSheet.create({
   },
   ctaBusy: { opacity: 0.7 },
   ctaText: { fontFamily: fonts.eyebrow, fontSize: 11, fontWeight: '700', letterSpacing: 0.8, color: '#0b0a08', textTransform: 'uppercase' },
+  inlineLink: { fontFamily: fonts.bodyBold, color: colors.goldBright, textDecorationLine: 'underline' },
   linkRow: { alignSelf: 'center', paddingVertical: 14 },
   link: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, textDecorationLine: 'underline' },
   footer: { marginTop: 18, alignItems: 'center', paddingTop: 18, borderTopWidth: 1, borderTopColor: colors.hairline },

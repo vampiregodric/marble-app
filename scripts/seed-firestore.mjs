@@ -33,6 +33,14 @@ async function seed() {
     phone: '',
     clientSince: Timestamp.fromDate(new Date('2026-03-01')),
     notificationPrefs: { automotive: true, epoxy: true, graphic: false },
+    // Prova de consentimento (Secção 3). termsVersion = LEGAL_VERSION em
+    // src/legal/texts.ts; marketing fica false até o cliente ligar no Perfil.
+    consent: {
+      termsVersion: '2026-09-03',
+      termsAcceptedAt: now,
+      marketing: false,
+      marketingUpdatedAt: null,
+    },
     createdAt: now,
     updatedAt: now,
   });

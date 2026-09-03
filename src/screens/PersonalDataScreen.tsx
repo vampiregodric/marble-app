@@ -10,7 +10,8 @@ import { authErrorMessage } from '../auth/errors';
 import { validateName, validatePhone } from '../auth/validation';
 
 // "Dados pessoais" a partir do Perfil: editar nome e telemóvel, ver o email,
-// pedir email de alteração de password. Apagar conta entra na Secção 3 (RGPD).
+// pedir email de alteração de password. Apagar conta está no Perfil, em
+// "Conta" (DeleteAccountScreen, Secção 3).
 export default function PersonalDataScreen() {
   const navigation = useNavigation();
   const { user, client, updateClient, resetPassword } = useAuth();

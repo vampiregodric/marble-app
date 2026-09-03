@@ -6,6 +6,12 @@
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web"],
       "port": 8081
+    },
+    {
+      "name": "marble-app-web-8082",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web", "--port", "8082"],
+      "port": 8082
     }
   ]
 }

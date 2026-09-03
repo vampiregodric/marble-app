@@ -112,7 +112,9 @@ fazer (de propósito, para a Secção 3): aceitação explícita de termos no
 registo e "apagar conta".
 
 ### Secção 3 — Conformidade RGPD
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-03). Termos + política no ecrã e em HTML,
+aceitação obrigatória no registo, consentimento de marketing separado,
+apagar conta por anonimização, retenção definida. Ver nota no fim.
 **Depende de:** Secção 1, Secção 2
 **Objetivo:** A app vai guardar dados pessoais reais (nome, contacto,
 carro/matrícula) de clientes de um negócio na UE — isto traz obrigações
@@ -131,6 +133,37 @@ cumprir os requisitos da loja. Construir:
 Studios se há mais alguma obrigação específica (ex: faturas, dados
 fiscais) — isto cobre a parte de proteção de dados pessoais na app, não
 é aconselhamento legal.
+**Decisões (2026-09-03, Fábio):** apagar conta = anonimizar no cliente
+(sem Cloud Functions/Blaze, sem mudar regras); retenção = histórico de
+trabalhos fica anonimizado, contas inativas há 3 anos são apagadas (job na
+Secção 6); consentimento de marketing pede-se só no Perfil, não no registo
+(o registo pede apenas a aceitação dos termos); textos redigidos em PT pelo
+Claude, o Fábio preenche os dados da empresa.
+**Nota (2026-09-03):** construído nesta sessão — `src/legal/texts.ts`
+(política + termos + `COMPANY` + `LEGAL_VERSION` + `RETENTION`),
+`src/screens/LegalScreen.tsx` (acessível sem login), checkbox de termos no
+registo (`src/components/Checkbox.tsx`, nunca pré-marcada, links para os
+dois textos), `src/screens/DeleteAccountScreen.tsx` (pede password,
+explica consequências, ecrã de despedida), Perfil reorganizado:
+"Notificações" com lembretes operacionais sempre ativos + interruptor
+"Ofertas e novidades" (off por defeito) que revela as 3 categorias; "Conta"
+ganha política, termos e "Apagar a minha conta e dados"; cartão de
+re-aceitação quando `consent.termsVersion` ≠ `LEGAL_VERSION`.
+`AuthContext` ganha `acceptTerms`, `setMarketingConsent`, `deleteAccount`,
+`needsTermsAcceptance`. `npm run build:legal` gera `docs/legal/*.html`
+(política, termos, página de pedido de eliminação que o Google Play
+exige). Verificado no web: registo bloqueado sem checkbox, links abrem os
+textos e voltam com o formulário intacto, conta antiga vê o cartão e
+aceita, toggle de marketing revela categorias, apagar conta com password
+errada dá erro e com a certa anonimiza o doc (confirmado via Admin SDK:
+name/email/phone vazios, `deletedAt`, utilizador Auth inexistente).
+**Fica para depois:** preencher `COMPANY` em `src/legal/texts.ts`
+(denominação, NIF, morada, email de privacidade) e correr
+`npm run build:legal`; revisão por advogado; job de contas inativas
+(Secção 6); publicar `docs/legal/` num URL público (Secção 11). Ponto a
+confirmar com a Marble Studios: a cláusula 5 dos termos assume que fotos
+dos trabalhos podem ir para o portfólio/redes sem identificar o dono e com
+matrícula ocultada, salvo pedido em contrário.
 
 ### Secção 4 — Ligar os 6 ecrãs a dados reais
 **Estado:** Por fazer
@@ -176,7 +209,13 @@ Blaze — cartão associado, custo ~€0 a este volume): +1 semana após um trab
 → lembrete de checkup; sem confirmação → alerta interno à equipa; +1 mês
 → oferta automática (lavagem grátis para carros, inspeção/manutenção
 para chãos — **por confirmar com o Fábio**, ver SPEC.md). Respeitar
-sempre a preferência de consentimento de marketing definida na Secção 3.
+sempre a preferência de consentimento de marketing definida na Secção 3:
+`offer`, `new_work` e `event_reminder` só vão para clientes com
+`consent.marketing == true` (e, para `new_work`, com a categoria ligada em
+`notificationPrefs`); `checkup_reminder` é operacional e vai sempre.
+Inclui também o job de retenção da Secção 3: apagar (anonimizar doc +
+apagar utilizador Auth) contas sem atividade há 3 anos
+(`RETENTION.inactiveAccountYears` em `src/legal/texts.ts`).
 
 ### Secção 7 — Ecrã de pedido de orçamento
 **Estado:** Por fazer
@@ -215,6 +254,14 @@ tratamento para a Inozetek quando a parceria for oficial (ver SPEC.md).
 **Objetivo:** Conta de developer Apple (99$/ano) e Google Play (25$
 único), ícones/splash finais em todos os tamanhos, screenshots para as
 lojas, ligar a app ao Firebase de **produção**, texto da ficha da loja.
+**Da Secção 3:** as lojas exigem um URL público da política de
+privacidade, e o Google Play exige também uma página web para pedir a
+eliminação da conta. Ambas já existem em `docs/legal/` (geradas por
+`npm run build:legal`); falta publicá-las (o mais simples é GitHub Pages a
+servir a pasta `docs/`) e preencher `COMPANY` em `src/legal/texts.ts`
+antes. Preencher também o formulário "Data safety" (Play) / "App Privacy"
+(Apple) com o que a política declara: nome, email, telemóvel, dados de
+veículo, identificador de push.
 
 ---
 

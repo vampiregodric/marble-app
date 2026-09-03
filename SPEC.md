@@ -58,6 +58,15 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - **Tecnologia:** Cross-platform (React Native ou Flutter) — um código para Android + iOS
 - **Login/conta de cliente:** Sim, com conta — necessário para associar carros/chãos, preferências de notificação e fluxo de checkups a cada cliente
   - **Decidido (2026-09-03):** email/password com recuperação por email; Google/Apple sign-in só depois de existir conta de developer. Início, Portfólio e Eventos são visíveis sem conta (montra pública); Perfil e Alertas pedem login. O registo pede nome, email, password e telemóvel (obrigatório — a equipa liga ao cliente no fluxo de checkup).
+- **RGPD (decidido 2026-09-03):** registo exige aceitar termos + política
+  numa checkbox não pré-marcada; consentimento de marketing ("Ofertas e
+  novidades") é separado, desligado por defeito e liga-se só no Perfil —
+  as preferências por categoria ficam por baixo dele, porque "novo trabalho
+  publicado" é marketing. Lembretes de checkup são operacionais e vão
+  sempre. Apagar conta anonimiza o registo (histórico de trabalhos fica
+  sem ligação à pessoa); contas inativas há 3 anos são apagadas. Textos em
+  `src/legal/texts.ts`; dados da empresa (nome legal, NIF, morada, email de
+  privacidade) por preencher.
 - **Idioma:** Português + Inglês
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 
