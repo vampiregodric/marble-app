@@ -11,6 +11,19 @@ npx expo start            # QR code para abrir na app Expo Go (Android/iOS)
 usa `npx.cmd` em vez de `npx` (ex: `npx.cmd expo start --web`). O `.cmd`
 contorna a política de execução sem mexer em definições do Windows.
 
+**Servidor para o telemóvel gerido pelo Claude (desde 2026-09-03):** em vez
+de o Fábio correr `expo start` numa janela dele, o Claude arranca-o com a
+configuração `marble-app-phone` de `.claude/launch.json` (porta 8081,
+projeto principal, `--clear`), mesmo estando num worktree — o Expo aceita
+`expo start <pasta>`. Vantagens: reinícios e limpeza de cache ficam do lado
+do Claude, sem pedir nada ao Fábio. Regras: (1) só um servidor na 8081 —
+se houver um `expo start` manual a correr, o Claude para-o com autorização
+antes de arrancar o dele; (2) o servidor morre quando a conversa fecha, por
+isso cada conversa nova arranca-o outra vez; (3) no telemóvel o Expo Go
+liga-se ao mesmo endereço de sempre (`exp://<IP do PC>:8081`) — basta
+RELOAD ou reabrir a app. Para a pré-visualização web num worktree continua
+a usar-se `marble-app-web-8082`.
+
 ## Estado atual
 
 Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
