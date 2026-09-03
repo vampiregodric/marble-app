@@ -157,9 +157,10 @@ textos e voltam com o formulário intacto, conta antiga vê o cartão e
 aceita, toggle de marketing revela categorias, apagar conta com password
 errada dá erro e com a certa anonimiza o doc (confirmado via Admin SDK:
 name/email/phone vazios, `deletedAt`, utilizador Auth inexistente).
-**Fica para depois:** preencher `COMPANY` em `src/legal/texts.ts`
-(denominação, NIF, morada, email de privacidade) e correr
-`npm run build:legal`; revisão por advogado; job de contas inativas
+**Dados da empresa preenchidos (2026-09-03):** Cacto Elegante, Lda., NIF
+519355849, Rua Quinta das Rosas 12A, 2840-131 Paio Pires, app@marble.pt —
+em `COMPANY` (`src/legal/texts.ts`), HTML regenerado.
+**Fica para depois:** revisão por advogado; job de contas inativas
 (Secção 6); publicar `docs/legal/` num URL público (Secção 11). Ponto a
 confirmar com a Marble Studios: a cláusula 5 dos termos assume que fotos
 dos trabalhos podem ir para o portfólio/redes sem identificar o dono e com
@@ -257,11 +258,17 @@ lojas, ligar a app ao Firebase de **produção**, texto da ficha da loja.
 **Da Secção 3:** as lojas exigem um URL público da política de
 privacidade, e o Google Play exige também uma página web para pedir a
 eliminação da conta. Ambas já existem em `docs/legal/` (geradas por
-`npm run build:legal`); falta publicá-las (o mais simples é GitHub Pages a
-servir a pasta `docs/`) e preencher `COMPANY` em `src/legal/texts.ts`
-antes. Preencher também o formulário "Data safety" (Play) / "App Privacy"
+`npm run build:legal`, dados da empresa já preenchidos); falta publicá-las
+(o mais simples é GitHub Pages a servir a pasta `docs/`). Preencher
+também o formulário "Data safety" (Play) / "App Privacy"
 (Apple) com o que a política declara: nome, email, telemóvel, dados de
-veículo, identificador de push.
+veículo, identificador de push. Ainda da Secção 3, a fazer aqui e não
+antes: (a) confirmar com o dono da Marble Studios a cláusula 5 dos termos
+(fotos dos trabalhos no portfólio/redes sem identificar o dono, matrícula
+ocultada, salvo pedido em contrário) e ajustar o texto se ele quiser
+outra regra; (b) revisão dos dois textos por advogado, quando os textos estiverem
+estáveis; se o texto mudar,
+subir `LEGAL_VERSION` e correr `npm run build:legal`.
 
 ---
 

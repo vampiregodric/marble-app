@@ -70,7 +70,8 @@ screen). Ainda não há ligação real à base de dados.
   app (ecrã `LegalScreen`) e pelo script `npm run build:legal`, que gera
   `docs/legal/*.html` (política, termos e "apagar conta" — a Apple e o
   Google pedem estes URLs públicos; ver Secção 11). Nunca edites os HTML à
-  mão. Enquanto houver `[A PREENCHER` em `COMPANY`, o script avisa.
+  mão. `COMPANY` já tem os dados reais (Cacto Elegante, Lda.); se ainda
+  houver `[A PREENCHER` em algum campo, o script avisa.
 - **Subir a `LEGAL_VERSION`** (data) sempre que o texto muda de forma
   material. O Perfil passa a mostrar um cartão "Termos e privacidade
   atualizados" a todos os clientes até aceitarem; contas antigas sem

@@ -65,8 +65,9 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   publicado" é marketing. Lembretes de checkup são operacionais e vão
   sempre. Apagar conta anonimiza o registo (histórico de trabalhos fica
   sem ligação à pessoa); contas inativas há 3 anos são apagadas. Textos em
-  `src/legal/texts.ts`; dados da empresa (nome legal, NIF, morada, email de
-  privacidade) por preencher.
+  `src/legal/texts.ts`. Entidade legal: Cacto Elegante, Lda., NIF
+  519355849, Rua Quinta das Rosas 12A, 2840-131 Paio Pires; email de
+  privacidade app@marble.pt.
 - **Idioma:** Português + Inglês
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 

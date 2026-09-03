@@ -15,16 +15,17 @@
 
 export const LEGAL_VERSION = '2026-09-03';
 
-// Dados da empresa — o Fábio preenche. Enquanto houver "[A PREENCHER" o
-// script build:legal avisa, e a app mostra o marcador tal como está.
+// Dados da empresa (preenchidos pelo Fábio a 2026-09-03). A marca é
+// "Marble Studios"; a entidade legal é a Cacto Elegante, Lda. Se algum
+// destes mudar, corre `npm run build:legal` para regenerar docs/legal/.
 export const COMPANY = {
   brand: 'Marble Studios',
-  legalName: '[A PREENCHER — denominação legal, ex: Marble Studios, Unipessoal Lda.]',
-  nif: '[A PREENCHER — NIF]',
-  address: '[A PREENCHER — morada completa da sede]',
-  // Email que recebe pedidos de acesso/apagamento/etc. Convém ser uma caixa
-  // própria (ex: privacidade@...), não o email pessoal de alguém da equipa.
-  privacyEmail: '[A PREENCHER — email de privacidade]',
+  legalName: 'Cacto Elegante, Lda.',
+  nif: '519355849',
+  address: 'Rua Quinta das Rosas 12A, 2840-131 Paio Pires',
+  // Recebe pedidos de acesso/apagamento/etc. (prazo legal de resposta: um
+  // mês). Alguém da equipa tem de ler esta caixa com regularidade.
+  privacyEmail: 'app@marble.pt',
 };
 
 export type LegalDoc = 'privacy' | 'terms';
