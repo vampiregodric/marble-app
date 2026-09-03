@@ -213,9 +213,10 @@ orçamento" ficava tapado pela barra de navegação do Android. Verificado no
 web (8082) com dados reais: Início, Portfólio (+ filtro), Detalhe
 (publicado e rascunho), Eventos (Próximos/Passados); Alertas e Perfil
 verificados por script autenticado (leitura, marcar lido permitido, outras
-escritas e outros clientes recusados). A foto do Jaguar vem do próprio repo
-público no GitHub (`raw.githubusercontent.com`) — só dev; em produção as
-fotos ficam onde a Secção 5 decidir.
+escritas e outros clientes recusados). Fotos: todos os `photoUrl` do seed
+ficam vazios (gradiente) até a Secção 5 decidir o alojamento — o
+repositório GitHub passou a privado (decisão do Fábio, 2026-09-03), por
+isso não serve para servir a foto do Jaguar como chegou a servir.
 
 ### Secção 5 — Painel da equipa (backoffice)
 **Estado:** Por fazer

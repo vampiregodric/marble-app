@@ -49,9 +49,10 @@ const on = (iso) => Timestamp.fromDate(new Date(iso));
 
 // Fotos: a app mostra qualquer URL público que fique em `photoUrl` e cai num
 // gradiente dourado quando está vazio (ver src/components/Photo.tsx). Onde
-// alojar as fotos reais decide-se na Secção 5 (backoffice). Por agora só o
-// Jaguar tem foto — servida pelo próprio repositório público no GitHub.
-const JAGUAR_PHOTO = 'https://raw.githubusercontent.com/vampiregodric/marble-app/master/assets/work-jaguar-purple.jpg';
+// alojar as fotos reais decide-se na Secção 5 (backoffice); até lá todas
+// ficam vazias. (O repositório GitHub é privado, por isso não serve para
+// alojar a foto do Jaguar — quando houver alojamento, mete aqui o URL.)
+const JAGUAR_PHOTO = '';
 
 async function resolveTestClient() {
   try {

@@ -41,8 +41,11 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
    automáticos (checkup 1 semana depois, etc.) ainda por implementar.
 6. **Fotos reais** — a app mostra qualquer URL público em `photoUrl`
    (`src/components/Photo.tsx`) e cai num gradiente dourado quando está
-   vazio. Onde alojar as fotos decide-se com o backoffice (Secção 5). No
-   dev só o Jaguar tem foto, servida pelo repo público no GitHub.
+   vazio. Onde alojar as fotos decide-se com o backoffice (Secção 5); até
+   lá todos os `photoUrl` do seed estão vazios (o repositório GitHub é
+   privado, não serve para alojar fotos). A foto do Jaguar continua em
+   `assets/work-jaguar-purple.jpg` para ser a primeira a carregar quando
+   houver alojamento.
 
 ## Autenticação (Secção 2)
 
