@@ -18,7 +18,8 @@ secção específica, faz isto primeiro:
 
 Diz ao Claude, no início dessa conversa, algo como: *"Estou a trabalhar no
 projeto Marble Studios em C:\Users\VGodr\Projects\marble-app — lê o
-ROADMAP.md e ataca a Secção 3."*
+ROADMAP.md e ataca a Secção 4 — Ligar os 6 ecrãs a dados reais."* (usa
+sempre o nome completo da secção, nunca só o número)
 
 ---
 

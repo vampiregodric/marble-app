@@ -36,6 +36,9 @@ código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
 ## Outras
 
 - No fim da tua secção, atualiza o estado dela no `ROADMAP.md` e faz commit
-  com uma mensagem clara do que ficou feito.
+  com uma mensagem clara do que ficou feito. Depois **pede ao Fábio para
+  correr `git push`** — o repositório está no GitHub (ver `DEVELOPMENT.md`),
+  mas o Claude Code em modo automático não pode publicar para fora do PC.
+  Se o push falhar ou for esquecido, o trabalho fica só neste disco.
 - O projeto vive fora do OneDrive de propósito (ver `DEVELOPMENT.md`) —
   nunca o movas de volta para lá.
