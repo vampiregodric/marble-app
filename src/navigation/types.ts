@@ -11,4 +11,5 @@ export type TabParamList = {
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   WorkDetail: { workId: string };
+  PersonalData: undefined;
 };

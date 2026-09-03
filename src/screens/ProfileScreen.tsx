@@ -1,31 +1,85 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Timestamp } from 'firebase/firestore';
 import { colors, fonts } from '../theme/theme';
 import PlaceholderThumb from '../components/PlaceholderThumb';
 import { CameraIcon, ChevronRightIcon } from '../components/Icons';
+import { useAuth } from '../auth/AuthContext';
+import { Client } from '../firebase/models';
+import { RootStackParamList } from '../navigation/types';
 
+// Carros/chãos e "ação pendente" continuam com dados de exemplo — passam a
+// vir do Firestore na Secção 4. Cabeçalho, preferências e conta já são reais.
 const ASSETS = [
   { id: 'bmw', name: 'BMW M4 — PPF Colorido', sub: 'Última visita: 25 Ago 2026', status: 'Checkup', ok: false, variant: 5 },
   { id: 'showroom', name: 'Showroom — Metallic Epoxy', sub: 'Instalado: 12 Jun 2026', status: 'Em dia', ok: true, variant: 1 },
 ];
 
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+function formatSince(ts?: Timestamp | null) {
+  if (!ts) return null;
+  const d = ts.toDate();
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  const first = parts[0][0] ?? '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] ?? '' : '';
+  return (first + last).toUpperCase();
+}
+
+type PrefKey = keyof Client['notificationPrefs'];
+
 export default function ProfileScreen() {
-  const [prefs, setPrefs] = useState({ automotive: true, epoxy: true, graphic: false });
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user, client, updateClient, signOut } = useAuth();
+  // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
+  const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
+
+  const displayName = client?.name || user?.displayName || user?.email || '';
+  const since = formatSince(client?.clientSince);
+  const prefs: Client['notificationPrefs'] = {
+    automotive: true,
+    epoxy: true,
+    graphic: true,
+    ...client?.notificationPrefs,
+    ...pendingPrefs,
+  };
+
+  const togglePref = async (key: PrefKey) => {
+    const next = !prefs[key];
+    setPendingPrefs((p) => ({ ...p, [key]: next }));
+    try {
+      await updateClient({ notificationPrefs: { ...prefs, [key]: next } });
+    } finally {
+      setPendingPrefs((p) => {
+        const { [key]: _drop, ...rest } = p;
+        return rest;
+      });
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>FP</Text>
+            <Text style={styles.avatarText}>{initialsOf(displayName)}</Text>
             <View style={styles.avatarEdit}>
               <CameraIcon />
             </View>
           </View>
-          <View>
-            <Text style={styles.name}>Fábio Pombinho</Text>
-            <Text style={styles.since}>Cliente desde Mar 2026</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.name} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={styles.since}>{since ? `Cliente desde ${since}` : user?.email}</Text>
           </View>
         </View>
 
@@ -69,7 +123,8 @@ export default function ProfileScreen() {
             <Pressable
               key={p.key}
               style={[styles.prefRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
-              onPress={() => setPrefs((prev) => ({ ...prev, [p.key]: !prev[p.key] }))}
+              onPress={() => togglePref(p.key)}
+              disabled={!client}
             >
               <Text style={styles.prefLabel}>{p.label}</Text>
               <View style={[styles.toggle, prefs[p.key] && styles.toggleOn]}>
@@ -81,11 +136,11 @@ export default function ProfileScreen() {
 
         <Text style={styles.secTitle}>Conta</Text>
         <View style={styles.accountList}>
-          <Pressable style={styles.accountRow}>
+          <Pressable style={styles.accountRow} onPress={() => navigation.navigate('PersonalData')}>
             <Text style={styles.accountLabel}>Dados pessoais</Text>
             <ChevronRightIcon />
           </Pressable>
-          <Pressable style={[styles.accountRow, { borderBottomWidth: 0 }]}>
+          <Pressable style={[styles.accountRow, { borderBottomWidth: 0 }]} onPress={() => signOut()}>
             <Text style={styles.accountLabel}>Terminar sessão</Text>
             <ChevronRightIcon />
           </Pressable>
@@ -122,6 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerText: { flex: 1 },
   name: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
   since: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkFaint, marginTop: 2 },
   pendingCard: {

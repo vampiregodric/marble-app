@@ -11,7 +11,27 @@ import EventsScreen from '../screens/EventsScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import WorkDetailScreen from '../screens/WorkDetailScreen';
+import PersonalDataScreen from '../screens/PersonalDataScreen';
+import AuthGate from '../components/AuthGate';
 import { RootStackParamList, TabParamList } from './types';
+
+// Perfil e Alertas precisam de conta — sem sessão mostram o ecrã de login no
+// lugar do tab. Início, Portfólio e Eventos ficam abertos a toda a gente.
+function AlertsTab() {
+  return (
+    <AuthGate>
+      <AlertsScreen />
+    </AuthGate>
+  );
+}
+
+function ProfileTab() {
+  return (
+    <AuthGate>
+      <ProfileScreen />
+    </AuthGate>
+  );
+}
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -68,8 +88,8 @@ function Tabs() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Início' }} />
       <Tab.Screen name="Portfolio" component={PortfolioScreen} options={{ tabBarLabel: 'Portfólio' }} />
       <Tab.Screen name="Events" component={EventsScreen} options={{ tabBarLabel: 'Eventos' }} />
-      <Tab.Screen name="Alerts" component={AlertsScreen} options={{ tabBarLabel: 'Alertas' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
+      <Tab.Screen name="Alerts" component={AlertsTab} options={{ tabBarLabel: 'Alertas' }} />
+      <Tab.Screen name="Profile" component={ProfileTab} options={{ tabBarLabel: 'Perfil' }} />
     </Tab.Navigator>
   );
 }
@@ -88,6 +108,7 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       WorkDetail: 'work/:workId',
+      PersonalData: 'profile/personal-data',
     },
   },
 };
@@ -98,6 +119,7 @@ export default function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

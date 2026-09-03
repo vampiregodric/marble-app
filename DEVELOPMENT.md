@@ -30,14 +30,39 @@ screen). Ainda não há ligação real à base de dados.
    `marble-studios-prod` existem, com Firestore (`eur3`, production mode) e
    Auth (email/password) ativos; config nos `.env` / `.env.production`.
    Ver "Firebase: os dois projetos" abaixo para o que falta (regras + seed).
-2. **Ligar os ecrãs ao Firestore** — substituir os arrays de exemplo por
+2. **Autenticação** — feito (2026-09-03): ver "Autenticação" abaixo.
+3. **Ligar os ecrãs ao Firestore** — substituir os arrays de exemplo por
    queries reais (Secção 4 do `ROADMAP.md`).
-3. **Painel da equipa (backoffice)** — ainda não desenhado nem construído.
-4. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
+4. **Painel da equipa (backoffice)** — ainda não desenhado nem construído.
+5. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
    automáticos (checkup 1 semana depois, etc.) ainda por implementar.
-5. **Fotos reais** — só o Jaguar (`assets/work-jaguar-purple.jpg`) e o
+6. **Fotos reais** — só o Jaguar (`assets/work-jaguar-purple.jpg`) e o
    logótipo são reais; o resto são placeholders com gradiente dourado
    (`src/components/PlaceholderThumb.tsx`).
+
+## Autenticação (Secção 2)
+
+- Tudo passa por `src/auth/AuthContext.tsx` (`useAuth()`): `user` (Firebase
+  Auth), `client` (doc `clients/{uid}`, em tempo real), `signIn`, `signUp`,
+  `signOut`, `resetPassword`, `updateClient`. Nos ecrãs, usa sempre isto —
+  nunca chames o Firebase Auth diretamente.
+- Os tabs Perfil e Alertas estão envolvidos em `AuthGate`: sem sessão mostram
+  o `LoginScreen` no lugar do tab. Início/Portfólio/Eventos ficam abertos.
+- `src/firebase/authInstance.native.ts` (iOS/Android) usa
+  `initializeAuth` + AsyncStorage para a sessão sobreviver a fechar a app;
+  `authInstance.ts` (web) usa `getAuth`. O Metro escolhe pelo sufixo
+  `.native`. O `// @ts-expect-error` lá dentro é esperado: o pacote
+  `firebase` só publica os tipos web, que não têm `getReactNativePersistence`.
+- Recuperar password envia um email do Firebase (template por defeito, em
+  inglês). Para o traduzir/personalizar: Firebase Console > Authentication >
+  Templates. Nos projetos novos a "proteção contra enumeração de emails" está
+  ligada, por isso a app nunca revela se um email tem conta.
+- Conta de teste criada no **dev** durante a Secção 2:
+  `teste.seccao2@example.com` / `Teste1234!` (podes apagá-la em
+  Authentication > Users; o doc `clients/<uid>` fica órfão — apaga-o também
+  no Firestore, ou deixa até a Secção 3 construir o "apagar conta").
+- Por fazer na Secção 3 (RGPD): checkbox de aceitação de termos no registo
+  (não pré-marcada) e "apagar a minha conta" no Perfil.
 
 ## Firebase: os dois projetos
 

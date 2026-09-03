@@ -57,6 +57,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 ## Decisões de arquitetura (confirmadas)
 - **Tecnologia:** Cross-platform (React Native ou Flutter) — um código para Android + iOS
 - **Login/conta de cliente:** Sim, com conta — necessário para associar carros/chãos, preferências de notificação e fluxo de checkups a cada cliente
+  - **Decidido (2026-09-03):** email/password com recuperação por email; Google/Apple sign-in só depois de existir conta de developer. Início, Portfólio e Eventos são visíveis sem conta (montra pública); Perfil e Alertas pedem login. O registo pede nome, email, password e telemóvel (obrigatório — a equipa liga ao cliente no fluxo de checkup).
 - **Idioma:** Português + Inglês
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 

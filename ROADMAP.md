@@ -82,13 +82,34 @@ config real já nos `.env` / `.env.production`; `App.tsx` importa
 carrega o `.env` e a app arranca sem erros de Firebase.
 
 ### Secção 2 — Autenticação de cliente
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-03). Email/password com recuperação de password,
+sessão persistente, Perfil com dados reais. Ver nota no fim.
 **Depende de:** Secção 1
 **Objetivo:** Ecrã de login/registo (email/password, e possivelmente
 Google/Apple sign-in), ligado ao Firebase Auth. Perfil passa a mostrar
 dados do utilizador autenticado em vez do "Fábio Pombinho" fixo.
 **Ficheiros:** novo `src/screens/LoginScreen.tsx`, ajustar
 `RootNavigator.tsx` para mostrar login antes das tabs quando não há sessão.
+**Decisões (2026-09-03, Fábio):** só email/password por agora (Google/Apple
+ficam para depois da conta de developer — Secção 11); Início, Portfólio e
+Eventos abertos sem conta, login só aparece nos tabs Perfil e Alertas;
+registo pede nome, email, password e telemóvel obrigatório (a equipa liga
+ao cliente no fluxo de checkup).
+**Nota (2026-09-03):** construído nesta sessão — `src/auth/AuthContext.tsx`
+(sessão + doc `clients/{uid}` em tempo real, `signIn`/`signUp`/`signOut`/
+`resetPassword`/`updateClient`), `src/screens/LoginScreen.tsx` (entrar /
+criar conta / recuperar password num só ecrã), `src/components/AuthGate.tsx`
+(envolve os tabs Perfil e Alertas), `src/screens/PersonalDataScreen.tsx`
+(editar nome/telemóvel, link para mudar password), `src/components/FormField.tsx`.
+Firebase dividido em `src/firebase/app.ts` + `authInstance.ts` (web) /
+`authInstance.native.ts` (iOS/Android com persistência em AsyncStorage —
+sem isto a sessão perdia-se ao fechar a app). `ProfileScreen` mostra nome,
+iniciais, "cliente desde" e preferências reais (gravadas no Firestore);
+carros/chãos e "ação pendente" continuam de exemplo até à Secção 4.
+Verificado no web: registo, reload mantém sessão, toggle persiste, guardar
+dados pessoais, terminar sessão, password errada dá mensagem. Ficou por
+fazer (de propósito, para a Secção 3): aceitação explícita de termos no
+registo e "apagar conta".
 
 ### Secção 3 — Conformidade RGPD
 **Estado:** Por fazer

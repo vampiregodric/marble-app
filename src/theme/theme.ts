@@ -12,6 +12,7 @@ export const colors = {
   hairline: 'rgba(198,161,91,0.22)',
   hairlineStrong: 'rgba(198,161,91,0.4)',
   ok: '#b7d1a8',
+  danger: '#e0a08f',
 };
 
 export const fonts = {

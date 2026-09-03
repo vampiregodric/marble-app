@@ -2,12 +2,11 @@ rules_version = '2';
 
 // Regras de segurança do Firestore — Marble Studios.
 //
-// Estado: escritas do cliente estão todas fechadas por agora (false) porque a
-// Secção 2 (autenticação) ainda não está construída — só a equipa (via
-// backoffice/Admin SDK, que ignora estas regras) e o script de seed escrevem
-// dados por enquanto. Quando a Secção 2 ligar o login, revê "clients",
-// "vehicles" e "notifications" para permitir que cada cliente giria os seus
-// próprios dados (uid == clientId).
+// Estado (Secção 2, 2026-09-03): o login está ligado. A app cria/lê/atualiza
+// `clients/{uid}` com o uid do Firebase Auth (ver src/auth/AuthContext.tsx).
+// `vehicles` e `notifications` continuam só de leitura para o cliente — quem
+// os escreve é a equipa (backoffice/Admin SDK, que ignora estas regras) e o
+// script de seed. Apagar conta (delete) entra na Secção 3 (RGPD).
 //
 // Deploy: npx firebase-tools deploy --only firestore:rules --project dev
 service cloud.firestore {
