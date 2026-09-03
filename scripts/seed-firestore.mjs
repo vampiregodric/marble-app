@@ -48,11 +48,24 @@ const hour = (n) => Timestamp.fromDate(new Date(Date.now() - n * 60 * 60 * 1000)
 const on = (iso) => Timestamp.fromDate(new Date(iso));
 
 // Fotos: a app mostra qualquer URL público que fique em `photoUrl` e cai num
-// gradiente dourado quando está vazio (ver src/components/Photo.tsx). Onde
-// alojar as fotos reais decide-se na Secção 5 (backoffice); até lá todas
-// ficam vazias. (O repositório GitHub é privado, por isso não serve para
-// alojar a foto do Jaguar — quando houver alojamento, mete aqui o URL.)
-const JAGUAR_PHOTO = '';
+// gradiente dourado quando está vazio (ver src/components/Photo.tsx). O
+// alojamento é o Cloudinary (Secção 5); a equipa carrega as fotos no
+// backoffice. A do Jaguar já lá está (carregada em 2026-09-04 pelo preset
+// marble-works) — o URL segue o formato que o backoffice gera
+// (marble-backoffice/src/media/cloudinary.ts). As outras ficam vazias até
+// a equipa as carregar.
+const CLOUDINARY = 'https://res.cloudinary.com/kr9bmaqh/image/upload';
+const JAGUAR_ID = 'b6eeuwb2ekpdxxxttnqy';
+const JAGUAR_PHOTO = `${CLOUDINARY}/c_limit,w_1600,q_auto,f_auto/${JAGUAR_ID}`;
+const JAGUAR_MEDIA = [
+  {
+    type: 'photo',
+    url: JAGUAR_PHOTO,
+    thumbnailUrl: `${CLOUDINARY}/c_fill,w_480,h_360,q_auto,f_auto/${JAGUAR_ID}`,
+    order: 0,
+    publicId: JAGUAR_ID,
+  },
+];
 
 async function resolveTestClient() {
   try {
@@ -134,6 +147,7 @@ async function seed() {
         { brand: 'Xtreme Polishing Systems', item: 'Detailing final' },
       ],
       photoUrl: JAGUAR_PHOTO,
+      media: JAGUAR_MEDIA,
       featured: true,
       featuredOrder: 0,
       published: true,
