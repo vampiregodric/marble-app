@@ -33,6 +33,15 @@ yarn-error.*
 # local env files
 .env*.local
 
+# env files with real Firebase config — live only on each machine.
+# Template with the variable names: .env.example
+.env
+.env.production
+
+# Firebase Admin service-account keys (real secrets — never commit)
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+
 # Firebase service account keys (usadas pelo script de seed) — NUNCA commitar
 serviceAccountKey*.json
 
