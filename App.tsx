@@ -12,7 +12,7 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { colors } from './src/theme/theme';
-import { WEB_MAX_WIDTH } from './src/utils/layout';
+import { WEB_FRAME_BORDER, WEB_MAX_WIDTH } from './src/utils/layout';
 import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/auth/AuthContext';
 // Inicializa o Firebase no arranque (lê .env). Falha cedo se a config faltar.
@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
     width: '100%',
     ...(Platform.OS === 'web' && {
       maxWidth: WEB_MAX_WIDTH,
-      borderLeftWidth: 1,
-      borderRightWidth: 1,
+      borderLeftWidth: WEB_FRAME_BORDER,
+      borderRightWidth: WEB_FRAME_BORDER,
       borderColor: colors.hairline,
     }),
   },
