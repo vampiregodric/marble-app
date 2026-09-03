@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer, DarkTheme, LinkingOptions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme/theme';
 import { HomeIcon, GridIcon, CalendarIcon, BellIcon, UserIcon } from '../components/Icons';
 import HomeScreen from '../screens/HomeScreen';
@@ -28,6 +29,11 @@ const navTheme = {
 };
 
 function Tabs() {
+  // A barra de tabs tem altura fixa (62) — o React Navigation só soma a margem
+  // do sistema (barra de navegação Android / home indicator iOS) quando não
+  // definimos altura, por isso somamos nós. No web o inset é 0.
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -35,8 +41,8 @@ function Tabs() {
         tabBarStyle: {
           backgroundColor: colors.screen,
           borderTopColor: colors.hairline,
-          height: 62,
-          paddingBottom: 8,
+          height: 62 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.goldBright,
