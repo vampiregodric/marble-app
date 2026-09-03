@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import { CATEGORIES } from '../data/categories';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
+import { useAppWidth } from '../utils/layout';
 
 const ALL = 'Todos';
 type Filter = typeof ALL | WorkCategory;
@@ -23,7 +24,7 @@ export default function PortfolioScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, 'Portfolio'>>();
   const [active, setActive] = useState<Filter>(ALL);
-  const { width: screenW } = useWindowDimensions();
+  const screenW = useAppWidth();
   const cardW = (screenW - 36 - 10) / 2;
   const { data: works, loading, error } = usePublishedWorks();
 

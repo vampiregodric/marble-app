@@ -5,7 +5,6 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   Pressable,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -24,6 +23,7 @@ import { useUnreadCount } from '../data/notifications';
 import { categoryFullName } from '../data/categories';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
+import { useAppWidth } from '../utils/layout';
 
 type Department = {
   id: string;
@@ -53,7 +53,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
-  const { width: screenW } = useWindowDimensions();
+  const screenW = useAppWidth();
   const carouselW = screenW - 36;
   const deptCardW = (screenW - 26 - 10) / 2 - 5;
 

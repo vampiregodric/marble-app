@@ -28,7 +28,7 @@ export default function Photo({ url, fallback, seed }: Props) {
     return (
       <Image
         source={{ uri }}
-        style={StyleSheet.absoluteFill}
+        style={styles.fill}
         resizeMode="cover"
         onError={() => setFailed(true)}
         accessibilityIgnoresInvertColors
@@ -36,7 +36,15 @@ export default function Photo({ url, fallback, seed }: Props) {
     );
   }
   if (fallback) {
-    return <Image source={fallback} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />;
+    return <Image source={fallback} style={styles.fill} resizeMode="cover" accessibilityIgnoresInvertColors />;
   }
   return <PlaceholderThumb variant={variantFor(seed)} style={StyleSheet.absoluteFill} />;
 }
+
+const styles = StyleSheet.create({
+  // width/height explícitos são obrigatórios: com uma imagem embutida
+  // (require), o React Native usa as dimensões originais do ficheiro quando
+  // o estilo não as define — a foto ficava no tamanho real, ancorada ao
+  // canto superior esquerdo, e só se via o preto do fundo.
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+});
