@@ -167,7 +167,9 @@ dos trabalhos podem ir para o portfólio/redes sem identificar o dono e com
 matrícula ocultada, salvo pedido em contrário.
 
 ### Secção 4 — Ligar os 6 ecrãs a dados reais
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-03). Os seis ecrãs leem o Firestore em tempo
+real, com estados de carregamento/vazio/erro; regras apertadas e índices
+publicados no dev; seed realista. Ver nota no fim.
 **Depende de:** Secção 1 (e idealmente Secção 2)
 **Objetivo:** Substituir os arrays de exemplo (`WORKS`, `EVENTS`,
 `ALERTS`, `departments`, etc.) por queries Firestore reais, ecrã a ecrã.
@@ -178,6 +180,41 @@ Pode ser dividido ainda mais (ex: "Secção 4a — Portfólio real",
 departamentos no Início (`HomeScreen.tsx`) passam a mostrar uma foto de
 cada área em vez do ícone de linha atual — o Fábio lê ícones de linha como
 "feito por IA" (ver regra 5 no `CLAUDE.md`).
+**Decisões (2026-09-03, Fábio):** os seis ecrãs numa só conversa; fotos por
+URL público em `photoUrl` com gradiente dourado quando vazio (o alojamento
+das fotos reais decide-se na Secção 5); seed alargado e corrido no dev;
+regras apertadas + índices compostos, com o Fábio a fazer o deploy.
+**Nota (2026-09-03):** construído nesta sessão — camada de dados em
+`src/data/` (`firestoreHooks.ts` genérico com `onSnapshot`; `works.ts`,
+`events.ts`, `notifications.ts`, `vehicles.ts`, `categories.ts`),
+`src/components/Photo.tsx` (URL → fallback → gradiente estável por ID),
+`src/components/ListState.tsx` (a carregar / vazio / erro),
+`src/utils/dates.ts` (`timeAgo`, `formatDate`, …). Ecrãs: Portfólio lê
+`works` publicados (filtro por categoria em memória; aceita
+`params.category`), Detalhe lê o doc e mostra "já não está disponível" para
+rascunhos/inexistentes, Eventos divide Próximos/Passados por data, Início
+mostra os `featured` no carrossel (toque abre o Detalhe), ponto no sino só
+com alertas por ler, cartões Automotive/Epoxy/Graphic abrem o Portfólio já
+filtrado (AI Business, Marble Ads e Xtreme ficam para as Secções 9 e 10);
+Alertas lê `notifications` do uid, tocar marca como lido e abre o
+trabalho/evento/perfil relacionado; Perfil lê `vehicles` do uid e deriva o
+cartão "Ação pendente" do primeiro com `checkupStatus: 'pending'`
+(desaparece quando está tudo em dia). `firestore.rules`: `works` só com
+`published == true` (as queries TÊM de incluir esse `where`), cliente só
+pode alterar `read` em `notifications`. `firestore.indexes.json`: 4 índices
+compostos. Seed (`npm run seed -- <chave> [--client email]`) cria 8
+trabalhos (1 rascunho), 3 eventos, 2 carros/chãos e 4 alertas ligados à
+conta de teste. `npm run check:firestore` valida regras+índices sem login;
+`npm run check:firestore:auth -- <chave>` valida Alertas/Perfil como o
+cliente. Ecrãs empilhados (Detalhe, Dados pessoais, Legal, Apagar conta)
+passaram a respeitar a margem inferior do sistema — o botão "Pedir
+orçamento" ficava tapado pela barra de navegação do Android. Verificado no
+web (8082) com dados reais: Início, Portfólio (+ filtro), Detalhe
+(publicado e rascunho), Eventos (Próximos/Passados); Alertas e Perfil
+verificados por script autenticado (leitura, marcar lido permitido, outras
+escritas e outros clientes recusados). A foto do Jaguar vem do próprio repo
+público no GitHub (`raw.githubusercontent.com`) — só dev; em produção as
+fotos ficam onde a Secção 5 decidir.
 
 ### Secção 5 — Painel da equipa (backoffice)
 **Estado:** Por fazer
@@ -198,6 +235,17 @@ app web com login da equipa a usar o SDK de cliente, é preciso dar um
 *custom claim* `admin: true` aos utilizadores da equipa (via Admin SDK ou
 Cloud Function) e alterar as regras para
 `allow write: if request.auth.token.admin == true`.
+**Da Secção 4:** o que o backoffice tem de preencher para a app mostrar bem
+cada coisa: em `works`, `published` (só a true aparece — rascunhos ficam
+invisíveis pelas regras), `featured` (carrossel do Início, curadoria
+manual), `category` (um de `Automotive` / `Epoxy Floors` / `Graphic`),
+`completedAt`, `photoUrl`; em `vehicles`, `checkupStatus` (`pending` faz
+aparecer o cartão "Ação pendente" no Perfil) e `lastServiceAt`; em
+`notifications`, `read: false` e o `relatedWorkId`/`relatedEventId`/
+`relatedVehicleId` que a app usa para abrir o sítio certo ao tocar. **Fotos:**
+decidir aqui onde ficam alojadas (Firebase Storage exige Blaze em projetos
+novos; alternativas: Cloudinary, Bunny, um bucket S3/R2) — a app só precisa
+de um URL público em `photoUrl`, e cai num gradiente quando está vazio.
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
@@ -217,6 +265,10 @@ sempre a preferência de consentimento de marketing definida na Secção 3:
 Inclui também o job de retenção da Secção 3: apagar (anonimizar doc +
 apagar utilizador Auth) contas sem atividade há 3 anos
 (`RETENTION.inactiveAccountYears` em `src/legal/texts.ts`).
+**Da Secção 4:** ao criar uma notificação, copiar o `photoUrl` do trabalho/
+evento relacionado para `notifications.photoUrl` (miniatura no ecrã de
+Alertas) e preencher `relatedWorkId`/`relatedEventId`/`relatedVehicleId`.
+`team_alert` nunca é mostrado ao cliente (a app filtra-o).
 
 ### Secção 7 — Ecrã de pedido de orçamento
 **Estado:** Por fazer

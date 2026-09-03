@@ -1,80 +1,83 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
-import PlaceholderThumb from '../components/PlaceholderThumb';
+import Photo from '../components/Photo';
+import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
+import { useAuth } from '../auth/AuthContext';
+import { markNotificationRead, useNotifications } from '../data/notifications';
+import { AppNotification } from '../firebase/models';
+import { RootStackParamList } from '../navigation/types';
+import { timeAgo } from '../utils/dates';
 
-type Alert = {
-  id: string;
-  title: string;
-  desc: string;
-  time: string;
-  unread: boolean;
-  variant: number;
-};
-
-const ALERTS: Alert[] = [
-  {
-    id: 'checkup',
-    title: 'Checkup pendente',
-    desc: 'O teu PPF (BMW M4) está pronto para o checkup gratuito. Confirma antes que a equipa te ligue.',
-    time: 'Há 2 horas',
-    unread: true,
-    variant: 5,
-  },
-  {
-    id: 'new-work',
-    title: 'Novo trabalho publicado',
-    desc: 'Acabámos de publicar um novo Metallic Epoxy no portfólio — vai espreitar.',
-    time: 'Ontem',
-    unread: true,
-    variant: 1,
-  },
-  {
-    id: 'wash',
-    title: 'Lavagem grátis disponível',
-    desc: 'O teu BMW M4 já passou um mês do checkup — tens uma lavagem grátis à espera.',
-    time: 'Há 3 dias',
-    unread: false,
-    variant: 5,
-  },
-  {
-    id: 'event',
-    title: 'Auto Expo Lisboa 2026',
-    desc: 'É já a 15 de Setembro. Vemo-nos lá?',
-    time: 'Há 5 dias',
-    unread: false,
-    variant: 0,
-  },
-];
-
+// Alertas do cliente (lembretes de checkup, novos trabalhos, ofertas,
+// eventos), em tempo real. Tocar num alerta marca-o como lido e abre o que
+// lhe diz respeito: o trabalho, a tab Eventos ou o Perfil (carro/chão).
+// Este ecrã está dentro de AuthGate — há sempre sessão aqui.
 export default function AlertsScreen() {
-  const unreadCount = ALERTS.filter((a) => a.unread).length;
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user } = useAuth();
+  const { data: alerts, loading, error } = useNotifications(user?.uid);
+  const unreadCount = alerts.filter((a) => !a.read).length;
+
+  const open = (a: AppNotification) => {
+    if (!a.read) {
+      // Não bloqueia a navegação; se falhar (offline), o ponto volta a aparecer
+      // no próximo snapshot e o cliente pode tocar outra vez.
+      markNotificationRead(a.id).catch(() => {});
+    }
+    if (a.relatedWorkId) navigation.navigate('WorkDetail', { workId: a.relatedWorkId });
+    else if (a.relatedEventId) navigation.navigate('Tabs', { screen: 'Events' });
+    else if (a.relatedVehicleId) navigation.navigate('Tabs', { screen: 'Profile' });
+  };
+
+  const subtitle = loading ? 'A carregar…' : unreadCount === 0 ? 'Tudo lido' : unreadCount === 1 ? '1 por ler' : `${unreadCount} por ler`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Alertas</Text>
-        <Text style={styles.subtitle}>{unreadCount} por ler</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {ALERTS.map((a) => (
-          <View key={a.id} style={styles.row}>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>{a.title}</Text>
-              <View style={styles.rowContent}>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowDesc}>{a.desc}</Text>
-                  <Text style={styles.rowTime}>{a.time}</Text>
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState error={error} />
+      ) : alerts.length === 0 ? (
+        <EmptyState
+          title="Sem alertas por agora."
+          description="Quando houver um checkup a confirmar, um trabalho novo ou uma oferta para ti, aparece aqui."
+        />
+      ) : (
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {alerts.map((a) => (
+            <Pressable
+              key={a.id}
+              style={styles.row}
+              onPress={() => open(a)}
+              accessibilityRole="button"
+              accessibilityLabel={`${a.title}${a.read ? '' : ', por ler'}`}
+            >
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>{a.title}</Text>
+                <View style={styles.rowContent}>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowDesc}>{a.description}</Text>
+                    <Text style={styles.rowTime}>{timeAgo(a.createdAt)}</Text>
+                  </View>
+                  <View style={styles.thumb}>
+                    <Photo url={a.photoUrl} seed={a.type} />
+                  </View>
                 </View>
-                <PlaceholderThumb variant={a.variant} style={styles.thumb} />
               </View>
-            </View>
-            {a.unread && <View style={styles.unreadDot} />}
-          </View>
-        ))}
-      </ScrollView>
+              {!a.read && <View style={styles.unreadDot} />}
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -94,12 +97,12 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   rowBody: {},
-  rowTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink, marginBottom: 7 },
+  rowTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink, marginBottom: 7, paddingRight: 16 },
   rowContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   rowText: { flex: 1 },
   rowDesc: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkMuted, lineHeight: 15 },
   rowTime: { fontFamily: fonts.body, fontSize: 8.5, color: colors.inkFaint, marginTop: 6 },
-  thumb: { width: 44, height: 44, borderRadius: 9, borderWidth: 1, borderColor: colors.hairline },
+  thumb: { width: 44, height: 44, borderRadius: 9, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden', backgroundColor: colors.panel2 },
   unreadDot: {
     position: 'absolute',
     top: 13,

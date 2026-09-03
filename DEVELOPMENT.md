@@ -11,18 +11,19 @@ npx expo start            # QR code para abrir na app Expo Go (Android/iOS)
 usa `npx.cmd` em vez de `npx` (ex: `npx.cmd expo start --web`). O `.cmd`
 contorna a política de execução sem mexer em definições do Windows.
 
-## Estado atual (fase MVP — UI com dados de exemplo)
+## Estado atual
 
-Ecrãs construídos e verificados a renderizar corretamente:
-- `src/screens/HomeScreen.tsx` — Início
-- `src/screens/PortfolioScreen.tsx` — Portfólio
-- `src/screens/EventsScreen.tsx` — Eventos
-- `src/screens/AlertsScreen.tsx` — Alertas
-- `src/screens/ProfileScreen.tsx` — Perfil
-- `src/screens/WorkDetailScreen.tsx` — Detalhe de um trabalho
+Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
+- `src/screens/HomeScreen.tsx` — Início: carrossel = `works` com
+  `featured: true`; ponto no sino = alertas por ler; cartões
+  Automotive/Epoxy/Graphic abrem o Portfólio filtrado
+- `src/screens/PortfolioScreen.tsx` — Portfólio: `works` publicados
+- `src/screens/WorkDetailScreen.tsx` — Detalhe: um doc de `works`
+- `src/screens/EventsScreen.tsx` — Eventos: `events` (Próximos/Passados)
+- `src/screens/AlertsScreen.tsx` — Alertas: `notifications` do uid
+- `src/screens/ProfileScreen.tsx` — Perfil: `clients/{uid}` + `vehicles`
 
-Todos usam dados de exemplo fixos no próprio ficheiro (arrays no topo de cada
-screen). Ainda não há ligação real à base de dados.
+Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 
 ## Por fazer a seguir
 
@@ -31,14 +32,17 @@ screen). Ainda não há ligação real à base de dados.
    Auth (email/password) ativos; config nos `.env` / `.env.production`.
    Ver "Firebase: os dois projetos" abaixo para o que falta (regras + seed).
 2. **Autenticação** — feito (2026-09-03): ver "Autenticação" abaixo.
-3. **Ligar os ecrãs ao Firestore** — substituir os arrays de exemplo por
-   queries reais (Secção 4 do `ROADMAP.md`).
+3. **Ligar os ecrãs ao Firestore** — feito (2026-09-03): ver "Dados reais"
+   abaixo.
 4. **Painel da equipa (backoffice)** — ainda não desenhado nem construído.
+   É a próxima secção; é quem vai criar trabalhos, eventos, carros/chãos e
+   alertas (a app só lê, exceto marcar alertas como lidos).
 5. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
    automáticos (checkup 1 semana depois, etc.) ainda por implementar.
-6. **Fotos reais** — só o Jaguar (`assets/work-jaguar-purple.jpg`) e o
-   logótipo são reais; o resto são placeholders com gradiente dourado
-   (`src/components/PlaceholderThumb.tsx`).
+6. **Fotos reais** — a app mostra qualquer URL público em `photoUrl`
+   (`src/components/Photo.tsx`) e cai num gradiente dourado quando está
+   vazio. Onde alojar as fotos decide-se com o backoffice (Secção 5). No
+   dev só o Jaguar tem foto, servida pelo repo público no GitHub.
 
 ## Autenticação (Secção 2)
 
@@ -98,6 +102,43 @@ screen). Ainda não há ligação real à base de dados.
   (prazo legal: um mês). Para apagar por esse caminho, o Admin SDK ou o
   backoffice faz o mesmo que a app: anonimiza o doc e apaga o utilizador.
 
+## Dados reais (Secção 4)
+
+- **Camada de dados em `src/data/`.** `firestoreHooks.ts` tem os hooks
+  genéricos (`useFirestoreList`, `useFirestoreDoc`, ambos com `onSnapshot` —
+  tudo é em tempo real, sem botão de refrescar) e devolve sempre
+  `{ data, loading, error }`. Os hooks por coleção (`works.ts`, `events.ts`,
+  `notifications.ts`, `vehicles.ts`) constroem as queries; `categories.ts`
+  tem os nomes de apresentação das 3 categorias. Nos ecrãs usa sempre estes
+  hooks — nunca chames `getDocs`/`onSnapshot` diretamente.
+- **Regra importante das regras:** `works` só é legível com
+  `published == true`, e as regras do Firestore não filtram — recusam a
+  query inteira. Qualquer query em `works` TEM de levar
+  `where('published', '==', true)`. Um `getDoc` de um rascunho dá
+  `permission-denied`, que `useFirestoreDoc` traduz em `missing: true`
+  (o Detalhe mostra "já não está disponível").
+- **Índices compostos** em `firestore.indexes.json` (4). Se uma query nova
+  precisar de índice, o erro é `failed-precondition` com um link na consola
+  do browser para o criar — mas acrescenta-o ao ficheiro e faz deploy, para
+  o prod ficar igual.
+- **Estados.** Toda a lista tem a carregar / vazio / erro
+  (`src/components/ListState.tsx`). Nunca deixes um ecrã em branco.
+- **Fotos.** `src/components/Photo.tsx` recebe `url` e `seed` (o ID do doc)
+  e preenche o contentor pai (que define tamanho, cantos e
+  `overflow: 'hidden'`). URL vazio ou que falha → gradiente estável por ID.
+- **Datas** em `src/utils/dates.ts` (`timeAgo`, `formatDate`,
+  `formatMonthYear`). Sempre a partir de `Timestamp`.
+- **Escritas do cliente:** só `clients/{uid}` (perfil) e `read` em
+  `notifications` (`markNotificationRead`). Tudo o resto é da equipa.
+- **Ecrãs empilhados** (Detalhe, Dados pessoais, Legal, Apagar conta) usam
+  `edges={['top', 'bottom']}` no `SafeAreaView` porque não têm barra de tabs
+  a proteger a margem inferior — sem isto o botão fixo em baixo fica tapado
+  pela barra de navegação do Android. Os tabs ficam com `['top']` (a barra
+  de tabs já soma o inset).
+- **Verificar:** `npm run check:firestore` (regras + índices, sem login) e
+  `npm run check:firestore:auth -- ./serviceAccountKey.dev.json` (Alertas e
+  Perfil como a conta de teste, via custom token — sem password).
+
 ## Firebase: os dois projetos
 
 | | dev | prod |
@@ -115,20 +156,23 @@ Studios tiver conta Google própria, adiciona-a como Owner em
 
 Ambos foram criados em **production mode** (tudo negado por defeito) — não
 há janela de 30 dias de base de dados aberta. As regras reais estão em
-`firestore.rules`; estão publicadas no **dev** (2026-09-03). O **prod**
-ainda tem as regras iniciais de production mode (tudo negado) — publica lá
-na Secção 11, antes do lançamento.
+`firestore.rules` e os índices em `firestore.indexes.json`; ambos publicados
+no **dev** (versão da Secção 4, 2026-09-03). O **prod** ainda tem as regras
+iniciais de production mode (tudo negado) e nenhum índice — publica lá na
+Secção 11, antes do lançamento.
 
 O Firebase CLI já está autenticado nesta máquina (`v.godric@gmail.com`).
-Sempre que mudares `firestore.rules`:
+Sempre que mudares `firestore.rules` ou `firestore.indexes.json`, corre a
+partir da pasta do projeto (ou do worktree onde a alteração está):
 
 ```bash
-npx.cmd firebase-tools deploy --only firestore:rules --project dev
+npx.cmd firebase-tools deploy --only firestore --project dev
 ```
 
-(troca `dev` por `prod` para o outro projeto; os aliases estão em
-`.firebaserc`). Nota: o Claude Code em modo automático não pode correr
-deploys — corre tu este comando no teu PowerShell.
+(publica regras e índices de uma vez; troca `dev` por `prod` para o outro
+projeto — os aliases estão em `.firebaserc`). Nota: o Claude Code em modo
+automático não pode correr deploys — corre tu este comando no teu
+PowerShell. Os índices demoram 1 a 3 minutos a construir.
 
 Para confirmar que tudo está ligado (config do `.env` + regras):
 
@@ -138,9 +182,11 @@ npm run check:firestore
 
 ### Popular com dados de exemplo
 
-Para o critério de conclusão da Secção 1 ("pelo menos um documento de
-exemplo em cada coleção"), usa o script de seed — precisa de uma chave de
-service account porque as regras negam escritas de cliente:
+O script de seed cria dados realistas em todas as coleções: 8 trabalhos
+(3 categorias, 3 em destaque, 1 rascunho não publicado), 3 eventos (2
+futuros, 1 passado), 2 carros/chãos e 4 alertas. É idempotente (IDs fixos).
+Precisa de uma chave de service account porque as regras negam escritas de
+cliente:
 
 ```bash
 # 1. Descarrega uma chave de service account:
@@ -151,7 +197,15 @@ service account porque as regras negam escritas de cliente:
 npm run seed -- ./serviceAccountKey.dev.json
 ```
 
-Não faças seed do `prod` — o roadmap diz para o deixar vazio até ao
+Os carros/chãos e alertas ficam ligados ao uid da conta de teste
+(`teste.seccao2@example.com`). Para os veres com **outra** conta (ex: a tua,
+no telemóvel), aponta o seed a esse email — os docs mudam de dono:
+
+```bash
+npm run seed -- ./serviceAccountKey.dev.json --client o.teu.email@exemplo.pt
+```
+
+O script recusa chaves do `prod` — o roadmap diz para o deixar vazio até ao
 lançamento (Secção 11).
 
 ### Trocar entre dev e prod

@@ -36,6 +36,7 @@
     "web": "expo start --web",
     "seed": "node scripts/seed-firestore.mjs",
     "check:firestore": "node scripts/check-firestore.mjs",
+    "check:firestore:auth": "node scripts/check-firestore-auth.mjs",
     "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
     "typecheck": "tsc --noEmit"
   },

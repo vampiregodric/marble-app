@@ -2,26 +2,38 @@ rules_version = '2';
 
 // Regras de segurança do Firestore — Marble Studios.
 //
-// Estado (Secção 3, 2026-09-03): o login está ligado. A app cria/lê/atualiza
-// `clients/{uid}` com o uid do Firebase Auth (ver src/auth/AuthContext.tsx).
-// `vehicles` e `notifications` continuam só de leitura para o cliente — quem
-// os escreve é a equipa (backoffice/Admin SDK, que ignora estas regras) e o
-// script de seed.
+// Estado (Secção 4, 2026-09-03): os ecrãs leem dados reais.
+// - `works`: só trabalhos PUBLICADOS são legíveis. Atenção: as regras não
+//   filtram resultados — uma query em `works` TEM de incluir
+//   `where('published', '==', true)`, senão o Firestore recusa a query toda
+//   (ver src/data/works.ts). Rascunhos (published: false) ficam invisíveis
+//   para a app até a equipa os publicar no backoffice.
+// - `events`: públicos.
+// - `clients/{uid}`: só o próprio (uid do Auth == id do doc).
+// - `vehicles`: só o dono lê; quem escreve é a equipa (Admin SDK/backoffice).
+// - `notifications`: só o dono lê; a única alteração permitida ao cliente é
+//   marcar como lida (`read`) — nada mais muda pelo SDK de cliente.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
-// (update, já permitido) e apaga o utilizador do Auth. O doc fica com
-// `deletedAt` e sem dados pessoais; como o uid deixa de existir, ninguém o
-// volta a ler pelo SDK de cliente. `delete: false` mantém-se de propósito —
-// evita que uma sessão comprometida destrua o histórico de trabalhos.
-// Estas regras NÃO mudaram na Secção 3; não é preciso novo deploy.
+// (update, já permitido) e apaga o utilizador do Auth. `delete: false`
+// mantém-se de propósito em `clients` — evita que uma sessão comprometida
+// destrua o histórico de trabalhos.
 //
-// Deploy: npx firebase-tools deploy --only firestore:rules --project dev
+// Deploy: npx.cmd firebase-tools deploy --only firestore:rules --project dev
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Portfólio e eventos são conteúdo público de marketing — visíveis sem login.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsResource() {
+      return signedIn() && request.auth.uid == resource.data.clientId;
+    }
+
+    // Portfólio: conteúdo público de marketing, mas só depois de publicado.
     match /works/{workId} {
-      allow read: if true;
+      allow read: if resource.data.published == true;
       allow write: if false;
     }
 
@@ -30,21 +42,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Dados do cliente — só o próprio (depois da Secção 2 ligar o Auth).
+    // Dados do cliente — só o próprio.
     match /clients/{clientId} {
-      allow read, update: if request.auth != null && request.auth.uid == clientId;
-      allow create: if request.auth != null && request.auth.uid == clientId;
+      allow read, update: if signedIn() && request.auth.uid == clientId;
+      allow create: if signedIn() && request.auth.uid == clientId;
       allow delete: if false;
     }
 
     match /vehicles/{vehicleId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.clientId;
+      allow read: if ownsResource();
       allow write: if false;
     }
 
     match /notifications/{notificationId} {
-      allow read, update: if request.auth != null && request.auth.uid == resource.data.clientId;
-      allow write: if false;
+      allow read: if ownsResource();
+      // Só o campo `read` pode mudar (marcar como lida). Título, tipo, etc.
+      // são da equipa.
+      allow update: if ownsResource()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read is bool;
+      allow create, delete: if false;
     }
   }
 }

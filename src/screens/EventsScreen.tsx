@@ -2,20 +2,29 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme/theme';
-import PlaceholderThumb from '../components/PlaceholderThumb';
+import Photo from '../components/Photo';
+import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
 import { LocationIcon } from '../components/Icons';
+import { useEvents } from '../data/events';
+import { MarbleEvent } from '../firebase/models';
+import { MONTHS_SHORT, isSameDay } from '../utils/dates';
 
-const FILTERS = ['Próximos', 'Passados'];
+const FILTERS = ['Próximos', 'Passados'] as const;
+type Filter = (typeof FILTERS)[number];
 
-const EVENTS = [
-  { id: 'auto-expo', day: '15', month: 'Set', status: 'Em breve', title: 'Auto Expo Lisboa 2026', location: 'FIL — Parque das Nações, Lisboa', variant: 0, past: false },
-  { id: 'car-coffee', day: '05', month: 'Set', status: 'Em breve', title: 'Car & Coffee Aveiro', location: 'Rossio, Aveiro', variant: 1, past: false },
-  { id: 'open-day', day: '10', month: 'Ago', status: 'Concluído', title: 'Open Day — Novo Espaço', location: 'Marble Studios HQ', variant: 2, past: true },
-];
+function statusOf(e: MarbleEvent, past: boolean): string {
+  if (past) return 'Concluído';
+  if (e.date && isSameDay(e.date.toDate(), new Date())) return 'Hoje';
+  return 'Em breve';
+}
 
+// Eventos onde a Marble Studios vai estar (feiras, car meets, open days).
+// Público, sem login. Só a equipa cria eventos (backoffice, Secção 5).
 export default function EventsScreen() {
-  const [active, setActive] = useState('Próximos');
-  const list = EVENTS.filter((e) => (active === 'Próximos' ? !e.past : e.past));
+  const [active, setActive] = useState<Filter>('Próximos');
+  const { upcoming, past, loading, error } = useEvents();
+  const showingPast = active === 'Passados';
+  const list = showingPast ? past : upcoming;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -32,30 +41,52 @@ export default function EventsScreen() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {list.map((e) => (
-          <View key={e.id} style={styles.card}>
-            <View style={styles.photo}>
-              <PlaceholderThumb variant={e.variant} style={StyleSheet.absoluteFill} />
-              <View style={styles.photoOverlay} />
-              <View style={styles.dateBadge}>
-                <Text style={styles.dateDay}>{e.day}</Text>
-                <Text style={styles.dateMon}>{e.month}</Text>
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState error={error} />
+      ) : list.length === 0 ? (
+        <EmptyState
+          title={showingPast ? 'Ainda não há eventos passados.' : 'Não há eventos marcados por agora.'}
+          description={
+            showingPast
+              ? 'Os eventos em que já estivemos ficam aqui como memória.'
+              : 'Anunciamos aqui feiras, car meets e open days assim que estiverem confirmados.'
+          }
+        />
+      ) : (
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {list.map((e) => {
+            const d = e.date?.toDate();
+            return (
+              <View key={e.id} style={styles.card}>
+                <View style={styles.photo}>
+                  <Photo url={e.photoUrl} seed={e.id} />
+                  <View style={styles.photoOverlay} />
+                  {d ? (
+                    <View style={styles.dateBadge}>
+                      <Text style={styles.dateDay}>{String(d.getDate()).padStart(2, '0')}</Text>
+                      <Text style={styles.dateMon}>{MONTHS_SHORT[d.getMonth()]}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.statusBadge}>
+                    <Text style={[styles.statusText, showingPast && styles.statusTextPast]}>{statusOf(e, showingPast)}</Text>
+                  </View>
+                </View>
+                <View style={styles.body}>
+                  <Text style={styles.eventTitle}>{e.title}</Text>
+                  {e.location ? (
+                    <View style={styles.metaRow}>
+                      <LocationIcon size={11} color={colors.gold} />
+                      <Text style={styles.metaText}>{e.location}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
-              <View style={[styles.statusBadge, e.past && styles.statusBadgePast]}>
-                <Text style={[styles.statusText, e.past && styles.statusTextPast]}>{e.status}</Text>
-              </View>
-            </View>
-            <View style={styles.body}>
-              <Text style={styles.eventTitle}>{e.title}</Text>
-              <View style={styles.metaRow}>
-                <LocationIcon size={11} color={colors.gold} />
-                <Text style={styles.metaText}>{e.location}</Text>
-              </View>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -72,7 +103,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#0b0a08', fontFamily: fonts.bodyBold },
   list: { padding: 18, gap: 12, paddingBottom: 32 },
   card: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.hairline, borderRadius: 14, overflow: 'hidden' },
-  photo: { height: 110 },
+  photo: { height: 110, backgroundColor: colors.panel2 },
   photoOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' },
   dateBadge: {
     position: 'absolute',
@@ -99,7 +130,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  statusBadgePast: {},
   statusText: { fontFamily: fonts.eyebrow, fontSize: 7, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   statusTextPast: { color: colors.inkFaint },
   body: { padding: 13 },

@@ -1,9 +1,11 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { LegalDoc } from '../legal/texts';
+import { WorkCategory } from '../firebase/models';
 
 export type TabParamList = {
   Home: undefined;
-  Portfolio: undefined;
+  // Os cartões dos departamentos no Início abrem o Portfólio já filtrado.
+  Portfolio: { category?: WorkCategory } | undefined;
   Events: undefined;
   Alerts: undefined;
   Profile: undefined;

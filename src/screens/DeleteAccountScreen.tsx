@@ -48,7 +48,7 @@ export default function DeleteAccountScreen() {
 
   if (done) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.doneWrap}>
           <Text style={styles.eyebrow}>Conta apagada</Text>
           <Text style={styles.title}>Até à próxima</Text>
@@ -64,7 +64,7 @@ export default function DeleteAccountScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel="Voltar">
           <BackIcon />

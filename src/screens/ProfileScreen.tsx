@@ -3,29 +3,16 @@ import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Timestamp } from 'firebase/firestore';
 import { colors, fonts } from '../theme/theme';
-import PlaceholderThumb from '../components/PlaceholderThumb';
+import Photo from '../components/Photo';
 import { CameraIcon, ChevronRightIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
-import { Client } from '../firebase/models';
+import { pendingCheckup, useVehicles } from '../data/vehicles';
+import { CATEGORIES } from '../data/categories';
+import { Client, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
-
-// Carros/chãos e "ação pendente" continuam com dados de exemplo — passam a
-// vir do Firestore na Secção 4. Cabeçalho, notificações e conta já são reais.
-const ASSETS = [
-  { id: 'bmw', name: 'BMW M4 — PPF Colorido', sub: 'Última visita: 25 Ago 2026', status: 'Checkup', ok: false, variant: 5 },
-  { id: 'showroom', name: 'Showroom — Metallic Epoxy', sub: 'Instalado: 12 Jun 2026', status: 'Em dia', ok: true, variant: 1 },
-];
-
-const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-function formatSince(ts?: Timestamp | null) {
-  if (!ts) return null;
-  const d = ts.toDate();
-  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
+import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -35,13 +22,14 @@ function initialsOf(name: string) {
   return (first + last).toUpperCase();
 }
 
-type PrefKey = keyof Client['notificationPrefs'];
+// Linha secundária de um carro/chão: a última visita (carro) ou a data de
+// instalação (chão). Sem data de serviço, mostra quando foi registado.
+function vehicleSubtitle(v: Vehicle): string {
+  if (v.lastServiceAt) return `${v.type === 'floor' ? 'Instalado' : 'Última visita'}: ${formatDate(v.lastServiceAt)}`;
+  return v.createdAt ? `Registado: ${formatDate(v.createdAt)}` : '';
+}
 
-const CATEGORIES: { key: PrefKey; label: string }[] = [
-  { key: 'automotive', label: 'Automotive Aesthetics' },
-  { key: 'epoxy', label: 'Epoxy Floors' },
-  { key: 'graphic', label: 'Graphic Solutions' },
-];
+type PrefKey = keyof Client['notificationPrefs'];
 
 function Toggle({ on }: { on: boolean }) {
   return (
@@ -51,9 +39,15 @@ function Toggle({ on }: { on: boolean }) {
   );
 }
 
+// Perfil do cliente: cabeçalho, ação pendente e carros/chãos vêm do
+// Firestore em tempo real (clients/{uid} via useAuth, vehicles por clientId).
+// Este ecrã está dentro de AuthGate — há sempre sessão aqui.
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, signOut } = useAuth();
+  const { data: vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(user?.uid);
+  const pending = pendingCheckup(vehicles);
+
   // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
   const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
   const [pendingMarketing, setPendingMarketing] = useState<boolean | null>(null);
@@ -61,7 +55,7 @@ export default function ProfileScreen() {
   const [termsError, setTermsError] = useState<string | null>(null);
 
   const displayName = client?.name || user?.displayName || user?.email || '';
-  const since = formatSince(client?.clientSince);
+  const since = formatMonthYear(client?.clientSince);
   const prefs: Client['notificationPrefs'] = {
     automotive: true,
     epoxy: true,
@@ -146,34 +140,68 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        <View style={styles.pendingCard}>
-          <View style={styles.pendingTag}>
-            <View style={styles.pendingDot} />
-            <Text style={styles.pendingTagText}>Ação pendente</Text>
+        {/* Passo atual do fluxo de acompanhamento: o carro/chão com checkup por
+            confirmar. Desaparece quando está tudo em dia. O botão "Agendar
+            agora" ganha comportamento na Secção 8. */}
+        {pending && (
+          <View style={styles.pendingCard}>
+            <View style={styles.pendingTag}>
+              <View style={styles.pendingDot} />
+              <Text style={styles.pendingTagText}>Ação pendente</Text>
+            </View>
+            <Text style={styles.pendingTitle}>Checkup {pending.type === 'floor' ? 'do teu chão' : 'do teu carro'}</Text>
+            <Text style={styles.pendingDesc}>
+              {pending.name}
+              {pending.lastServiceAt ? ` · trabalho concluído ${timeAgo(pending.lastServiceAt).toLowerCase()}` : ''}. Confirma o
+              checkup gratuito antes que a equipa te ligue.
+            </Text>
+            <Pressable style={styles.cta}>
+              <Text style={styles.ctaText}>Agendar agora</Text>
+            </Pressable>
           </View>
-          <Text style={styles.pendingTitle}>Checkup do teu PPF</Text>
-          <Text style={styles.pendingDesc}>BMW M4 · aplicado há 8 dias. Confirma o checkup gratuito antes que a equipa te ligue.</Text>
-          <Pressable style={styles.cta}>
-            <Text style={styles.ctaText}>Agendar agora</Text>
-          </Pressable>
-        </View>
+        )}
 
         <Text style={styles.secTitle}>Os teus carros & chãos</Text>
         <View style={styles.assetList}>
-          {ASSETS.map((a) => (
-            <View key={a.id} style={styles.assetRow}>
-              <PlaceholderThumb variant={a.variant} style={styles.assetThumb} />
-              <View style={styles.assetText}>
-                <Text style={styles.assetName}>{a.name}</Text>
-                <Text style={styles.assetSub}>{a.sub}</Text>
-              </View>
-              <View style={[styles.assetStatus, a.ok ? styles.assetStatusOk : styles.assetStatusPending]}>
-                <Text style={[styles.assetStatusText, a.ok ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>
-                  {a.status}
-                </Text>
-              </View>
+          {vehiclesLoading ? (
+            <View style={styles.assetEmpty}>
+              <ActivityIndicator color={colors.gold} />
             </View>
-          ))}
+          ) : vehiclesError ? (
+            <View style={styles.assetEmpty}>
+              <Text style={styles.assetEmptyTitle}>Não foi possível carregar os teus carros e chãos.</Text>
+              <Text style={styles.assetEmptyDesc}>{vehiclesError.code}</Text>
+            </View>
+          ) : vehicles.length === 0 ? (
+            <View style={styles.assetEmpty}>
+              <Text style={styles.assetEmptyTitle}>Ainda não tens carros ou chãos registados.</Text>
+              <Text style={styles.assetEmptyDesc}>
+                A equipa associa-os à tua conta quando fizeres um trabalho connosco — e a partir daí acompanhas aqui os checkups.
+              </Text>
+            </View>
+          ) : (
+            vehicles.map((v) => {
+              const ok = v.checkupStatus === 'ok';
+              return (
+                <View key={v.id} style={styles.assetRow}>
+                  <View style={styles.assetThumb}>
+                    <Photo url={v.photoUrl} seed={v.id} />
+                  </View>
+                  <View style={styles.assetText}>
+                    <Text style={styles.assetName} numberOfLines={1}>
+                      {v.name}
+                    </Text>
+                    <Text style={styles.assetSub}>{vehicleSubtitle(v)}</Text>
+                  </View>
+                  <View style={[styles.assetStatus, ok ? styles.assetStatusOk : styles.assetStatusPending]}>
+                    <Text style={[styles.assetStatusText, ok ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>
+                      {ok ? 'Em dia' : 'Checkup'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })
+          )}
         </View>
 
         <Text style={styles.secTitle}>Notificações</Text>
@@ -205,17 +233,17 @@ export default function ProfileScreen() {
           </Pressable>
 
           {marketing &&
-            CATEGORIES.map((p, i, arr) => (
+            CATEGORIES.map((c, i, arr) => (
               <Pressable
-                key={p.key}
+                key={c.key}
                 style={[styles.prefRow, styles.prefRowSub, i === arr.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => togglePref(p.key)}
+                onPress={() => togglePref(c.prefKey)}
                 disabled={!client}
                 accessibilityRole="switch"
-                accessibilityState={{ checked: prefs[p.key] }}
+                accessibilityState={{ checked: prefs[c.prefKey] }}
               >
-                <Text style={styles.prefLabel}>{p.label}</Text>
-                <Toggle on={prefs[p.key]} />
+                <Text style={styles.prefLabel}>{c.fullName}</Text>
+                <Toggle on={prefs[c.prefKey]} />
               </Pressable>
             ))}
         </View>
@@ -310,7 +338,7 @@ const styles = StyleSheet.create({
   secTitle: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 1.6, color: colors.inkMuted, textTransform: 'uppercase', marginHorizontal: 18, marginTop: 22, marginBottom: 10 },
   assetList: { paddingHorizontal: 18, gap: 8 },
   assetRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, padding: 10 },
-  assetThumb: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline },
+  assetThumb: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden', backgroundColor: colors.panel2 },
   assetText: { flex: 1 },
   assetName: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink },
   assetSub: { fontFamily: fonts.body, fontSize: 9.5, color: colors.inkFaint, marginTop: 1 },
@@ -320,6 +348,9 @@ const styles = StyleSheet.create({
   assetStatusText: { fontFamily: fonts.eyebrow, fontSize: 7, letterSpacing: 0.6, textTransform: 'uppercase' },
   assetStatusTextOk: { color: colors.ok },
   assetStatusTextPending: { color: colors.goldBright },
+  assetEmpty: { borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, padding: 14, gap: 4, alignItems: 'center' },
+  assetEmptyTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.inkMuted, textAlign: 'center' },
+  assetEmptyDesc: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 15, color: colors.inkFaint, textAlign: 'center' },
   prefList: { paddingHorizontal: 18 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.hairline },
   prefRowSub: { paddingLeft: 14, paddingVertical: 9 },

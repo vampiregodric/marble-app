@@ -1,7 +1,11 @@
 #!/usr/bin/env node
-// Verifica que a config do .env chega ao Firestore de dev e que as regras
-// publicadas são as esperadas: `works` e `events` legíveis sem login,
-// `clients` bloqueado. Usa o SDK de cliente (o mesmo que a app), sem chave.
+// Verifica que a config do .env chega ao Firestore de dev e que as regras e
+// índices publicados são os esperados, usando o SDK de cliente (o mesmo que
+// a app), sem chave nem login:
+//   - `works` publicados legíveis; a query da app (published + orderBy) tem
+//     índice; rascunhos e a coleção inteira sem filtro são recusados;
+//   - `events` legíveis;
+//   - `clients` bloqueado.
 //
 // Uso:  npm run check:firestore
 
@@ -9,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebase/firestore';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const env = Object.fromEntries(
@@ -28,24 +32,67 @@ const app = initializeApp({
 const db = getFirestore(app);
 let ok = true;
 
+const pass = (msg) => console.log(`  OK   ${msg}`);
+const fail = (msg) => {
+  ok = false;
+  console.log(`  ERRO ${msg}`);
+};
+
 console.log(`Projeto: ${env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}`);
 
-for (const name of ['works', 'events']) {
-  try {
-    const snap = await getDocs(collection(db, name));
-    console.log(`  ${name}: OK — ${snap.size} doc(s): ${snap.docs.map((d) => d.id).join(', ')}`);
-  } catch (e) {
-    ok = false;
-    console.log(`  ${name}: ERRO — ${e.code ?? e.message}`);
-  }
+// 1. A query do Portfólio (regras + índice composto published/completedAt).
+try {
+  const snap = await getDocs(query(collection(db, 'works'), where('published', '==', true), orderBy('completedAt', 'desc')));
+  pass(`works publicados: ${snap.size} doc(s): ${snap.docs.map((d) => d.id).join(', ')}`);
+  if (snap.docs.some((d) => d.data().published !== true)) fail('há docs não publicados na resposta!');
+} catch (e) {
+  fail(
+    `works publicados: ${e.code ?? e.message}` +
+      (e.code === 'failed-precondition' ? ' — índice em falta: npx.cmd firebase-tools deploy --only firestore:indexes --project dev' : '')
+  );
 }
 
+// 2. A query do carrossel (índice featured/published/completedAt).
+try {
+  const snap = await getDocs(
+    query(collection(db, 'works'), where('featured', '==', true), where('published', '==', true), orderBy('completedAt', 'desc'))
+  );
+  pass(`works em destaque: ${snap.size} doc(s)`);
+} catch (e) {
+  fail(`works em destaque: ${e.code ?? e.message}`);
+}
+
+// 3. Sem o filtro published, as regras têm de recusar a query toda.
+try {
+  await getDocs(collection(db, 'works'));
+  fail('works SEM filtro published é legível — as regras não são as de firestore.rules!');
+} catch (e) {
+  pass(`works sem filtro: recusado (${e.code}) — correto`);
+}
+
+// 4. Um rascunho não pode ser lido diretamente.
+try {
+  const snap = await getDoc(doc(db, 'works', 'work-draft-tesla'));
+  if (snap.exists()) fail('rascunho work-draft-tesla é legível — regras erradas');
+  else pass('rascunho work-draft-tesla: não existe (seed não corrido?) — nada a verificar');
+} catch (e) {
+  pass(`rascunho work-draft-tesla: recusado (${e.code}) — correto`);
+}
+
+// 5. Eventos públicos.
+try {
+  const snap = await getDocs(query(collection(db, 'events'), orderBy('date', 'desc')));
+  pass(`events: ${snap.size} doc(s): ${snap.docs.map((d) => d.id).join(', ')}`);
+} catch (e) {
+  fail(`events: ${e.code ?? e.message}`);
+}
+
+// 6. Clientes bloqueados sem login.
 try {
   await getDocs(collection(db, 'clients'));
-  ok = false;
-  console.log('  clients: LEGÍVEL SEM LOGIN — as regras não são as de firestore.rules!');
+  fail('clients LEGÍVEL SEM LOGIN — as regras não são as de firestore.rules!');
 } catch (e) {
-  console.log(`  clients: bloqueado sem login (${e.code}) — correto`);
+  pass(`clients: bloqueado sem login (${e.code}) — correto`);
 }
 
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');

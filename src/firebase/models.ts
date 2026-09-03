@@ -127,6 +127,10 @@ export interface AppNotification {
   title: string;
   description: string;
   read: boolean;
+  // Miniatura opcional (ex: foto do trabalho publicado). Quem cria a
+  // notificação (Secção 6 / backoffice) copia aqui o photoUrl do trabalho ou
+  // evento relacionado; a app mostra um gradiente quando está vazio.
+  photoUrl?: string;
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
