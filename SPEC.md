@@ -50,7 +50,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Quando um novo trabalho é adicionado numa categoria, os clientes com opt-in nessa categoria recebem notificação push ("Novo trabalho feito pela Marble Studios")
 
 ## Implicações técnicas identificadas (a validar)
-- Vai ser necessário um **backoffice/painel de administração** para a equipa gerir: clientes, carros/produtos, trabalhos/portfólio, notificações, lembretes automáticos
+- Vai ser necessário um **backoffice/painel de administração** para a equipa gerir: clientes, carros/produtos, trabalhos/portfólio, notificações, lembretes automáticos. **Confirmado (2026-09-03): é uma aplicação separada** da app do cliente, não faz parte deste projeto React Native — ver ROADMAP.md, Secção 5.
 - Sistema de notificações push com regras/gatilhos temporais (agendamento automático de lembretes)
 - Preferências de notificação por categoria, por cliente
 
