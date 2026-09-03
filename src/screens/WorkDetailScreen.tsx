@@ -7,6 +7,7 @@ import Photo from '../components/Photo';
 import { EmptyState, ErrorState } from '../components/ListState';
 import { BackIcon, ShareIcon, CalendarIcon, CarIcon } from '../components/Icons';
 import { useWork } from '../data/works';
+import { LOCAL_WORK_PHOTOS } from '../data/localPhotos';
 import { categoryFullName } from '../data/categories';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate } from '../utils/dates';
@@ -52,7 +53,7 @@ export default function WorkDetailScreen() {
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.hero}>
-              <Photo url={work.photoUrl} seed={work.id} />
+              <Photo url={work.photoUrl} fallback={LOCAL_WORK_PHOTOS[work.id]} seed={work.id} />
               <View style={styles.heroOverlay} />
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{categoryFullName(work.category)}</Text>

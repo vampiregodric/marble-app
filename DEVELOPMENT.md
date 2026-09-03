@@ -43,9 +43,11 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
    (`src/components/Photo.tsx`) e cai num gradiente dourado quando está
    vazio. Onde alojar as fotos decide-se com o backoffice (Secção 5); até
    lá todos os `photoUrl` do seed estão vazios (o repositório GitHub é
-   privado, não serve para alojar fotos). A foto do Jaguar continua em
-   `assets/work-jaguar-purple.jpg` para ser a primeira a carregar quando
-   houver alojamento.
+   privado, não serve para alojar fotos). Exceção transitória: a foto do
+   Jaguar vem embutida na app (`src/data/localPhotos.ts` →
+   `assets/work-jaguar-purple.jpg`) como reserva para o doc `work-example`
+   enquanto o `photoUrl` estiver vazio. Quando o backoffice preencher URLs,
+   apaga esse ficheiro e os `fallback=` nos três ecrãs.
 
 ## Autenticação (Secção 2)
 

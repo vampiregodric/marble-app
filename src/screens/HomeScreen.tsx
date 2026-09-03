@@ -19,6 +19,7 @@ import Photo from '../components/Photo';
 import PlaceholderThumb from '../components/PlaceholderThumb';
 import { useAuth } from '../auth/AuthContext';
 import { useFeaturedWorks } from '../data/works';
+import { LOCAL_WORK_PHOTOS } from '../data/localPhotos';
 import { useUnreadCount } from '../data/notifications';
 import { categoryFullName } from '../data/categories';
 import { WorkCategory } from '../firebase/models';
@@ -126,7 +127,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={w.title}
               >
-                <Photo url={w.photoUrl} seed={w.id} />
+                <Photo url={w.photoUrl} fallback={LOCAL_WORK_PHOTOS[w.id]} seed={w.id} />
                 <View style={styles.slideOverlay} />
                 <View style={styles.slideText}>
                   <Text style={styles.slideTag}>{categoryFullName(w.category)} · Concluído</Text>

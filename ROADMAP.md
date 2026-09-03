@@ -216,7 +216,10 @@ verificados por script autenticado (leitura, marcar lido permitido, outras
 escritas e outros clientes recusados). Fotos: todos os `photoUrl` do seed
 ficam vazios (gradiente) até a Secção 5 decidir o alojamento — o
 repositório GitHub passou a privado (decisão do Fábio, 2026-09-03), por
-isso não serve para servir a foto do Jaguar como chegou a servir.
+isso não serve para servir a foto do Jaguar como chegou a servir. Para o
+Jaguar continuar com foto real até lá, `src/data/localPhotos.ts` embute
+`assets/work-jaguar-purple.jpg` como reserva do doc `work-example`
+(transitório; apagar quando houver `photoUrl` reais).
 
 ### Secção 5 — Painel da equipa (backoffice)
 **Estado:** Por fazer
