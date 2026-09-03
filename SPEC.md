@@ -87,6 +87,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Ecrã de Perfil (protótipo desenhado)
 - Cabeçalho: avatar, nome, "cliente desde"
+- **Foto de perfil (confirmado 2026-09-03):** o cliente vai poder pôr a sua própria foto de perfil — é a única foto que o cliente carrega na app (as fotos de trabalhos são só da equipa, via backoffice). Ainda não está construído: o ícone de câmara no avatar é, por agora, só visual. Precisa de: escolher imagem no telemóvel, alojamento (o mesmo que a Secção 5 decidir para as fotos dos trabalhos), guardar em `clients/{uid}.avatarUrl`, e acrescentar "foto de perfil" aos dados pessoais na política de privacidade (subir `LEGAL_VERSION`). Apagar conta já remove `avatarUrl`.
 - Cartão "Ação pendente": mostra o passo atual do fluxo de acompanhamento (ex: checkup a confirmar), com CTA para agendar
 - "Os teus carros & chãos": lista de veículos/pisos associados ao cliente, cada um com estado ("Checkup pendente" / "Em dia")
 - "Preferências de notificação": toggle por categoria (Automotive Aesthetics, Epoxy Floors, Graphic Solutions)

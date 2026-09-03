@@ -260,6 +260,14 @@ para o vídeo, que é a opção mais barata). Modelo já definido em
 `photoUrl` como capa. A galeria no Detalhe da app (deslizável + leitor de
 vídeo) constrói-se assim que o backoffice conseguir carregar média, para
 ser testada com fotos reais — primeira tarefa do lado da app depois disso.
+**Foto de perfil do cliente (confirmado 2026-09-03, ver SPEC.md):** o
+alojamento escolhido aqui tem de servir também a foto de perfil que o
+cliente carrega a partir da app (a única escrita de ficheiros do lado do
+cliente — precisa de regras de upload restritas ao próprio uid e de limite
+de tamanho). Construir na app, junto com a galeria, depois desta secção:
+seletor de imagem, upload, `clients/{uid}.avatarUrl`, e atualização da
+política de privacidade (`LEGAL_VERSION`). Até lá o ícone de câmara no
+avatar do Perfil fica, de propósito, sem ação.
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
