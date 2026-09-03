@@ -2,6 +2,19 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "marble-app-phone",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": [
+        "C:\\Users\\VGodr\\Projects\\marble-app\\node_modules\\expo\\bin\\cli",
+        "start",
+        "C:\\Users\\VGodr\\Projects\\marble-app",
+        "--port",
+        "8081",
+        "--clear"
+      ],
+      "port": 8081
+    },
+    {
       "name": "marble-app-web",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web", "--port", "8083"],
