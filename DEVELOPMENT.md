@@ -216,18 +216,43 @@ precisares de testar contra prod localmente (raro, e só depois do
 lançamento), cria `.env.local` com os valores de prod — está no
 `.gitignore` e sobrepõe-se ao `.env`; apaga-o quando acabares.
 
-## Nota importante: pasta do projeto está dentro do OneDrive
+## Onde vive o projeto (e porquê)
 
-Isto causa um problema real: o Metro (o compilador do Expo) às vezes não
-deteta alterações a ficheiros guardados nesta pasta, porque o OneDrive
-interfere com a monitorização de ficheiros do Windows. Sintoma: editas um
-ficheiro, mas o que aparece no telemóvel/browser continua a versão antiga.
+`C:\Users\VGodr\Projects\marble-app` — **fora do OneDrive, de propósito.**
+Esteve dentro do OneDrive no início e o Metro (o compilador do Expo) não
+detetava alterações aos ficheiros, porque o OneDrive interfere com a
+monitorização de ficheiros do Windows. Foi movido em 2026-09-02 e o
+problema desapareceu. Nunca o movas de volta para uma pasta sincronizada
+(OneDrive/Dropbox/Google Drive). Se algum dia editares um ficheiro e a app
+continuar a mostrar a versão antiga, para o servidor (Ctrl+C) e volta a
+correr `npx expo start`.
 
-**Solução se isto acontecer:** parar o servidor (Ctrl+C) e voltar a correr
-`npx expo start`. Isso força a reler tudo do disco.
+## GitHub: cópia de segurança e trabalhar noutro computador
 
-**Solução definitiva (recomendada):** mover esta pasta para fora do
-OneDrive, por exemplo para `C:\Users\VGodr\Projects\marble-app`. Pastas de
-projetos de código não devem viver em pastas sincronizadas na cloud
-(OneDrive/Dropbox/Google Drive) — é uma prática standard, não é specific
-a este projeto.
+O repositório está em **https://github.com/vampiregodric/marble-app**
+(privado, conta `vampiregodric`). É a única cópia fora deste PC — por isso
+**cada commit tem de ser enviado**:
+
+```bash
+git push
+```
+
+O `git push` está autorizado para o Claude nas definições do projeto
+(`.claude/settings.json`), por isso cada conversa deve fazê-lo sozinha no
+fim do trabalho. Se alguma vez for bloqueado (conversa aberta antes destas
+definições existirem), corre tu o `git push` no teu PowerShell. Na primeira vez em cada
+máquina abre-se uma janela "Connect to GitHub": escolhe "Sign in with your
+browser". Se a fechares por engano e o terminal pedir `Username`, faz
+Ctrl+C e corre o push outra vez.
+
+Para continuar o trabalho **noutro computador** (o tablet só serve para
+acompanhar a conversa — não corre código):
+
+```bash
+git clone https://github.com/vampiregodric/marble-app.git
+```
+
+Depois, dentro da pasta: `npm install`, copia `.env.example` para `.env` e
+preenche com os valores do projeto `marble-studios-dev` (consola Firebase >
+Definições do projeto > Your apps). O `.env` não vem do git de propósito.
+Node.js tem de estar instalado (versão LTS).

@@ -35,7 +35,10 @@ código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
 
 ## Outras
 
-- No fim da tua secção, atualiza o estado dela no `ROADMAP.md` e faz commit
-  com uma mensagem clara do que ficou feito.
+- No fim da tua secção, atualiza o estado dela no `ROADMAP.md`, faz commit
+  com uma mensagem clara do que ficou feito, e corre **`git push`** — está
+  autorizado nas definições do projeto (`.claude/settings.json`) e o GitHub
+  é a única cópia fora deste PC (ver `DEVELOPMENT.md`). Se o push for
+  bloqueado, pede ao Fábio para o correr; não deixes trabalho só no disco.
 - O projeto vive fora do OneDrive de propósito (ver `DEVELOPMENT.md`) —
   nunca o movas de volta para lá.
