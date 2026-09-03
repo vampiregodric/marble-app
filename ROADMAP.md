@@ -251,6 +251,12 @@ aparecer o cartão "Ação pendente" no Perfil) e `lastServiceAt`; em
 decidir aqui onde ficam alojadas (Firebase Storage exige Blaze em projetos
 novos; alternativas: Cloudinary, Bunny, um bucket S3/R2) — a app só precisa
 de um URL público em `photoUrl`, e cai num gradiente quando está vazio.
+**Galeria (pedido do Fábio, 2026-09-03, ver SPEC.md):** cada trabalho vai
+ter várias fotos e vídeo, não só a capa. O backoffice precisa de upload
+múltiplo e de alojamento que aguente vídeo (ou aceitar links YouTube/Vimeo
+para o vídeo, que é a opção mais barata). Modelo previsto: `works.media[]`
+com `{ type: 'photo' | 'video', url, thumbnailUrl? }`, mantendo `photoUrl`
+como capa. A galeria no Detalhe da app faz-se quando houver alojamento.
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer

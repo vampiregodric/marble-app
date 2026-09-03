@@ -46,6 +46,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Portfólio de trabalhos
 - Cada trabalho concluído (carro, chão epóxi, ou trabalho gráfico) entra no portfólio dentro da app
+- **Galeria por trabalho (pedido 2026-09-03):** um trabalho pode ter várias fotos e vídeo (ex: 4 fotos + 1 vídeo), não só uma imagem. A foto de capa continua a ser a que aparece nos cartões do Portfólio e do carrossel; no Detalhe abre-se a galeria completa. Implicações: modelo `works.media[]` (tipo foto/vídeo, URL, miniatura), galeria deslizável + leitor de vídeo no Detalhe, e upload múltiplo no backoffice (Secção 5), que é também quem decide onde alojar fotos e vídeos.
 - Cliente tem preferências (checkboxes) para escolher que categorias de trabalho quer ser notificado: carros / chãos / gráfico
 - Quando um novo trabalho é adicionado numa categoria, os clientes com opt-in nessa categoria recebem notificação push ("Novo trabalho feito pela Marble Studios")
 
