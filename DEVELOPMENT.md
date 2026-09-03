@@ -241,6 +241,15 @@ problema desapareceu. Nunca o movas de volta para uma pasta sincronizada
 continuar a mostrar a versão antiga, para o servidor (Ctrl+C) e volta a
 correr `npx expo start`.
 
+**Depois de um `git merge` que traz ficheiros novos** (típico no fim de
+cada secção), o Metro que já estava a correr pode não os ver e a app no
+telemóvel mostra um ecrã vermelho "Unable to resolve module ...". Não é
+erro no código: para o servidor (Ctrl+C) e arranca com a cache limpa:
+
+```bash
+npx.cmd expo start --clear
+```
+
 ## GitHub: cópia de segurança e trabalhar noutro computador
 
 O repositório está em **https://github.com/vampiregodric/marble-app**
