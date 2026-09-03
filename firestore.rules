@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore — Marble Studios.
+//
+// Estado: escritas do cliente estão todas fechadas por agora (false) porque a
+// Secção 2 (autenticação) ainda não está construída — só a equipa (via
+// backoffice/Admin SDK, que ignora estas regras) e o script de seed escrevem
+// dados por enquanto. Quando a Secção 2 ligar o login, revê "clients",
+// "vehicles" e "notifications" para permitir que cada cliente giria os seus
+// próprios dados (uid == clientId).
+//
+// Deploy: npx firebase-tools deploy --only firestore:rules --project dev
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Portfólio e eventos são conteúdo público de marketing — visíveis sem login.
+    match /works/{workId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Dados do cliente — só o próprio (depois da Secção 2 ligar o Auth).
+    match /clients/{clientId} {
+      allow read, update: if request.auth != null && request.auth.uid == clientId;
+      allow create: if request.auth != null && request.auth.uid == clientId;
+      allow delete: if false;
+    }
+
+    match /vehicles/{vehicleId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.clientId;
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.clientId;
+      allow write: if false;
+    }
+  }
+}

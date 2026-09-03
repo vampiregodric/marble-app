@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase service account keys (usadas pelo script de seed) — NUNCA commitar
+serviceAccountKey*.json
+
 # typescript
 *.tsbuildinfo
 

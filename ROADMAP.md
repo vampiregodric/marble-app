@@ -50,7 +50,10 @@ Cada secção abaixo está pensada para ser atacada isoladamente. As que têm
 podem avançar em qualquer ordem ou em paralelo (conversas diferentes).
 
 ### Secção 1 — Firebase & modelo de dados
-**Estado:** Por fazer
+**Estado:** Em progresso — infraestrutura de código pronta, falta criar os
+projetos Firebase reais (passo manual, ver `DEVELOPMENT.md` → "Firebase: os
+dois projetos"). Depois de criados e do `.env`/`.env.production` preenchidos,
+esta secção fica completa.
 **Depende de:** nada — pode começar já
 **Objetivo:** Criar **dois** projetos Firebase — um de desenvolvimento
 (`marble-studios-dev` ou semelhante) e um de produção (`marble-studios-prod`)
@@ -64,6 +67,16 @@ a estrutura de coleções: `clients`, `vehicles` (carro/chão, ligado a um
 **Critério de conclusão:** app liga-se ao Firebase de dev sem erros;
 coleções criadas na consola com pelo menos um documento de exemplo em
 cada; projeto de produção existe mas fica "vazio" até ao lançamento.
+**Nota (2026-09-03):** construído nesta sessão —
+`src/firebase/config.ts` agora lê `EXPO_PUBLIC_FIREBASE_*` de `.env`
+(dev) / `.env.production` (prod) em vez de valores fixos; modelo de dados
+TypeScript das 5 coleções em `src/firebase/models.ts`; `firestore.rules` +
+`firestore.indexes.json` + `firebase.json` + `.firebaserc` (aliases `dev`/
+`prod`) prontos para deploy via CLI; script `npm run seed -- <chave.json>`
+(`scripts/seed-firestore.mjs`) para popular um documento de exemplo por
+coleção via Firebase Admin SDK. Falta só o passo manual: criar os dois
+projetos na consola Firebase e colar a config real nos `.env*` — ver
+`DEVELOPMENT.md`.
 
 ### Secção 2 — Autenticação de cliente
 **Estado:** Por fazer
