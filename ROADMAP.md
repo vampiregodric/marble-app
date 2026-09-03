@@ -224,7 +224,7 @@ Jaguar continuar com foto real até lá, `src/data/localPhotos.ts` embute
 ### Secção 5 — Painel da equipa (backoffice)
 **Estado:** Feito (2026-09-03). Backoffice web em
 `C:\Users\VGodr\Projects\marble-backoffice` (repositório próprio,
-`vampiregodric/marble-backoffice`), publicado em
+https://github.com/vampiregodric/marble.backoffice), publicado em
 https://marble-studios-backoffice-dev.web.app. Ver "Decisões" e "Nota" no
 fim desta secção.
 **Depende de:** Secção 1
