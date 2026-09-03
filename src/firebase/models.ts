@@ -38,6 +38,17 @@ export interface Client {
   phone?: string;
   avatarUrl?: string;
   clientSince: Timestamp;
+  // Preenchido pelo backoffice (Secção 5) em fichas criadas pela equipa
+  // para clientes SEM conta na app (o ID do doc é aleatório, não é um uid).
+  // Ausente nos docs criados pela app no registo. Estes clientes não veem
+  // alertas — não têm onde os ler.
+  createdByTeam?: boolean;
+  // Notas internas da equipa (só o backoffice lê e escreve).
+  notes?: string;
+  // Presente quando a equipa juntou esta ficha (sem conta) à conta da app
+  // do mesmo cliente: carros, trabalhos e alertas passaram para `mergedInto`
+  // e este doc ficou anonimizado com `deletedAt`. Ver backoffice.
+  mergedInto?: string;
   // Sub-preferências de MARKETING por categoria: que novidades do portfólio
   // interessam ao cliente. Só contam quando `consent.marketing` é true —
   // sem esse opt-in não se envia nada de marketing, seja qual for o valor
@@ -68,10 +79,13 @@ export interface Vehicle {
   type: VehicleType;
   name: string; // ex: "BMW M4 — PPF Colorido"
   model?: string; // ex: "BMW M4"
+  // Matrícula (carros). Só a equipa vê; a app não a mostra.
+  plate?: string;
   lastServiceAt?: Timestamp;
   checkupStatus: CheckupStatus;
   photoUrl?: string;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface WorkProduct {
@@ -89,6 +103,9 @@ export interface WorkMedia {
   thumbnailUrl?: string;
   // Ordem na galeria (0 = primeiro).
   order?: number;
+  // ID do ficheiro no alojamento (Cloudinary), para o backoffice conseguir
+  // gerar variantes e, um dia, apagar. A app não precisa dele.
+  publicId?: string;
 }
 
 // Um trabalho concluído, publicado no Portfólio.
@@ -109,9 +126,14 @@ export interface Work {
   products: WorkProduct[];
   // Curadoria manual da equipa para o carrossel do Início (ver SPEC.md).
   featured: boolean;
+  // Posição no carrossel do Início (0 = primeiro). Definida no ecrã
+  // "Destaques" do backoffice. OBRIGATÓRIA quando `featured` é true: a app
+  // ordena o carrossel por este campo e o Firestore exclui docs sem ele.
+  featuredOrder?: number;
   published: boolean;
   completedAt: Timestamp;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface MarbleEvent {
@@ -121,6 +143,7 @@ export interface MarbleEvent {
   date: Timestamp;
   photoUrl?: string;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export type NotificationType =
@@ -128,6 +151,7 @@ export type NotificationType =
   | 'offer' // +1 mês, lavagem grátis — MARKETING, exige consent.marketing
   | 'new_work' // novo trabalho na categoria com opt-in — MARKETING, exige consent.marketing
   | 'event_reminder' // MARKETING, exige consent.marketing
+  | 'message' // mensagem direta da equipa sobre o serviço do cliente (backoffice) — OPERACIONAL
   | 'team_alert'; // alerta interno à equipa (cliente não confirmou checkup) — Secção 6
 
 // Tipos que só podem ser enviados com consent.marketing === true.

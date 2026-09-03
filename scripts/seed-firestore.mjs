@@ -79,6 +79,9 @@ async function seed() {
     name: 'Fábio Pombinho',
     email: 'exemplo@marblestudios.pt',
     phone: '',
+    // Ficha criada pela equipa, sem conta na app (Secção 5): o backoffice
+    // marca-a assim e sabe que não lhe pode enviar alertas.
+    createdByTeam: true,
     clientSince: on('2026-03-01'),
     notificationPrefs: { automotive: true, epoxy: true, graphic: false },
     consent: {
@@ -116,8 +119,9 @@ async function seed() {
   };
   for (const [id, data] of Object.entries(vehicles)) batch.set(db.collection('vehicles').doc(id), data);
 
-  // --- works: 7 publicados nas 3 categorias (3 em destaque no carrossel) + 1
-  // rascunho que NÃO pode aparecer na app (testa as regras).
+  // --- works: 7 publicados nas 3 categorias (3 em destaque no carrossel, com
+  // `featuredOrder` — a app ordena o carrossel por ele) + 1 rascunho que NÃO
+  // pode aparecer na app (testa as regras).
   const works = {
     'work-example': {
       title: 'Jaguar F-Type — Vinil Roxo Metálico',
@@ -131,6 +135,7 @@ async function seed() {
       ],
       photoUrl: JAGUAR_PHOTO,
       featured: true,
+      featuredOrder: 0,
       published: true,
       completedAt: on('2026-08-30'),
     },
@@ -147,6 +152,7 @@ async function seed() {
         { brand: 'Xtreme Polishing Systems', item: 'Topcoat UV' },
       ],
       featured: true,
+      featuredOrder: 1,
       published: true,
       completedAt: on('2026-08-29'),
     },
@@ -171,6 +177,7 @@ async function seed() {
         'Nova identidade visual aplicada em 12 viaturas: design, impressão e aplicação de vinil. Cores e tipografia alinhadas com o novo logótipo da empresa cliente.',
       products: [{ brand: 'Avery Dennison', item: 'Vinil de impressão MPI 1105' }],
       featured: true,
+      featuredOrder: 2,
       published: true,
       completedAt: on('2026-08-24'),
     },
@@ -212,6 +219,7 @@ async function seed() {
       description: 'Ainda não publicado — não pode aparecer na app.',
       products: [],
       featured: true,
+      featuredOrder: 3,
       published: false,
       completedAt: on('2026-09-02'),
     },

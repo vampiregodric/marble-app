@@ -47,20 +47,23 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 2. **Autenticação** — feito (2026-09-03): ver "Autenticação" abaixo.
 3. **Ligar os ecrãs ao Firestore** — feito (2026-09-03): ver "Dados reais"
    abaixo.
-4. **Painel da equipa (backoffice)** — ainda não desenhado nem construído.
-   É a próxima secção; é quem vai criar trabalhos, eventos, carros/chãos e
-   alertas (a app só lê, exceto marcar alertas como lidos).
+4. **Painel da equipa (backoffice)** — feito (2026-09-03): projeto
+   separado em `C:\Users\VGodr\Projects\marble-backoffice`, publicado em
+   https://marble-studios-backoffice-dev.web.app. Ver "Backoffice" abaixo.
 5. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
    automáticos (checkup 1 semana depois, etc.) ainda por implementar.
 6. **Fotos reais** — a app mostra qualquer URL público em `photoUrl`
    (`src/components/Photo.tsx`) e cai num gradiente dourado quando está
-   vazio. Onde alojar as fotos decide-se com o backoffice (Secção 5); até
-   lá todos os `photoUrl` do seed estão vazios (o repositório GitHub é
-   privado, não serve para alojar fotos). Exceção transitória: a foto do
+   vazio. Alojamento decidido na Secção 5: **Cloudinary** (plano gratuito),
+   com upload feito pela equipa no backoffice; a app só recebe URLs. Os
+   `photoUrl` do seed continuam vazios. Exceção transitória: a foto do
    Jaguar vem embutida na app (`src/data/localPhotos.ts` →
    `assets/work-jaguar-purple.jpg`) como reserva para o doc `work-example`
-   enquanto o `photoUrl` estiver vazio. Quando o backoffice preencher URLs,
-   apaga esse ficheiro e os `fallback=` nos três ecrãs.
+   enquanto o `photoUrl` estiver vazio. Quando a equipa carregar a foto real
+   do Jaguar no backoffice, apaga esse ficheiro e os `fallback=` nos três
+   ecrãs. A galeria (`works.media[]`) no Detalhe e a foto de perfil do
+   cliente (mesmo Cloudinary, preset `marble-avatars`) são as próximas
+   tarefas do lado da app.
 
 ## Autenticação (Secção 2)
 

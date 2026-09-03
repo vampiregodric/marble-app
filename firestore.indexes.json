@@ -14,7 +14,7 @@
       "fields": [
         { "fieldPath": "featured", "order": "ASCENDING" },
         { "fieldPath": "published", "order": "ASCENDING" },
-        { "fieldPath": "completedAt", "order": "DESCENDING" }
+        { "fieldPath": "featuredOrder", "order": "ASCENDING" }
       ]
     },
     {

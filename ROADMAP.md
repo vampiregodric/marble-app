@@ -222,7 +222,11 @@ Jaguar continuar com foto real até lá, `src/data/localPhotos.ts` embute
 (transitório; apagar quando houver `photoUrl` reais).
 
 ### Secção 5 — Painel da equipa (backoffice)
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-03). Backoffice web em
+`C:\Users\VGodr\Projects\marble-backoffice` (repositório próprio,
+`vampiregodric/marble-backoffice`), publicado em
+https://marble-studios-backoffice-dev.web.app. Ver "Decisões" e "Nota" no
+fim desta secção.
 **Depende de:** Secção 1
 **Objetivo:** Interface para a equipa da Marble Studios gerir clientes,
 carros/chãos, trabalhos (adicionar ao portfólio), eventos, e escolher o
@@ -268,6 +272,52 @@ de tamanho). Construir na app, junto com a galeria, depois desta secção:
 seletor de imagem, upload, `clients/{uid}.avatarUrl`, e atualização da
 política de privacidade (`LEGAL_VERSION`). Até lá o ícone de câmara no
 avatar do Perfil fica, de propósito, sem ação.
+**Decisões (2026-09-03, Fábio):** web responsiva instalável como PWA (sem
+app mobile); Vite + React + TypeScript com CSS próprio no tema
+preto/dourado; escrita no Firestore com o SDK de cliente + login da equipa
+com claim `admin: true` (sem servidor, sem Blaze); fotos e vídeo no
+**Cloudinary** (plano gratuito, upload unsigned direto do browser, com
+miniaturas de vídeo e redimensionamento automáticos — serve também a foto
+de perfil do cliente, preset `marble-avatars`); publicação em Firebase
+Hosting do mesmo projeto (site `marble-studios-backoffice-dev`; o prod na
+Secção 11); uma só zona de upload em que a primeira foto é a capa e
+qualquer outra pode ser promovida; ação "Juntar fichas" construída já;
+alertas manuais (lembrete de checkup, mensagem da equipa, oferta) com o
+consentimento RGPD aplicado na interface e no código.
+**Nota (2026-09-03):** construído nesta sessão. **Do lado da app:**
+`firestore.rules` ganhou `isAdmin()` (claim `admin`) — a equipa lê e
+escreve tudo, incluindo rascunhos e dados de clientes; cliente continua
+igual. `useFeaturedWorks` passou a ordenar por `featuredOrder` (novo campo,
+obrigatório quando `featured` é true — o Firestore exclui docs sem ele; o
+índice `featured+published+featuredOrder` substitui o antigo). Modelo
+ganhou `Work.featuredOrder/updatedAt`, `WorkMedia.publicId`,
+`Client.createdByTeam/notes/mergedInto`, `Vehicle.plate/updatedAt`,
+`MarbleEvent.updatedAt` e o tipo de alerta `message` (operacional, da
+equipa). Seed atualizado (featuredOrder nos destaques, `createdByTeam` no
+cliente de exemplo) e corrido no dev. `.claude/launch.json` ganhou
+`marble-backoffice-web` (porta 5180). **Backoffice:** Painel (números,
+checkups pendentes com contacto e "Enviar lembrete", alertas internos,
+últimos trabalhos), Trabalhos (lista com filtros; formulário com galeria
+drag-and-drop, capa, produtos, cliente/carro, publicado/destaque),
+Destaques (ordem do carrossel por arrastar, guardada num só batch),
+Eventos, Clientes (contas da app + fichas sem conta, detecção de
+duplicados por email/telemóvel, "Juntar fichas" que passa carros/trabalhos/
+alertas para a conta e anonimiza a ficha), ficha do cliente (dados,
+consentimentos RGPD, carros/chãos com checkup, trabalhos, alertas),
+Alertas (lista + envio manual com bloqueio de marketing sem consentimento).
+Contas da equipa via `scripts/set-admin.mjs` (cria sem password; a pessoa
+define-a com "Esqueci-me da password"); login por token só em dev
+(`scripts/dev-token.mjs`) para o Claude testar sem passwords. Admins no
+dev: v.godric@gmail.com e equipa.teste@example.com. Verificado no browser
+com dados reais do dev: login por token, painel, lista de trabalhos,
+editar trabalho com foto por URL (doc gravado com `media[]` + `photoUrl` +
+`updatedAt`), destaques (tirar/juntar/guardar ordem), e deploy para o
+Hosting dev. **Fica pendente do Fábio:** cloud name do Cloudinary (até lá a
+galeria só aceita fotos por URL) e criar o repositório GitHub privado
+`marble-backoffice`. **Próximo do lado da app:** galeria no Detalhe
+(`media[]`, deslizável + vídeo), foto de perfil do cliente (preset
+`marble-avatars`, `clients/{uid}.avatarUrl`, subir `LEGAL_VERSION`), e
+fotos reais em vez do ícone de linha nos cartões do Início.
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
@@ -291,6 +341,16 @@ apagar utilizador Auth) contas sem atividade há 3 anos
 evento relacionado para `notifications.photoUrl` (miniatura no ecrã de
 Alertas) e preencher `relatedWorkId`/`relatedEventId`/`relatedVehicleId`.
 `team_alert` nunca é mostrado ao cliente (a app filtra-o).
+**Da Secção 5:** o backoffice já cria docs em `notifications` à mão
+(`checkup_reminder`, `message`, `offer`) com as regras de consentimento
+aplicadas em `marble-backoffice/src/data/writes.ts` → `sendNotification`;
+as Cloud Functions devem gerar docs com o mesmo formato (o push é um
+acréscimo, não substitui o doc — é o doc que aparece no ecrã Alertas).
+Os `team_alert` criados aqui aparecem no Painel do backoffice com "Marcar
+como visto". Clientes com `createdByTeam: true` não têm conta na app —
+nunca lhes enviar nada. Regras: só o claim `admin` escreve em
+`notifications`; as Functions usam o Admin SDK, que passa por cima das
+regras.
 
 ### Secção 7 — Ecrã de pedido de orçamento
 **Estado:** Por fazer

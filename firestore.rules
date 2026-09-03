@@ -2,22 +2,30 @@ rules_version = '2';
 
 // Regras de segurança do Firestore — Marble Studios.
 //
+// Dois tipos de utilizador no mesmo Firebase Auth:
+// - CLIENTE: conta criada na app. Só lê o que é público ou seu; só escreve
+//   no próprio doc `clients/{uid}` e no campo `read` das suas notificações.
+// - EQUIPA (Secção 5, 2026-09-03): conta com o custom claim `admin: true`,
+//   dado pelo script `scripts/set-admin.mjs` do backoffice (Admin SDK). Lê e
+//   escreve tudo a partir do backoffice web, com o SDK de cliente — não há
+//   servidor. Ver isAdmin().
+//
 // Estado (Secção 4, 2026-09-03): os ecrãs leem dados reais.
-// - `works`: só trabalhos PUBLICADOS são legíveis. Atenção: as regras não
-//   filtram resultados — uma query em `works` TEM de incluir
-//   `where('published', '==', true)`, senão o Firestore recusa a query toda
-//   (ver src/data/works.ts). Rascunhos (published: false) ficam invisíveis
-//   para a app até a equipa os publicar no backoffice.
+// - `works`: só trabalhos PUBLICADOS são legíveis pelo cliente. Atenção: as
+//   regras não filtram resultados — uma query da app em `works` TEM de
+//   incluir `where('published', '==', true)`, senão o Firestore recusa a
+//   query toda (ver src/data/works.ts). A equipa vê também os rascunhos.
 // - `events`: públicos.
-// - `clients/{uid}`: só o próprio (uid do Auth == id do doc).
-// - `vehicles`: só o dono lê; quem escreve é a equipa (Admin SDK/backoffice).
+// - `clients/{uid}`: só o próprio (uid do Auth == id do doc) ou a equipa.
+// - `vehicles`: só o dono lê; quem escreve é a equipa.
 // - `notifications`: só o dono lê; a única alteração permitida ao cliente é
 //   marcar como lida (`read`) — nada mais muda pelo SDK de cliente.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
 // (update, já permitido) e apaga o utilizador do Auth. `delete: false`
-// mantém-se de propósito em `clients` — evita que uma sessão comprometida
-// destrua o histórico de trabalhos.
+// mantém-se de propósito em `clients`, também para a equipa — evita que uma
+// sessão comprometida destrua o histórico de trabalhos. "Juntar fichas" no
+// backoffice também anonimiza em vez de apagar.
 //
 // Deploy: npx.cmd firebase-tools deploy --only firestore:rules --project dev
 service cloud.firestore {
@@ -27,41 +35,47 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Equipa da Marble Studios (backoffice). O claim só se dá pelo Admin SDK.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
     function ownsResource() {
       return signedIn() && request.auth.uid == resource.data.clientId;
     }
 
     // Portfólio: conteúdo público de marketing, mas só depois de publicado.
     match /works/{workId} {
-      allow read: if resource.data.published == true;
-      allow write: if false;
+      allow read: if resource.data.published == true || isAdmin();
+      allow write: if isAdmin();
     }
 
     match /events/{eventId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
-    // Dados do cliente — só o próprio.
+    // Dados do cliente — só o próprio, ou a equipa.
     match /clients/{clientId} {
-      allow read, update: if signedIn() && request.auth.uid == clientId;
-      allow create: if signedIn() && request.auth.uid == clientId;
+      allow read, update: if (signedIn() && request.auth.uid == clientId) || isAdmin();
+      allow create: if (signedIn() && request.auth.uid == clientId) || isAdmin();
       allow delete: if false;
     }
 
     match /vehicles/{vehicleId} {
-      allow read: if ownsResource();
-      allow write: if false;
+      allow read: if ownsResource() || isAdmin();
+      allow write: if isAdmin();
     }
 
     match /notifications/{notificationId} {
-      allow read: if ownsResource();
-      // Só o campo `read` pode mudar (marcar como lida). Título, tipo, etc.
-      // são da equipa.
-      allow update: if ownsResource()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
-        && request.resource.data.read is bool;
-      allow create, delete: if false;
+      allow read: if ownsResource() || isAdmin();
+      // Cliente: só o campo `read` pode mudar (marcar como lida). Título,
+      // tipo, etc. são da equipa.
+      allow update: if isAdmin()
+        || (ownsResource()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read is bool);
+      allow create, delete: if isAdmin();
     }
   }
 }

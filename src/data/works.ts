@@ -19,7 +19,10 @@ export function usePublishedWorks(): ListState<Work> {
   return useFirestoreList<Work>(q);
 }
 
-// Destaques escolhidos pela equipa para o carrossel do Início.
+// Destaques escolhidos pela equipa para o carrossel do Início, na ordem que
+// ela definiu no ecrã "Destaques" do backoffice (`featuredOrder`, 0 =
+// primeiro). O Firestore exclui docs sem esse campo — o backoffice garante
+// que todo o trabalho em destaque o tem.
 export function useFeaturedWorks(max = 5): ListState<Work> {
   const q = useMemo(
     () =>
@@ -27,7 +30,7 @@ export function useFeaturedWorks(max = 5): ListState<Work> {
         worksCol,
         where('featured', '==', true),
         where('published', '==', true),
-        orderBy('completedAt', 'desc'),
+        orderBy('featuredOrder', 'asc'),
         limit(max)
       ),
     [max]
