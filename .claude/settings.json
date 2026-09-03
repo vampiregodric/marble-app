@@ -5,7 +5,26 @@
   "permissions": {
     "allow": [
       "Bash(git push)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(npx.cmd firebase-tools deploy --project dev *)",
+      "PowerShell(npx.cmd firebase-tools deploy --only firestore --project dev)",
+      "PowerShell(npx.cmd firebase-tools deploy --only firestore:rules --project dev)",
+      "PowerShell(npx.cmd firebase-tools deploy --only firestore:indexes --project dev)",
+      "PowerShell(npm.cmd run seed *)",
+      "PowerShell(npm.cmd run check:firestore*)",
+      "PowerShell(node scripts/seed-firestore.mjs *)",
+      "PowerShell(node scripts/check-firestore*)",
+      "Bash(npm run seed *)",
+      "Bash(npm run check:firestore*)",
+      "Bash(node scripts/seed-firestore.mjs *)",
+      "Bash(node scripts/check-firestore*)"
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Deploying Firestore rules and indexes to the DEV Firebase project of this repo (`firebase-tools deploy ... --project dev`, project id marble-studios-dev, config in firebase.json/.firebaserc) is routine and safe. Deploys to `--project prod` are NOT covered and still need the user.",
+      "Running this repo's own scripts scripts/seed-firestore.mjs, scripts/check-firestore.mjs and scripts/check-firestore-auth.mjs against the dev project with serviceAccountKey.dev.json is safe, including the `--client <email>` flag: it only relabels test fixtures in the dev database with an email the user supplied in chat."
     ]
   }
 }
