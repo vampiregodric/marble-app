@@ -36,7 +36,12 @@ export default function PortfolioScreen() {
         <Text style={styles.subtitle}>{WORKS.length} trabalhos publicados</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ gap: 8 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsRow}
+        contentContainerStyle={styles.chipsRowContent}
+      >
         {CATEGORIES.map((c) => (
           <Pressable key={c} onPress={() => setActive(c)} style={[styles.chip, active === c && styles.chipActive]}>
             <Text style={[styles.chipText, active === c && styles.chipTextActive]}>{c}</Text>
@@ -44,7 +49,7 @@ export default function PortfolioScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.gridScroll} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         {filtered.map((w) => (
           <Pressable
             key={w.id}
@@ -72,11 +77,13 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8 },
   title: { fontFamily: fonts.bodyExtraBold, fontSize: 21, color: colors.ink },
   subtitle: { fontFamily: fonts.body, fontSize: 11, color: colors.inkFaint, marginTop: 3 },
-  chipsRow: { marginTop: 14, paddingLeft: 20 },
-  chip: { borderWidth: 1, borderColor: colors.hairline, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
+  chipsRow: { flexGrow: 0, flexShrink: 0, height: 40, marginTop: 14, paddingLeft: 20 },
+  chipsRowContent: { alignItems: 'center', gap: 8 },
+  chip: { alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.hairline, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
   chipActive: { backgroundColor: colors.gold, borderColor: colors.gold },
   chipText: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.8, color: colors.inkMuted, textTransform: 'uppercase' },
   chipTextActive: { color: '#0b0a08', fontFamily: fonts.bodyBold },
+  gridScroll: { flex: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 18, paddingBottom: 32 },
   card: { height: 148, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline },
   cardOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
