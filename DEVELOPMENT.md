@@ -170,9 +170,18 @@ npx.cmd firebase-tools deploy --only firestore --project dev
 ```
 
 (publica regras e índices de uma vez; troca `dev` por `prod` para o outro
-projeto — os aliases estão em `.firebaserc`). Nota: o Claude Code em modo
-automático não pode correr deploys — corre tu este comando no teu
-PowerShell. Os índices demoram 1 a 3 minutos a construir.
+projeto — os aliases estão em `.firebaserc`). Os índices demoram 1 a 3
+minutos a construir.
+
+**O Claude pode fazer isto sozinho no dev** (desde 2026-09-03): as
+definições do projeto (`.claude/settings.json`, `permissions.allow`)
+autorizam o deploy para `--project dev`, o seed (`npm run seed`, incluindo
+`--client email`) e os scripts `check:firestore*`, na ferramenta PowerShell
+(no Bash do Claude o `node` não está no PATH). A secção `autoMode.allow` do
+mesmo ficheiro explica ao classificador do modo automático porque é que
+isso é seguro. Deploys para **prod** continuam a pedir-te confirmação, de
+propósito. Se uma conversa aberta antes destas regras existirem for
+bloqueada, corre tu o comando no teu PowerShell.
 
 Para confirmar que tudo está ligado (config do `.env` + regras):
 
