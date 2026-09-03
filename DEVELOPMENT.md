@@ -22,9 +22,10 @@ screen). Ainda não há ligação real à base de dados.
 
 ## Por fazer a seguir
 
-1. **Firebase real** — falta só criar os dois projetos na consola (ver secção
-   abaixo, "Firebase: os dois projetos"). O resto (config por variáveis de
-   ambiente, modelo de dados, regras, script de seed) já está pronto.
+1. **Firebase real** — feito (2026-09-03): `marble-studios-dev` e
+   `marble-studios-prod` existem, com Firestore (`eur3`, production mode) e
+   Auth (email/password) ativos; config nos `.env` / `.env.production`.
+   Ver "Firebase: os dois projetos" abaixo para o que falta (regras + seed).
 2. **Ligar os ecrãs ao Firestore** — substituir os arrays de exemplo por
    queries reais (Secção 4 do `ROADMAP.md`).
 3. **Painel da equipa (backoffice)** — ainda não desenhado nem construído.
@@ -36,40 +37,39 @@ screen). Ainda não há ligação real à base de dados.
 
 ## Firebase: os dois projetos
 
-Isto é um passo manual — precisa da tua conta Google, não pode ser feito
-por automação. Demora uns 5 minutos por projeto. Repete para os dois:
+| | dev | prod |
+|---|---|---|
+| Project ID | `marble-studios-dev` | `marble-studios-prod` |
+| Firestore | `(default)`, `eur3`, production mode | idem |
+| Auth | Email/Password | Email/Password |
+| App web | "Marble Studios App" | "Marble Studios App" |
+| Config | `.env` | `.env.production` |
+| Analytics / Gemini / Dev Program | desligados | desligados |
 
-1. Vai a https://console.firebase.google.com e clica "Add project" /
-   "Adicionar projeto".
-2. Nome sugerido: `marble-studios-dev` para o primeiro, `marble-studios-prod`
-   para o segundo (se o nome já estiver ocupado globalmente, o Firebase
-   sugere um ID alternativo — usa esse e atualiza `.firebaserc`).
-3. Google Analytics: opcional, podes desativar para simplificar.
-4. Depois de criado: **Build > Firestore Database > Create database**.
-   - Região recomendada: uma região europeia (ex: `eur3` multi-region ou
-     `europe-west1`/`europe-west4`) — os dados são de clientes na UE
-     (RGPD, ver Secção 3 do `ROADMAP.md`). Evita `us-central` por defeito.
-   - Modo: "Start in test mode" está bem por agora (expira em 30 dias;
-     `firestore.rules` já tem as regras reais prontas para deploy quando a
-     Secção 2 ligar o login).
-5. **Build > Authentication > Get started** e ativa pelo menos o provedor
-   "Email/Password" (a Secção 2 trata do ecrã de login).
-6. **Definições do projeto (engrenagem) > Geral > As tuas apps > Web (`</>`)**
-   — regista uma app web (nome: "Marble Studios App"), copia os 6 valores
-   (`apiKey`, `authDomain`, `projectId`, `storageBucket`,
-   `messagingSenderId`, `appId`) para:
-   - `.env` se for o projeto **dev**
-   - `.env.production` se for o projeto **prod**
-7. Atualiza `.firebaserc` com os IDs reais dos projetos se forem diferentes
-   de `marble-studios-dev` / `marble-studios-prod`.
+Conta Google dona dos dois: `v.godric@gmail.com`. Se um dia a Marble
+Studios tiver conta Google própria, adiciona-a como Owner em
+**Definições do projeto > Users and permissions** nos dois projetos.
 
-Depois de fazeres isto para o projeto **dev**, corre `npx expo start --web`
-— a app deve arrancar sem o erro "Config do Firebase em falta".
+Ambos foram criados em **production mode** (tudo negado por defeito) — não
+há janela de 30 dias de base de dados aberta. As regras reais estão em
+`firestore.rules` e fazem-se deploy assim:
+
+```bash
+npx firebase-tools login
+```
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project dev
+```
+
+(troca `dev` por `prod` para o outro projeto; os aliases estão em
+`.firebaserc`).
 
 ### Popular com dados de exemplo
 
 Para o critério de conclusão da Secção 1 ("pelo menos um documento de
-exemplo em cada coleção"), a forma mais rápida é o script de seed:
+exemplo em cada coleção"), usa o script de seed — precisa de uma chave de
+service account porque as regras negam escritas de cliente:
 
 ```bash
 # 1. Descarrega uma chave de service account:
@@ -80,9 +80,16 @@ exemplo em cada coleção"), a forma mais rápida é o script de seed:
 npm run seed -- ./serviceAccountKey.dev.json
 ```
 
-Repete com a chave do projeto `prod` se quiseres confirmar que também
-funciona lá (o roadmap diz para o deixar "vazio" até ao lançamento, mas
-testar uma vez que liga sem erros é razoável).
+Não faças seed do `prod` — o roadmap diz para o deixar vazio até ao
+lançamento (Secção 11).
+
+### Trocar entre dev e prod
+
+Nunca à mão. `npx expo start` lê sempre `.env` (dev). Só uma build de
+produção (`eas build --profile production`) lê `.env.production`. Se
+precisares de testar contra prod localmente (raro, e só depois do
+lançamento), cria `.env.local` com os valores de prod — está no
+`.gitignore` e sobrepõe-se ao `.env`; apaga-o quando acabares.
 
 ## Nota importante: pasta do projeto está dentro do OneDrive
 

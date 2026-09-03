@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "marble-app-web",
-      "runtimeExecutable": "C:\\Program Files\\nodejs\\npx.cmd",
-      "runtimeArgs": ["expo", "start", "--web"],
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web"],
       "port": 8081
     }
   ]

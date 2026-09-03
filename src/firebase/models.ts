@@ -14,6 +14,10 @@ export const COLLECTIONS = {
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
 
 export interface Client {
+  // IMPORTANTE: o ID do documento em `clients` TEM de ser o `uid` do Firebase
+  // Auth (não um ID aleatório). As regras em firestore.rules dependem disso
+  // (request.auth.uid == clientId). A Secção 2 deve criar o doc com
+  // setDoc(doc(db, 'clients', user.uid), ...).
   id: string;
   name: string;
   email: string;

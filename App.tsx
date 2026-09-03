@@ -13,6 +13,8 @@ import {
 } from '@expo-google-fonts/manrope';
 import { colors } from './src/theme/theme';
 import RootNavigator from './src/navigation/RootNavigator';
+// Inicializa o Firebase no arranque (lê .env). Falha cedo se a config faltar.
+import './src/firebase/config';
 
 export default function App() {
   const [fontsLoaded] = useFonts({

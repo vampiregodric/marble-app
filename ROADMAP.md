@@ -50,10 +50,12 @@ Cada secção abaixo está pensada para ser atacada isoladamente. As que têm
 podem avançar em qualquer ordem ou em paralelo (conversas diferentes).
 
 ### Secção 1 — Firebase & modelo de dados
-**Estado:** Em progresso — infraestrutura de código pronta, falta criar os
-projetos Firebase reais (passo manual, ver `DEVELOPMENT.md` → "Firebase: os
-dois projetos"). Depois de criados e do `.env`/`.env.production` preenchidos,
-esta secção fica completa.
+**Estado:** Quase feito — os dois projetos Firebase existem e a app liga-se
+ao de dev sem erros. Faltam dois passos que precisam do login do Fábio
+(ver `DEVELOPMENT.md` → "Firebase: os dois projetos"): (1) deploy das
+regras com `npx firebase-tools deploy --only firestore:rules --project dev`
+e (2) `npm run seed -- ./serviceAccountKey.dev.json` para criar o documento
+de exemplo em cada coleção. Feitos esses dois, marca "Feito".
 **Depende de:** nada — pode começar já
 **Objetivo:** Criar **dois** projetos Firebase — um de desenvolvimento
 (`marble-studios-dev` ou semelhante) e um de produção (`marble-studios-prod`)
@@ -74,9 +76,12 @@ TypeScript das 5 coleções em `src/firebase/models.ts`; `firestore.rules` +
 `firestore.indexes.json` + `firebase.json` + `.firebaserc` (aliases `dev`/
 `prod`) prontos para deploy via CLI; script `npm run seed -- <chave.json>`
 (`scripts/seed-firestore.mjs`) para popular um documento de exemplo por
-coleção via Firebase Admin SDK. Falta só o passo manual: criar os dois
-projetos na consola Firebase e colar a config real nos `.env*` — ver
-`DEVELOPMENT.md`.
+coleção via Firebase Admin SDK. Projetos `marble-studios-dev` e
+`marble-studios-prod` criados na consola (Firestore `eur3` em production
+mode, Auth email/password, app web registada, Analytics/Gemini desligados);
+config real já nos `.env` / `.env.production`; `App.tsx` importa
+`src/firebase/config` no arranque. Verificado: `npx expo start --web`
+carrega o `.env` e a app arranca sem erros de Firebase.
 
 ### Secção 2 — Autenticação de cliente
 **Estado:** Por fazer
@@ -129,12 +134,22 @@ projeto novo/próprio, a apontar ao mesmo Firebase.
 computador da loja) ou também mobile? A recomendação é começar por web —
 a equipa provavelmente vai gerir isto de um computador, não em
 movimento, e web evita duplicar trabalho de UI numa fase inicial.
+**Nota técnica (da Secção 1):** `firestore.rules` tem `write: if false`
+em `works`, `events`, `vehicles` e `notifications`. Isso só funciona se o
+backoffice escrever via Admin SDK (servidor/Cloud Functions). Se for uma
+app web com login da equipa a usar o SDK de cliente, é preciso dar um
+*custom claim* `admin: true` aos utilizadores da equipa (via Admin SDK ou
+Cloud Function) e alterar as regras para
+`allow write: if request.auth.token.admin == true`.
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
 **Depende de:** Secção 1, Secção 3 (consentimento), Secção 4
-**Objetivo:** Firebase Cloud Messaging + Cloud Functions (ou scheduler
-equivalente) para o fluxo descrito no SPEC.md: +1 semana após um trabalho
+**Objetivo:** Cloud Functions com scheduler para o fluxo descrito no
+SPEC.md (**nota:** o SDK `firebase` JS instalado só faz FCM na web; em
+iOS/Android o caminho com Expo é `expo-notifications` + Expo Push Service,
+disparado a partir das Cloud Functions. Cloud Functions exigem o plano
+Blaze — cartão associado, custo ~€0 a este volume): +1 semana após um trabalho
 → lembrete de checkup; sem confirmação → alerta interno à equipa; +1 mês
 → oferta automática (lavagem grátis para carros, inspeção/manutenção
 para chãos — **por confirmar com o Fábio**, ver SPEC.md). Respeitar
