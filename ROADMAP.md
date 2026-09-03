@@ -119,6 +119,10 @@ fiscais) — isto cobre a parte de proteção de dados pessoais na app, não
 Pode ser dividido ainda mais (ex: "Secção 4a — Portfólio real",
 "Secção 4b — Perfil real") se uma conversa não chegar para os 6.
 **Nota:** este é o maior bloco de trabalho — vale a pena fatiar por ecrã.
+**Decisão (2026-09-03):** quando houver fotos reais, os cartões dos
+departamentos no Início (`HomeScreen.tsx`) passam a mostrar uma foto de
+cada área em vez do ícone de linha atual — o Fábio lê ícones de linha como
+"feito por IA" (ver regra 5 no `CLAUDE.md`).
 
 ### Secção 5 — Painel da equipa (backoffice)
 **Estado:** Por fazer
