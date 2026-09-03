@@ -79,6 +79,18 @@ export interface WorkProduct {
   item: string;
 }
 
+// Um item da galeria de um trabalho (pedido do Fábio, 2026-09-03: um
+// trabalho pode ter várias fotos e vídeo). A equipa carrega-os no backoffice
+// (Secção 5), que também decide o alojamento. `thumbnailUrl` é obrigatório
+// para vídeo (a app mostra a miniatura e só carrega o vídeo ao tocar).
+export interface WorkMedia {
+  type: 'photo' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  // Ordem na galeria (0 = primeiro).
+  order?: number;
+}
+
 // Um trabalho concluído, publicado no Portfólio.
 export interface Work {
   id: string;
@@ -88,7 +100,12 @@ export interface Work {
   vehicleId?: string;
   model?: string;
   description: string;
+  // Capa: aparece nos cartões do Portfólio e no carrossel do Início.
   photoUrl?: string;
+  // Galeria completa, mostrada no Detalhe (ainda não construída na app —
+  // fica para quando o backoffice conseguir carregar média). Ausente ou
+  // vazio = só a capa.
+  media?: WorkMedia[];
   products: WorkProduct[];
   // Curadoria manual da equipa para o carrossel do Início (ver SPEC.md).
   featured: boolean;
