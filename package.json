@@ -33,7 +33,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "seed": "node scripts/seed-firestore.mjs"
+    "seed": "node scripts/seed-firestore.mjs",
+    "check:firestore": "node scripts/check-firestore.mjs"
   },
   "private": true
 }

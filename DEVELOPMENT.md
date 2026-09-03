@@ -7,6 +7,10 @@ npx expo start --web      # preview no browser
 npx expo start            # QR code para abrir na app Expo Go (Android/iOS)
 ```
 
+**Se o PowerShell disser "running scripts is disabled on this system"**:
+usa `npx.cmd` em vez de `npx` (ex: `npx.cmd expo start --web`). O `.cmd`
+contorna a política de execução sem mexer em definições do Windows.
+
 ## Estado atual (fase MVP — UI com dados de exemplo)
 
 Ecrãs construídos e verificados a renderizar corretamente:
@@ -52,18 +56,26 @@ Studios tiver conta Google própria, adiciona-a como Owner em
 
 Ambos foram criados em **production mode** (tudo negado por defeito) — não
 há janela de 30 dias de base de dados aberta. As regras reais estão em
-`firestore.rules` e fazem-se deploy assim:
+`firestore.rules`; estão publicadas no **dev** (2026-09-03). O **prod**
+ainda tem as regras iniciais de production mode (tudo negado) — publica lá
+na Secção 11, antes do lançamento.
+
+O Firebase CLI já está autenticado nesta máquina (`v.godric@gmail.com`).
+Sempre que mudares `firestore.rules`:
 
 ```bash
-npx firebase-tools login
-```
-
-```bash
-npx firebase-tools deploy --only firestore:rules --project dev
+npx.cmd firebase-tools deploy --only firestore:rules --project dev
 ```
 
 (troca `dev` por `prod` para o outro projeto; os aliases estão em
-`.firebaserc`).
+`.firebaserc`). Nota: o Claude Code em modo automático não pode correr
+deploys — corre tu este comando no teu PowerShell.
+
+Para confirmar que tudo está ligado (config do `.env` + regras):
+
+```bash
+npm run check:firestore
+```
 
 ### Popular com dados de exemplo
 

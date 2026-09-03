@@ -50,12 +50,10 @@ Cada secção abaixo está pensada para ser atacada isoladamente. As que têm
 podem avançar em qualquer ordem ou em paralelo (conversas diferentes).
 
 ### Secção 1 — Firebase & modelo de dados
-**Estado:** Quase feito — os dois projetos Firebase existem e a app liga-se
-ao de dev sem erros. Faltam dois passos que precisam do login do Fábio
-(ver `DEVELOPMENT.md` → "Firebase: os dois projetos"): (1) deploy das
-regras com `npx firebase-tools deploy --only firestore:rules --project dev`
-e (2) `npm run seed -- ./serviceAccountKey.dev.json` para criar o documento
-de exemplo em cada coleção. Feitos esses dois, marca "Feito".
+**Estado:** Feito (2026-09-03). Os dois projetos existem, a app liga-se ao
+de dev, `firestore.rules` publicadas no dev, e as 5 coleções têm um
+documento de exemplo cada. Para confirmar num novo ambiente:
+`npm run check:firestore`.
 **Depende de:** nada — pode começar já
 **Objetivo:** Criar **dois** projetos Firebase — um de desenvolvimento
 (`marble-studios-dev` ou semelhante) e um de produção (`marble-studios-prod`)
