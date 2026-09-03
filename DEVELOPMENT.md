@@ -183,9 +183,10 @@ O repositório está em **https://github.com/vampiregodric/marble-app**
 git push
 ```
 
-O Claude Code em modo automático não pode publicar para fora do PC, tal
-como não pode fazer deploys do Firebase — quando uma conversa te disser que
-commitou, corre tu o `git push` no teu PowerShell. Na primeira vez em cada
+O `git push` está autorizado para o Claude nas definições do projeto
+(`.claude/settings.json`), por isso cada conversa deve fazê-lo sozinha no
+fim do trabalho. Se alguma vez for bloqueado (conversa aberta antes destas
+definições existirem), corre tu o `git push` no teu PowerShell. Na primeira vez em cada
 máquina abre-se uma janela "Connect to GitHub": escolhe "Sign in with your
 browser". Se a fechares por engano e o terminal pedir `Username`, faz
 Ctrl+C e corre o push outra vez.
