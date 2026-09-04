@@ -406,14 +406,17 @@ backoffice quando a equipa tiver vídeos reais; o preset `marble-avatars`
 ainda guarda na pasta `works` (cosmético, Fábio corrige no Cloudinary).
 
 ### Secção 6 — Notificações push automáticas
-**Estado:** Feito no código e verificado no dev (2026-09-04). Cloud
-Functions (acompanhamento por trabalho, novo trabalho, lembrete de evento,
-retenção, limpeza no Cloudinary, push), push na app com pedido de
-permissão no momento certo e abertura do ecrã certo ao tocar, backoffice
-com o plano de acompanhamento por trabalho e a coluna Push. **Pendente do
-Fábio:** ativar o Blaze no dev (deploy das Functions), segredos do
-Cloudinary, login no Expo + development build Android para ver o push
-real. Ver nota no fim.
+**Estado:** Feito (2026-09-04). Cloud Functions publicadas no dev
+(`onNotificationCreated` → push, `onWorkWritten` → novo trabalho,
+`onClientUpdated` → Cloudinary, `dailyJobs` às 10:00 de Lisboa), Blaze
+ativo, development build Android instalada no telemóvel do Fábio e **push
+real verificado** (chegou, o toque abriu os Alertas e marcou como lido).
+Backoffice com o plano de acompanhamento por trabalho e a coluna Push.
+**Pendente (não bloqueia):** os segredos do Cloudinary
+(`functions:secrets:set CLOUDINARY_API_KEY` / `_SECRET`, pelo Fábio) e
+mudar `CLOUDINARY_CLEANUP=off` → `on` em `functions/.env` + novo deploy,
+para a foto de perfil ser apagada sozinha no Cloudinary; até lá a
+`onClientUpdated` só regista nos logs. Ver nota no fim.
 **Depende de:** Secção 1, Secção 3 (consentimento), Secção 4
 **Objetivo:** Cloud Functions com scheduler para o fluxo descrito no
 SPEC.md (**nota:** o SDK `firebase` JS instalado só faz FCM na web; em
@@ -486,7 +489,9 @@ formulário, Painel com o alerta interno, coluna Push). Regras e índices do
 Firestore não mudaram. Ver DEVELOPMENT.md, "Notificações push e Cloud
 Functions". Para a Secção 8: o job já trata `vehicles.checkupRequestedAt`
 como confirmação — basta o botão "Agendar agora" gravá-lo. Para a Secção
-11: Blaze + segredos + deploy das Functions no prod, `google-services.json`
+11: ligar o projeto prod à conta de faturação "My Billing Account" (já
+existe, ver DEVELOPMENT.md "Blaze no dev"), segredos + deploy das
+Functions no prod, `google-services.json`
 do prod, credencial FCM do prod no EAS.
 
 ### Secção 7 — Ecrã de pedido de orçamento

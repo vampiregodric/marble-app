@@ -59,8 +59,8 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 5. **Notificações push** — feito (Secção 6, 2026-09-04): Cloud Functions
    em `functions/` (acompanhamento por trabalho, novo trabalho, eventos,
    retenção, Cloudinary) + `expo-notifications` na app. Ver "Notificações
-   push e Cloud Functions" abaixo. Pendente: Blaze + deploy no dev,
-   development build Android.
+   push e Cloud Functions" abaixo. Publicado no dev; dev build Android no
+   telemóvel do Fábio. Pendente: segredos do Cloudinary (`CLOUDINARY_CLEANUP`).
 6. **Fotos reais** — feito (Secções 5 e 5b, 2026-09-04): tudo no
    **Cloudinary** (plano gratuito). A equipa carrega as fotos e vídeos dos
    trabalhos no backoffice; a app só recebe URLs (`photoUrl` = capa,
@@ -290,7 +290,11 @@ uma vez por projeto, no PowerShell dele, a partir da pasta do projeto:
 npx.cmd firebase-tools functions:secrets:set CLOUDINARY_API_KEY --project dev
 ```
 
-e o mesmo para `CLOUDINARY_API_SECRET`. Sem eles o deploy das funções que
+e o mesmo para `CLOUDINARY_API_SECRET`. **Depois** disso, muda
+`CLOUDINARY_CLEANUP=off` para `on` em `functions/.env` e faz deploy outra
+vez — só aí a `onClientUpdated` passa a declarar os segredos (declará-los
+sem valor faz o deploy inteiro falhar, foi por isso que o interruptor
+existe). Sem eles o deploy das funções que
 os declaram falha; com eles em falta em execução, a limpeza no Cloudinary
 é só registada nos logs (nada rebenta). O cloud name (público) está em
 `functions/.env`. Logs: `npx.cmd firebase-tools functions:log --project dev`.
@@ -380,6 +384,47 @@ Passos (uma vez):
 Depois disto, `expo-dev-client` faz com que `expo start` sirva a dev build
 e o Expo Go ao mesmo tempo — os dois continuam a funcionar (o Expo Go sem
 push).
+
+### Blaze no dev — o que aconteceu a 2026-09-04 (para não repetir no prod)
+
+- O upgrade para Blaze na consola do Firebase ligou o projeto a uma conta
+  de faturação antiga e **fechada** ("Firebase Payment"); a Google não a
+  deixa reabrir. Sintoma na CLI: `Billing account for project … is not
+  open` ao ativar APIs.
+- A conta nova criada com o **Visa Electron** da empresa também foi fechada
+  pela Google: os Electron não passam na verificação (sem
+  pré-autorização). Resolveu-se com outro cartão (Visa/Mastercard normal)
+  e o pagamento único de 10 € (fica como crédito). A conta que ficou é
+  **"My Billing Account"** (`013056-591FBF-81EA13`), ligada ao
+  `marble-studios-dev` em Google Cloud → Billing → Your projects → ⋮ →
+  Change billing. Para o prod (Secção 11) é só ligar o projeto prod a esta
+  mesma conta — nada de cartão outra vez.
+- O primeiro deploy de Functions de 2.ª geração falha 2–3 vezes por
+  propagação (APIs, Secret Manager, identidades Eventarc/Pub/Sub): a
+  própria CLI diz "retry in a few minutes". Repetir o mesmo comando
+  resolve. A API do Secret Manager foi ligada criando (e destruindo) um
+  segredo de teste `SM_PROBE`.
+- O deploy em modo não interativo falha se `defineSecret` for chamado para
+  um segredo sem valor — daí o interruptor `CLOUDINARY_CLEANUP` em
+  `functions/.env`.
+
+### EAS — o que ficou criado
+
+- Conta Expo do Fábio: `vampiregodric` (v.godric@gmail.com); o projeto vive
+  na organização **marble-studios** (`owner` no `app.json`), slug
+  `marble-studios`, `projectId 2d792556-5f26-493d-8534-3250945a10f0`.
+- App Android `pt.marble.app` registada no Firebase dev
+  (`1:418501225214:android:caea02432c45ce895ed3af`);
+  `google-services.json` na raiz. Chave FCM V1 (a
+  `serviceAccountKey.dev.json`) carregada pelo Fábio no dashboard do Expo.
+- Primeira development build:
+  https://expo.dev/accounts/marble-studios/projects/marble-studios/builds/31ef345b-3867-41d4-a527-3a3155815632
+  (APK instalado no Android do Fábio; keystore gerado pelo EAS). Push real
+  verificado: ticket aceite, recibo sem erros, toque abriu os Alertas e
+  marcou o alerta como lido.
+- Builds novas só são precisas quando mudam módulos nativos ou o
+  `app.json` (plugins, ícones, permissões); alterações de JS chegam pelo
+  servidor `marble-app-phone` como no Expo Go.
 
 ### Login por token de dev na app web
 

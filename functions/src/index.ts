@@ -27,12 +27,19 @@ initializeApp();
 setGlobalOptions({ region: 'europe-west1', maxInstances: 5, memory: '256MiB' });
 
 const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', { default: 'kr9bmaqh' });
-const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY');
-const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET');
+
+// A limpeza no Cloudinary precisa dos segredos CLOUDINARY_API_KEY e
+// CLOUDINARY_API_SECRET no Secret Manager. Enquanto não existirem, o deploy
+// falharia só por os declarar — por isso só se declaram com
+// CLOUDINARY_CLEANUP=on em functions/.env (ver DEVELOPMENT.md). Desligado,
+// onClientUpdated limita-se a registar que ficou por apagar.
+const CLOUDINARY_CLEANUP = process.env.CLOUDINARY_CLEANUP === 'on';
+const cloudinarySecrets = CLOUDINARY_CLEANUP ? [defineSecret('CLOUDINARY_API_KEY'), defineSecret('CLOUDINARY_API_SECRET')] : [];
 
 function cloudinaryConfig(): CloudinaryConfig | null {
-  const apiKey = CLOUDINARY_API_KEY.value();
-  const apiSecret = CLOUDINARY_API_SECRET.value();
+  if (!CLOUDINARY_CLEANUP) return null;
+  const apiKey = cloudinarySecrets[0].value();
+  const apiSecret = cloudinarySecrets[1].value();
   if (!apiKey || !apiSecret) return null;
   return { cloudName: CLOUDINARY_CLOUD_NAME.value(), apiKey, apiSecret };
 }
@@ -56,7 +63,7 @@ export const onWorkWritten = onDocumentWritten('works/{id}', async (event) => {
 });
 
 // Foto de perfil removida/trocada ou conta apagada → limpar no Cloudinary.
-export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', secrets: [CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET] }, async (event) => {
+export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', secrets: cloudinarySecrets }, async (event) => {
   if (!event.data) return;
   const before = { id: event.params.uid, ...event.data.before.data() } as Client;
   const after = { id: event.params.uid, ...event.data.after.data() } as Client;
