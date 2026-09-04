@@ -508,6 +508,14 @@ formulário/fluxo de pedido de orçamento.
 Perfil (`src/screens/ProfileScreen.tsx`) ainda não faz nada. Decidir e
 construir: calendário dentro da app, ou só confirmação simples que avisa
 a equipa?
+**Plano (2026-09-04, Fábio):** corre em **paralelo com a Secção 7**, numa
+conversa própria, **sem tocar no backoffice** (que é da 7): o pedido fica
+no próprio carro/chão (`vehicles/{id}`: `checkupRequestedAt` + dia
+preferido + nota), as regras deixam o dono escrever só esses campos, e
+uma Cloud Function (`functions/`) cria um `team_alert` "Ligar a X: pediu
+checkup do Y para dia Z" no Painel que já existe. O job diário já trata
+`checkupRequestedAt` como "confirmado". A cópia de `models.ts` do
+backoffice sincroniza-se depois de a 7 entrar.
 
 ### Secção 9 — Conteúdo estático: AI Business & Marble Ads
 **Estado:** Feito (2026-09-04). Página de serviços genérica para os cinco
@@ -565,6 +573,10 @@ tratamento para a Inozetek quando a parceria for oficial (ver SPEC.md).
 sozinho. Para a Inozetek: novo `DepartmentId` em `models.ts` (app e
 backoffice), entrada em `DEPARTMENTS` e conteúdo — a foto do cartão passa
 a ser escolhível no backoffice sem mais código.
+**Plano (2026-09-04, Fábio):** corre em **paralelo com a 7 e a 8**, só na
+app. A Inozetek fica com o conteúdo preparado mas **sem cartão** até a
+parceria ser oficial (SPEC) — o `DepartmentId` novo exige o backoffice,
+que é da Secção 7.
 
 ### Secção 11 — Preparação para lançamento nas lojas
 **Estado:** Por fazer
@@ -593,6 +605,29 @@ subir `LEGAL_VERSION` e correr `npm run build:legal`.
 no Firebase (`pt.marble.app`) e usar o seu `google-services.json` na build
 de produção; carregar a credencial FCM V1 do prod no EAS. Sem isto não há
 push nem lembretes em produção.
+**Plano (2026-09-04, Fábio): em duas partes.** A **parte 1** arranca já,
+em paralelo com 7, 8 e 10, porque as contas das lojas demoram dias a
+aprovar: contas Apple Developer e Google Play (Fábio), plano Blaze e
+Functions no prod, ícones e splash finais em todos os tamanhos
+(`app.json`, `assets/`), perfil de produção do EAS, ficha da loja (PT/EN),
+formulários "Data safety"/"App Privacy" a partir da política, páginas
+legais publicadas (GitHub Pages). Não toca em `src/`. A **parte 2**
+(build de produção, screenshots finais, submissão) só depois de 7, 8, 10
+e 12 estarem no master.
+
+### Secção 12 — Inglês
+**Estado:** Por fazer
+**Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
+**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11
+**Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
+Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
+próprio, a não ser que o Fábio queira): textos dos ecrãs, estados vazios,
+erros, `src/data/departmentContent.ts` (`CONTENT.en`, estrutura já pronta),
+`src/data/categories.ts`, `DEPARTMENTS` (nome/tagline), datas
+(`src/utils/dates.ts`). Os textos legais ficam só em PT (a revisão jurídica
+é de um texto). Pesar `expo-localization` + um módulo `t()` simples em vez
+de uma biblioteca de i18n completa. Os alertas criados pelo backoffice e
+pelas Functions são escritos pela equipa em PT — decidir se ficam assim.
 
 ---
 
