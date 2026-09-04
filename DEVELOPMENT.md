@@ -22,16 +22,25 @@ antes de arrancar o dele; (2) o servidor morre quando a conversa fecha, por
 isso cada conversa nova arranca-o outra vez; (3) no telemóvel o Expo Go
 liga-se ao mesmo endereço de sempre (`exp://<IP do PC>:8081`) — basta
 RELOAD ou reabrir a app. Para a pré-visualização web num worktree continua
-a usar-se `marble-app-web-8082`.
+a usar-se `marble-app-web-8082` (ou `marble-app-web`, na 8083, quando há
+duas secções em paralelo — uma por porta).
+
+**Worktree novo:** copiar o `.env` do checkout principal e correr `npm ci`
+na raiz **e em `functions/`** — o `npm run typecheck` da raiz também
+compila `functions/src`, e sem as dependências das Functions dá erros
+`Cannot find module 'firebase-functions/...'` que não são do teu código.
 
 ## Estado atual
 
 Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/HomeScreen.tsx` — Início: carrossel = `works` com
   `featured: true`; ponto no sino = alertas por ler; cartões dos seis
-  departamentos com a foto escolhida pela equipa (`settings/home`), os três
-  com portfólio abrem o Portfólio filtrado; botão do Perfil mostra a foto
-  do cliente quando existe
+  departamentos com a foto escolhida pela equipa (`settings/home`), cada
+  um abre a página de serviços do departamento (Secção 9); botão do Perfil
+  mostra a foto do cliente quando existe
+- `src/screens/DepartmentScreen.tsx` — página de serviços de um
+  departamento: conteúdo estático de `src/data/departmentContent.ts`,
+  foto de `settings/home`, trabalhos recentes da categoria (`works`)
 - `src/screens/PortfolioScreen.tsx` — Portfólio: `works` publicados
 - `src/screens/WorkDetailScreen.tsx` — Detalhe: um doc de `works`, com a
   galeria `media[]` deslizável no topo e visualizador em ecrã inteiro
@@ -435,6 +444,38 @@ acaba em `-dev`; em produção é código morto. Serve para o Claude verificar
 Alertas e Perfil sem escrever a password de ninguém — foi assim que a
 Secção 6 viu os alertas automáticos a chegar ao ecrã Alertas em tempo
 real.
+
+## Páginas de departamento (Secção 9)
+
+Tocar num cartão do Início abre `src/screens/DepartmentScreen.tsx` (rota
+`Department { id }`, URL web `services/:id`) — decisão do Fábio
+(2026-09-04): serviços primeiro, o Portfólio filtrado fica a um toque
+dentro da página. Regras:
+
+- **O conteúdo é código, não Firestore.** Tudo em
+  `src/data/departmentContent.ts` (`CONTENT.pt[id]`: `headline`, `intro`,
+  `services[]`, `steps[]`, `pricing`, `cta`). Para mudar um texto edita-se
+  aí e sai numa versão nova da app. Não há coleção, regras nem ecrã de
+  backoffice para isto. O nome e a tagline vêm de `DEPARTMENTS`
+  (`src/data/departments.ts`); a foto do topo é a do cartão
+  (`settings/home.departmentCovers`, escolhida no backoffice).
+- **Um departamento novo = uma entrada nova.** `hasDepartmentContent(id)`
+  decide se o cartão do Início abre a página; sem entrada o cartão fica
+  inerte (é o caso da Xtreme até à Secção 10). Para a Inozetek é preciso
+  ainda o `DepartmentId` em `models.ts` (app e backoffice, iguais) e a
+  linha em `DEPARTMENTS`.
+- **`cta`** é `{ kind: 'quote', label }` (abre `RequestQuote` com
+  `{ department }`) ou `{ kind: 'link', label, url }` (abre um URL externo
+  — loja da Xtreme).
+- **Idiomas:** `CONTENT.en` existe e está vazio; `departmentContent(id,
+  locale)` cai para PT. Quando a app inteira ganhar inglês, preenche-se.
+- **Trabalhos recentes:** os departamentos com `category` mostram os 6
+  trabalhos publicados mais recentes dessa categoria, com a mesma escuta
+  do Portfólio (`usePublishedWorks`, filtro em memória) — sem índice novo.
+- **`RequestQuote`** é o ecrã da Secção 7. Enquanto ela não entrar,
+  `src/screens/RequestQuoteScreen.tsx` é um ecrã de reserva ("em breve" +
+  email) que a Secção 7 substitui por completo; a rota e os params
+  (`{ workId?, department? }`) mantêm-se.
 
 ## Firebase: os dois projetos
 
