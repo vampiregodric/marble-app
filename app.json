@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "marble-app",
-    "slug": "marble-app",
+    "slug": "marble-studios",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "pt.marble.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -42,6 +43,12 @@
           "defaultChannel": "default"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2d792556-5f26-493d-8534-3250945a10f0"
+      }
+    },
+    "owner": "marble-studios"
   }
 }
