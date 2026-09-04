@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import WorkGallery from '../components/WorkGallery';
 import MediaViewer from '../components/MediaViewer';
@@ -21,7 +22,7 @@ type Route = RouteProp<RootStackParamList, 'WorkDetail'>;
 // alerta antigo. O topo é a galeria (works.media[], deslizável); tocar num
 // item abre-o em ecrã inteiro (MediaViewer), onde o vídeo reproduz.
 export default function WorkDetailScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const { data: work, loading, missing, error } = useWork(route.params.workId);
   const screenW = useAppWidth();
@@ -108,8 +109,10 @@ export default function WorkDetailScreen() {
             )}
           </ScrollView>
 
+          {/* Secção 7: abre o formulário já com este trabalho como contexto
+              (foto de capa + título) e o departamento pela categoria. */}
           <View style={styles.ctaBar}>
-            <Pressable style={styles.ctaBtn}>
+            <Pressable style={styles.ctaBtn} onPress={() => navigation.navigate('RequestQuote', { workId: work.id })} accessibilityRole="button">
               <Text style={styles.ctaText}>Pedir orçamento semelhante</Text>
             </Pressable>
           </View>

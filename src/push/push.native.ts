@@ -34,6 +34,7 @@ export type PushOpenData = {
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
+  relatedRequestId?: string;
 };
 
 const projectId: string | undefined = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;

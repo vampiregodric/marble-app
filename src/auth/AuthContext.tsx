@@ -39,8 +39,15 @@ type AuthValue = {
   // true quando o cliente ainda não aceitou a LEGAL_VERSION atual (conta
   // antiga, ou textos legais atualizados). O Perfil mostra o pedido.
   needsTermsAcceptance: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  // Devolve o uid — o formulário de orçamento precisa dele logo a seguir.
+  signIn: (email: string, password: string) => Promise<string>;
   signUp: (input: SignUpInput) => Promise<void>;
+  // Pedido de orçamento sem conta (Secção 7, decisão do Fábio): cria a
+  // conta com os dados do formulário, fica com sessão neste dispositivo e
+  // envia o email do Firebase para o cliente definir a password. A
+  // aceitação dos termos tem de vir de uma checkbox não pré-marcada, como
+  // no registo. Devolve o uid.
+  createAccountFromRequest: (input: Omit<SignUpInput, 'password'>) => Promise<string>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateClient: (patch: ClientUpdate) => Promise<void>;
@@ -69,6 +76,18 @@ function touchLastActive(uid: string, data: Omit<Client, 'id'>) {
   const last = data.lastActiveAt?.toMillis?.() ?? 0;
   if (Date.now() - last < 24 * 60 * 60 * 1000) return;
   updateDoc(clientRef(uid), { lastActiveAt: serverTimestamp() }).catch(() => {});
+}
+
+// Password aleatória para a conta criada a partir de um pedido de orçamento
+// (32 caracteres). Usa o gerador criptográfico quando existe (browser,
+// Hermes recente); o cliente nunca a vê nem precisa dela.
+function randomPassword(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!#%&*+-=?@';
+  const bytes = new Uint8Array(32);
+  const cryptoObj = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto;
+  if (cryptoObj?.getRandomValues) cryptoObj.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
 // O ID do doc em `clients` TEM de ser o uid do Auth — as regras do Firestore
@@ -140,7 +159,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       client,
       needsTermsAcceptance: !!client && !client.deletedAt && client.consent?.termsVersion !== LEGAL_VERSION,
       async signIn(email, password) {
-        await signInWithEmailAndPassword(auth, email.trim(), password);
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        return cred.user.uid;
+      },
+      async createAccountFromRequest({ name, email, phone, acceptedTerms }) {
+        if (!acceptedTerms) throw new Error('Tens de aceitar os termos para criar conta.');
+        // Ninguém conhece esta password: a conta só se usa pela sessão que
+        // fica neste dispositivo e pelo link "definir password" do email.
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), randomPassword());
+        await updateProfile(cred.user, { displayName: name.trim() });
+        await createClientDoc(cred.user, { name: name.trim(), phone: phone.trim(), acceptedTerms: true });
+        // Falhar aqui não é grave: "Esqueceste-te da password?" no login
+        // envia o mesmo email.
+        await sendPasswordResetEmail(auth, email.trim()).catch(() => {});
+        return cred.user.uid;
       },
       async signUp({ name, email, phone, password, acceptedTerms }) {
         if (!acceptedTerms) throw new Error('Tens de aceitar os termos para criar conta.');

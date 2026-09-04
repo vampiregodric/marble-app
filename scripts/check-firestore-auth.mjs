@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 // Verifica as leituras PRIVADAS da app (Alertas e Perfil) tal como um cliente
-// com sessão as faz — mesmas queries que src/data/notifications.ts e
-// src/data/vehicles.ts — e que as regras só deixam marcar alertas como
-// lidos. Entra como o cliente com um custom token do Admin SDK, por isso não
-// precisa de password; precisa da chave de service account do dev.
+// com sessão as faz — mesmas queries que src/data/notifications.ts,
+// src/data/vehicles.ts e src/data/requests.ts — e que as regras só deixam
+// marcar alertas como lidos e criar pedidos de orçamento bem formados
+// (Secção 7). Entra como o cliente com um custom token do Admin SDK, por
+// isso não precisa de password; precisa da chave de service account do dev.
+//
+// O pedido de teste é criado a sério e apagado logo a seguir (Admin SDK);
+// no dev, a Cloud Function pode chegar a criar o alerta interno e a
+// confirmação — o script apaga-os também.
 //
 // Uso:
 //   node scripts/check-firestore-auth.mjs ./serviceAccountKey.dev.json [email]
@@ -14,9 +19,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, getDocs, orderBy, query, updateDoc, where, limit } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
 
 const [keyPath, email = 'teste.seccao2@example.com'] = process.argv.slice(2);
 if (!keyPath) {
@@ -110,6 +116,70 @@ try {
 } catch (e) {
   pass(`alertas de outro cliente: recusado (${e.code}) — correto`);
 }
+
+// 6. Pedidos de orçamento (Secção 7): a query do Perfil (índice clientId/createdAt).
+try {
+  const snap = await getDocs(query(collection(db, 'requests'), where('clientId', '==', user.uid), orderBy('createdAt', 'desc'), limit(20)));
+  pass(`requests: ${snap.size} pedido(s) — ${snap.docs.map((d) => `${d.data().department} [${d.data().status}]`).join('; ') || 'nenhum'}`);
+} catch (e) {
+  fail(`requests: ${e.code ?? e.message}` + (e.code === 'failed-precondition' ? ' — índice em falta (firestore.indexes.json)' : ''));
+}
+
+// 7. Criar um pedido bem formado tem de ser permitido; variantes que a app
+//    nunca envia (estado já fechado, clientId de outro, campos da equipa)
+//    têm de ser recusadas; alterar depois de criado também.
+const validRequest = {
+  type: 'quote',
+  status: 'new',
+  clientId: user.uid,
+  name: 'Teste automático',
+  email,
+  phone: '912345678',
+  contactPreference: 'call',
+  department: 'automotive',
+  services: ['PPF'],
+  fields: [{ key: 'car', label: 'Carro', value: 'Carro de teste' }],
+  message: 'Pedido criado pelo script check:firestore:auth — pode ser apagado.',
+  platform: 'web',
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
+};
+const requestId = `check-${Date.now()}`;
+const requestRef = doc(db, 'requests', requestId);
+try {
+  await setDoc(requestRef, validRequest);
+  pass('requests: criar um pedido válido — permitido');
+  try {
+    await updateDoc(requestRef, { status: 'closed' });
+    fail('requests: o cliente conseguiu ALTERAR o estado do pedido — regras erradas');
+  } catch (e) {
+    pass(`requests: alterar o pedido depois de criado: recusado (${e.code}) — correto`);
+  }
+} catch (e) {
+  fail(`requests: criar um pedido válido: ${e.code ?? e.message}`);
+}
+const invalid = {
+  'estado já fechado': { ...validRequest, status: 'closed' },
+  'clientId de outro cliente': { ...validRequest, clientId: 'client-example' },
+  'campo da equipa (notes)': { ...validRequest, notes: 'hack' },
+  'departamento inventado': { ...validRequest, department: 'spa' },
+  'sem telemóvel': { ...validRequest, phone: '' },
+};
+for (const [label, data] of Object.entries(invalid)) {
+  try {
+    await setDoc(doc(db, 'requests', `${requestId}-bad`), data);
+    fail(`requests: pedido com ${label} foi PERMITIDO — regras erradas`);
+  } catch (e) {
+    pass(`requests: pedido com ${label}: recusado (${e.code}) — correto`);
+  }
+}
+// Limpeza (Admin SDK): o pedido de teste e o que a Cloud Function tenha criado.
+const admin = getAdminFirestore();
+await new Promise((r) => setTimeout(r, 4000));
+await admin.collection('requests').doc(requestId).delete();
+const spawned = await admin.collection('notifications').where('relatedRequestId', '==', requestId).get();
+for (const d of spawned.docs) await d.ref.delete();
+console.log(`  --   pedido de teste apagado (${spawned.size} alerta(s) da Function apagado(s))`);
 
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');
 process.exit(ok ? 0 : 1);

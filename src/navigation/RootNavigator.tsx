@@ -14,6 +14,7 @@ import WorkDetailScreen from '../screens/WorkDetailScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
 import LegalScreen from '../screens/LegalScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
+import RequestQuoteScreen from '../screens/RequestQuoteScreen';
 import AuthGate from '../components/AuthGate';
 import { markNotificationRead } from '../data/notifications';
 import { PushOpenData, usePushOpens } from '../push/push';
@@ -116,6 +117,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       PersonalData: 'profile/personal-data',
       Legal: 'legal/:doc',
       DeleteAccount: 'profile/delete-account',
+      RequestQuote: 'request',
     },
   },
 };
@@ -127,7 +129,7 @@ function openFromPush(data: PushOpenData) {
   if (data.notificationId) markNotificationRead(data.notificationId).catch(() => {});
   if (data.relatedWorkId) navigationRef.navigate('WorkDetail', { workId: data.relatedWorkId });
   else if (data.relatedEventId) navigationRef.navigate('Tabs', { screen: 'Events' });
-  else if (data.relatedVehicleId) navigationRef.navigate('Tabs', { screen: 'Profile' });
+  else if (data.relatedVehicleId || data.relatedRequestId) navigationRef.navigate('Tabs', { screen: 'Profile' });
   else navigationRef.navigate('Tabs', { screen: 'Alerts' });
 }
 
@@ -158,6 +160,7 @@ export default function RootNavigator() {
         <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="RequestQuote" component={RequestQuoteScreen} options={{ presentation: 'card' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

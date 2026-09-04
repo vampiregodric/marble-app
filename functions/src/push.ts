@@ -24,6 +24,7 @@ export function pushData(id: string, n: AppNotification): Record<string, string>
   if (n.relatedWorkId) data.relatedWorkId = n.relatedWorkId;
   if (n.relatedEventId) data.relatedEventId = n.relatedEventId;
   if (n.relatedVehicleId) data.relatedVehicleId = n.relatedVehicleId;
+  if (n.relatedRequestId) data.relatedRequestId = n.relatedRequestId;
   return data;
 }
 
