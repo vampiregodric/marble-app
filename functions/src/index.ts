@@ -65,16 +65,17 @@ export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', se
 
 // Job diário: recibos de push, acompanhamento pós-serviço, lembretes de
 // eventos, retenção de contas. 10:00 em Lisboa — nunca de madrugada.
+// Não precisa dos segredos do Cloudinary: ao anonimizar uma conta, o job
+// tira `avatarUrl` e é o trigger onClientUpdated que limpa os ficheiros.
 export const dailyJobs = onSchedule(
   {
     schedule: '0 10 * * *',
     timeZone: 'Europe/Lisbon',
     timeoutSeconds: 540,
     memory: '512MiB',
-    secrets: [CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET],
   },
   async () => {
-    const summary = await runDailyJobs(getFirestore(), { auth: getAuth(), cloudinary: cloudinaryConfig() ?? undefined }, new Date(), log);
+    const summary = await runDailyJobs(getFirestore(), { auth: getAuth() }, new Date(), log);
     logger.info('dailyJobs', summary);
   }
 );

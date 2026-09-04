@@ -79,7 +79,9 @@ export async function anonymizeClient(db: Firestore, deps: RetentionDeps, client
     const n = await deleteAvatarFiles(deps.cloudinary, client.id);
     if (n) log(`  cloudinary: ${n} ficheiro(s) apagado(s)`);
   } else {
-    log('  cloudinary: sem credenciais — ficheiros da foto de perfil ficam por apagar');
+    // No Firebase, tirar `avatarUrl` acima dispara onClientUpdated, que tem
+    // os segredos e apaga os ficheiros da tag uid_<uid>.
+    log('  cloudinary: limpeza entregue ao trigger onClientUpdated');
   }
 }
 
