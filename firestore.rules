@@ -55,6 +55,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Definições do ecrã Início escolhidas pela equipa (Secção 5b): por
+    // agora `settings/home` com a foto de cada cartão de departamento.
+    // Conteúdo público, como o portfólio.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Dados do cliente — só o próprio, ou a equipa.
     match /clients/{clientId} {
       allow read, update: if (signedIn() && request.auth.uid == clientId) || isAdmin();

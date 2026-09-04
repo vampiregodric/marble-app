@@ -28,13 +28,18 @@ a usar-se `marble-app-web-8082`.
 
 Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/HomeScreen.tsx` — Início: carrossel = `works` com
-  `featured: true`; ponto no sino = alertas por ler; cartões
-  Automotive/Epoxy/Graphic abrem o Portfólio filtrado
+  `featured: true`; ponto no sino = alertas por ler; cartões dos seis
+  departamentos com a foto escolhida pela equipa (`settings/home`), os três
+  com portfólio abrem o Portfólio filtrado; botão do Perfil mostra a foto
+  do cliente quando existe
 - `src/screens/PortfolioScreen.tsx` — Portfólio: `works` publicados
-- `src/screens/WorkDetailScreen.tsx` — Detalhe: um doc de `works`
+- `src/screens/WorkDetailScreen.tsx` — Detalhe: um doc de `works`, com a
+  galeria `media[]` deslizável no topo e visualizador em ecrã inteiro
+  (fotos + vídeo)
 - `src/screens/EventsScreen.tsx` — Eventos: `events` (Próximos/Passados)
 - `src/screens/AlertsScreen.tsx` — Alertas: `notifications` do uid
-- `src/screens/ProfileScreen.tsx` — Perfil: `clients/{uid}` + `vehicles`
+- `src/screens/ProfileScreen.tsx` — Perfil: `clients/{uid}` + `vehicles`;
+  tocar no avatar muda/remove a foto de perfil (Cloudinary)
 
 Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 
@@ -52,18 +57,15 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
    https://marble-studios-backoffice-dev.web.app. Ver "Backoffice" abaixo.
 5. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
    automáticos (checkup 1 semana depois, etc.) ainda por implementar.
-6. **Fotos reais** — a app mostra qualquer URL público em `photoUrl`
-   (`src/components/Photo.tsx`) e cai num gradiente dourado quando está
-   vazio. Alojamento decidido na Secção 5: **Cloudinary** (plano gratuito),
-   com upload feito pela equipa no backoffice; a app só recebe URLs. Os
-   `photoUrl` do seed continuam vazios. Exceção transitória: a foto do
-   Jaguar vem embutida na app (`src/data/localPhotos.ts` →
-   `assets/work-jaguar-purple.jpg`) como reserva para o doc `work-example`
-   enquanto o `photoUrl` estiver vazio. Quando a equipa carregar a foto real
-   do Jaguar no backoffice, apaga esse ficheiro e os `fallback=` nos três
-   ecrãs. A galeria (`works.media[]`) no Detalhe e a foto de perfil do
-   cliente (mesmo Cloudinary, preset `marble-avatars`) são as próximas
-   tarefas do lado da app.
+6. **Fotos reais** — feito (Secções 5 e 5b, 2026-09-04): tudo no
+   **Cloudinary** (plano gratuito). A equipa carrega as fotos e vídeos dos
+   trabalhos no backoffice; a app só recebe URLs (`photoUrl` = capa,
+   `media[]` = galeria) e cai num gradiente dourado quando estão vazios
+   (`src/components/Photo.tsx`). O cliente carrega uma única foto: a de
+   perfil (preset `marble-avatars`). A foto embutida do Jaguar
+   (`src/data/localPhotos.ts`) foi apagada — a real está no Cloudinary;
+   `assets/work-jaguar-purple.jpg` fica só como ficheiro de origem, a app
+   não o usa. Ver "Galeria, fotos dos serviços e foto de perfil" abaixo.
 
 ## Autenticação (Secção 2)
 
@@ -159,6 +161,55 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 - **Verificar:** `npm run check:firestore` (regras + índices, sem login) e
   `npm run check:firestore:auth -- ./serviceAccountKey.dev.json` (Alertas e
   Perfil como a conta de teste, via custom token — sem password).
+
+## Galeria, fotos dos serviços e foto de perfil (Secção 5b)
+
+- **Galeria do Detalhe.** `galleryItems(work)` (`src/data/works.ts`)
+  normaliza `works.media[]` (ordenado por `order`; sem `media`, a capa) para
+  `src/components/WorkGallery.tsx` (deslizável no topo, contador "3 / 7",
+  pontos, etiqueta "Ver vídeo" sobre a miniatura) e
+  `src/components/MediaViewer.tsx` (Modal em ecrã inteiro, FlatList com
+  paginação, fotos inteiras, vídeo com `expo-video` — o leitor só é criado
+  para o item ativo e é libertado ao sair, para não descarregar vídeos que
+  o cliente não vê). O hero tem proporção 4:3 da largura útil.
+- **Fotos dos serviços (Início).** `settings/home.departmentCovers.{id}`
+  (`HomeSettings` em `models.ts`, hook `useHomeSettings` em
+  `src/data/settings.ts`) dá a foto de fundo de cada cartão; a lista de
+  departamentos está em `src/data/departments.ts` (cópia no backoffice em
+  `src/utils/departments.ts` — mantém iguais). A equipa escolhe as fotos no
+  backoffice em **Destaques > Fotos dos serviços**. Sem foto, gradiente
+  estável por ID; nunca ícones (regra 5 do CLAUDE.md). Regras: leitura
+  pública, escrita `isAdmin()`.
+- **Foto de perfil.** Fluxo em `src/media/avatarPicker.ts` (galeria ou
+  câmara com `expo-image-picker`, recorte quadrado nativo, redução a 1024
+  px com `expo-image-manipulator`) e `src/media/cloudinary.ts` (upload
+  unsigned com o preset `marble-avatars` e as tags `avatar,uid_<uid>`;
+  devolve o URL de entrega `c_fill,w_512,h_512,g_face`). O Perfil grava
+  `clients/{uid}.avatarUrl` via `updateClient`; remover = `''`; apagar
+  conta já apaga o campo. `src/components/Avatar.tsx` (foto ou iniciais)
+  é usado no Perfil e no botão de Perfil do Início;
+  `src/components/ActionSheet.tsx` é o menu no estilo da app. Variáveis:
+  `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME` e `..._PRESET_AVATARS` (ver
+  `.env.example`); sem elas o avatar fica sem ação e sem o ícone da câmara.
+- **Apagar o ficheiro no Cloudinary não é possível pela app** (API
+  assinada). A política de privacidade promete 30 dias
+  (`RETENTION.avatarFileDays`): até a Secção 6 automatizar com uma Cloud
+  Function, a equipa apaga à mão na Media Library, procurando pela tag
+  `uid_<uid>` (ver README do backoffice). O mesmo vale para fotos de
+  trabalhos removidas no backoffice — mas essas não são dados pessoais.
+- **Testar a foto de perfil no browser** (o seletor de ficheiros do
+  sistema não se automatiza): o `expo-image-picker` na web cria um
+  `<input type=file>` e dispara-lhe um `click`; intercetar
+  `HTMLInputElement.prototype.dispatchEvent` para injetar um `File` gerado
+  num canvas e disparar `change` exercita o fluxo inteiro (foi assim que a
+  Secção 5b o verificou). No telemóvel testa-se a sério com o Expo Go.
+- **Textos legais** ganharam a foto de perfil e o Cloudinary como
+  subcontratante (`LEGAL_VERSION` 2026-09-04; HTML regenerado). Todas as
+  contas veem o cartão "Termos e privacidade atualizados" uma vez.
+- **Novos módulos nativos** (`expo-video`, `expo-image-picker`,
+  `expo-image-manipulator`) estão todos no Expo Go — não é preciso build.
+  O `app.json` leva o plugin do `expo-image-picker` com os textos de
+  permissão em português (só contam em builds da Secção 11).
 
 ## Firebase: os dois projetos
 

@@ -25,7 +25,8 @@ export type SignUpInput = {
   // antes; aqui volta-se a verificar para ninguém criar conta sem aceitar.
   acceptedTerms: boolean;
 };
-export type ClientUpdate = Partial<Pick<Client, 'name' | 'phone' | 'notificationPrefs'>>;
+// `avatarUrl: ''` remove a foto de perfil (Secção 5b).
+export type ClientUpdate = Partial<Pick<Client, 'name' | 'phone' | 'notificationPrefs' | 'avatarUrl'>>;
 
 type AuthValue = {
   // `initializing` é true só até o Firebase dizer se há sessão guardada.

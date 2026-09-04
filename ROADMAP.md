@@ -321,7 +321,10 @@ fotos reais em vez do ícone de linha nos cartões do Início — tudo na
 Secção 5b, abaixo.
 
 ### Secção 5b — Galeria e foto de perfil na app
-**Estado:** Por fazer (escolhida pelo Fábio como próximo passo, 2026-09-04)
+**Estado:** Feito (2026-09-04). Galeria deslizável + visualizador em ecrã
+inteiro com vídeo no Detalhe, foto de perfil do cliente (Cloudinary),
+cartões do Início com a foto escolhida pela equipa no backoffice, textos
+legais atualizados. Ver "Decisões" e "Nota" no fim desta secção.
 **Depende de:** Secção 5 (alojamento Cloudinary e `works.media[]` já
 preenchidos pelo backoffice)
 **Objetivo:** Fechar o ciclo das fotos do lado da app do cliente, agora que
@@ -357,6 +360,50 @@ juntadas no backoffice. O preset `marble-avatars` deve ter incoming
 transformation `c_limit,w_1024,h_1024` e formatos `jpg,png,webp,heic`
 (qualquer pessoa com o cloud name pode fazer upload para esse preset — o
 limite de tamanho no preset é a proteção contra abuso).
+**Decisões (2026-09-04, Fábio):** vídeo e fotos abrem num visualizador em
+ecrã inteiro (deslizável, contador em texto, "Fechar"), o vídeo só carrega
+aí; foto de perfil com menu no avatar ("Escolher da galeria", "Tirar
+foto", "Remover foto" quando há foto); os cartões do Início mostram uma
+foto **escolhida pela equipa no backoffice** por departamento (não "o
+trabalho mais recente"), guardada em `settings/home`; extras aceites: foto
+do cliente no botão de Perfil do Início, hero do Detalhe em 4:3, foto do
+cliente na ficha dele no backoffice.
+**Nota (2026-09-04):** construído nesta sessão. **App:**
+`src/components/WorkGallery.tsx` + `MediaViewer.tsx` (`expo-video`, leitor
+só para o item ativo), `galleryItems()` em `src/data/works.ts`;
+`src/media/avatarPicker.ts` (`expo-image-picker` + `expo-image-manipulator`,
+recorte quadrado, 1024 px) e `src/media/cloudinary.ts` (upload unsigned
+`marble-avatars`, tags `avatar,uid_<uid>`, URL `c_fill,w_512,h_512,g_face`);
+`src/components/Avatar.tsx` e `ActionSheet.tsx`; `ClientUpdate` aceita
+`avatarUrl`; Início lê `settings/home` (`useHomeSettings`,
+`src/data/departments.ts`) e desenha os seis cartões com foto de fundo ou
+gradiente — os ícones de departamento saíram de `Icons.tsx`;
+`src/data/localPhotos.ts` e os `fallback=` apagados (o Jaguar vem do
+Cloudinary). Modelo: `COLLECTIONS.settings`, `DepartmentId`,
+`DepartmentCover`, `HomeSettings`. Regras: `settings/*` leitura pública,
+escrita admin (publicadas no dev). Seed: `settings/home` com o Jaguar no
+Automotive (`merge`). `check:firestore` verifica `settings/home`. Textos
+legais: foto de perfil (dados, base legal = consentimento, direitos),
+Cloudinary como subcontratante, ficheiro apagado em 30 dias
+(`RETENTION.avatarFileDays`); `LEGAL_VERSION` 2026-09-04, HTML regenerado.
+`app.json`: plugins `expo-video` e `expo-image-picker` (textos de
+permissão PT). **Backoffice** (repositório próprio): `settings/home` em
+tempo real (`useDocument`), `saveDepartmentCover` (setDoc merge),
+"Destaques > Fotos dos serviços" (seis cartões: carregar foto ou usar a
+capa de um trabalho publicado, "Tirar"), avatar do cliente na ficha,
+`models.ts` sincronizado, README com a obrigação de apagar o ficheiro do
+avatar em 30 dias. Verificado no web (8082 + backoffice 5180 com dados
+reais do dev): Início com o Jaguar no cartão Automotive (escolhido no
+backoffice), Detalhe do Jaguar (hero 4:3, visualizador), Detalhe do
+"Metallic Epoxy — Showroom Premium" com galeria de 2 itens (foto + vídeo
+de teste carregados pelo backoffice para o Cloudinary; o vídeo reproduz no
+visualizador com `expo-video`), foto de perfil carregada de ponta a ponta
+(seletor → redução → Cloudinary → `avatarUrl`) com a conta de teste.
+**Fica para depois:** apagar automaticamente o ficheiro do avatar no
+Cloudinary ao remover/apagar conta (Secção 6, Cloud Function com a API
+assinada); o vídeo de teste no trabalho "Showroom" pode ser removido no
+backoffice quando a equipa tiver vídeos reais; o preset `marble-avatars`
+ainda guarda na pasta `works` (cosmético, Fábio corrige no Cloudinary).
 
 ### Secção 6 — Notificações push automáticas
 **Estado:** Por fazer
@@ -390,6 +437,15 @@ como visto". Clientes com `createdByTeam: true` não têm conta na app —
 nunca lhes enviar nada. Regras: só o claim `admin` escreve em
 `notifications`; as Functions usam o Admin SDK, que passa por cima das
 regras.
+**Da Secção 5b:** a app não consegue apagar ficheiros no Cloudinary (API
+assinada). A política de privacidade promete que o ficheiro da foto de
+perfil desaparece do alojamento em 30 dias (`RETENTION.avatarFileDays`)
+depois de o cliente a remover ou apagar a conta. Construir aqui uma Cloud
+Function (trigger em `clients/{uid}` quando `avatarUrl` muda ou é apagado,
+e no job de retenção) que chama a Admin API do Cloudinary (API key/secret
+só em variáveis das Functions, nunca na app nem no backoffice) e apaga os
+ficheiros com a tag `uid_<uid>`. Até lá é manual (ver README do
+backoffice).
 
 ### Secção 7 — Ecrã de pedido de orçamento
 **Estado:** Por fazer

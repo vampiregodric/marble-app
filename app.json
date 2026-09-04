@@ -22,7 +22,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A Marble Studios usa as tuas fotografias só para escolheres a tua foto de perfil.",
+          "cameraPermission": "A Marble Studios usa a câmara só para tirares a tua foto de perfil.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

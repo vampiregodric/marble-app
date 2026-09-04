@@ -10,47 +10,27 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
-import { CarIcon, DropletIcon, PenIcon, SparkIcon, TrendUpIcon, BoxIcon, BellIcon, UserIcon } from '../components/Icons';
+import { BellIcon, UserIcon } from '../components/Icons';
 import Photo from '../components/Photo';
+import Avatar from '../components/Avatar';
 import PlaceholderThumb from '../components/PlaceholderThumb';
 import { useAuth } from '../auth/AuthContext';
 import { useFeaturedWorks } from '../data/works';
-import { LOCAL_WORK_PHOTOS } from '../data/localPhotos';
+import { useHomeSettings } from '../data/settings';
 import { useUnreadCount } from '../data/notifications';
 import { categoryFullName } from '../data/categories';
+import { DEPARTMENTS } from '../data/departments';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { useAppWidth } from '../utils/layout';
 
-type Department = {
-  id: string;
-  name: string;
-  tagline: string;
-  Icon: typeof CarIcon;
-  badge?: string;
-  // Departamentos com portfólio abrem o Portfólio já filtrado. Os outros
-  // (AI Business, Marble Ads, Xtreme) ganham página própria nas Secções 9 e 10.
-  category?: WorkCategory;
-};
-
-// Os departamentos são a estrutura do negócio, não conteúdo — ficam fixos.
-// Quando houver fotos reais de cada área, o ícone dá lugar a uma foto
-// (decisão no ROADMAP, Secção 4).
-const departments: Department[] = [
-  { id: 'automotive', name: 'Automotive Aesthetics', tagline: 'PPF, vinil & detailing', Icon: CarIcon, category: 'Automotive' },
-  { id: 'epoxy', name: 'Epoxy Floors', tagline: 'Metallic, flake & solid', Icon: DropletIcon, category: 'Epoxy Floors' },
-  { id: 'graphic', name: 'Graphic Solutions', tagline: 'Identidade & impressão', Icon: PenIcon, category: 'Graphic' },
-  { id: 'ai', name: 'AI Business', tagline: 'Consultoria & automação com IA', Icon: SparkIcon },
-  { id: 'ads', name: 'Marble Ads', tagline: 'Google Ads & Meta Ads', Icon: TrendUpIcon },
-  { id: 'xps', name: 'Xtreme Polishing Systems', tagline: 'Buy your epoxy here', Icon: BoxIcon, badge: 'Oficial' },
-];
-
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user } = useAuth();
+  const { user, client } = useAuth();
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const screenW = useAppWidth();
@@ -59,8 +39,13 @@ export default function HomeScreen() {
 
   // Carrossel: destaques escolhidos pela equipa (works.featured), em tempo real.
   const { data: featured, loading } = useFeaturedWorks(5);
+  // Fotos dos cartões de departamento, escolhidas pela equipa no backoffice
+  // (settings/home). Sem foto, o cartão fica no gradiente — nunca um ícone.
+  const { data: home } = useHomeSettings();
+  const covers = home?.departmentCovers ?? {};
   // Ponto no sino: só com sessão e alertas por ler.
   const unread = useUnreadCount(user?.uid);
+  const avatarUrl = client?.avatarUrl?.trim();
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / carouselW);
@@ -84,13 +69,14 @@ export default function HomeScreen() {
             <BellIcon size={15} color={colors.gold} />
             {unread > 0 ? <View style={styles.dot} /> : null}
           </Pressable>
+          {/* Com sessão e foto de perfil, o botão do Perfil é a própria foto. */}
           <Pressable
-            style={styles.iconBtn}
+            style={[styles.iconBtn, !!avatarUrl && styles.iconBtnAvatar]}
             onPress={() => navigation.navigate('Tabs', { screen: 'Profile' })}
             accessibilityRole="button"
             accessibilityLabel="Perfil"
           >
-            <UserIcon size={15} color={colors.gold} />
+            {avatarUrl ? <Avatar url={avatarUrl} name={client?.name ?? ''} size={30} /> : <UserIcon size={15} color={colors.gold} />}
           </Pressable>
         </View>
       </View>
@@ -127,7 +113,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={w.title}
               >
-                <Photo url={w.photoUrl} fallback={LOCAL_WORK_PHOTOS[w.id]} seed={w.id} />
+                <Photo url={w.photoUrl} seed={w.id} />
                 <View style={styles.slideOverlay} />
                 <View style={styles.slideText}>
                   <Text style={styles.slideTag}>{categoryFullName(w.category)} · Concluído</Text>
@@ -154,27 +140,43 @@ export default function HomeScreen() {
           <View style={styles.gridLabelLine} />
         </View>
 
+        {/* Cartões de departamento: foto escolhida pela equipa como fundo,
+            nome e tagline por cima. O selo "Oficial" é informação (Xtreme é
+            distribuidor oficial), por isso fica. */}
         <View style={styles.deptGrid}>
-          {departments.map((d) => (
-            <Pressable
-              key={d.id}
-              style={[styles.deptCard, { width: deptCardW }]}
-              onPress={d.category ? () => openPortfolio(d.category) : undefined}
-              accessibilityRole="button"
-              accessibilityLabel={d.name}
-            >
-              <d.Icon size={26} color={colors.gold} />
-              <View>
-                <Text style={styles.deptName}>{d.name}</Text>
-                <Text style={styles.deptTagline}>{d.tagline}</Text>
-              </View>
-              {d.badge ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{d.badge}</Text>
+          {DEPARTMENTS.map((d) => {
+            const cover = covers[d.id];
+            return (
+              <Pressable
+                key={d.id}
+                style={[styles.deptCard, { width: deptCardW }]}
+                onPress={d.category ? () => openPortfolio(d.category) : undefined}
+                accessibilityRole="button"
+                accessibilityLabel={d.name}
+              >
+                <Photo url={cover?.thumbnailUrl || cover?.photoUrl} seed={d.id} />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
+                  locations={[0, 0.5, 1]}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+                <View style={styles.deptText}>
+                  <Text style={styles.deptName} numberOfLines={2}>
+                    {d.name}
+                  </Text>
+                  <Text style={styles.deptTagline} numberOfLines={1}>
+                    {d.tagline}
+                  </Text>
                 </View>
-              ) : null}
-            </Pressable>
-          ))}
+                {d.badge ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{d.badge}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -205,6 +207,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // O Avatar traz a própria borda; a do botão sairia a dobrar.
+  iconBtnAvatar: { borderWidth: 0, backgroundColor: 'transparent' },
   dot: {
     position: 'absolute',
     top: 5,
@@ -236,25 +240,27 @@ const styles = StyleSheet.create({
   gridLabelLine: { flex: 1, height: 1, backgroundColor: colors.hairline },
   deptGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 13, gap: 10, paddingBottom: 24 },
   deptCard: {
-    backgroundColor: colors.panel,
+    height: 122,
+    borderRadius: 14,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.hairline,
-    borderRadius: 14,
-    padding: 14,
-    minHeight: 88,
-    gap: 20,
+    backgroundColor: colors.panel2,
+    justifyContent: 'flex-end',
   },
+  deptText: { padding: 12 },
   deptName: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 2 },
-  deptTagline: { fontFamily: fonts.body, fontSize: 10, color: colors.inkFaint },
+  deptTagline: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
   badge: {
     position: 'absolute',
     top: 10,
     right: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
     borderColor: colors.hairline,
     borderRadius: 20,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  badgeText: { fontFamily: fonts.eyebrow, fontSize: 7.5, letterSpacing: 1, color: colors.goldDim, textTransform: 'uppercase' },
+  badgeText: { fontFamily: fonts.eyebrow, fontSize: 7.5, letterSpacing: 1, color: colors.goldBright, textTransform: 'uppercase' },
 });

@@ -43,3 +43,31 @@ export function useWork(workId: string | undefined): DocState<Work> {
   const ref = useMemo(() => (workId ? doc(worksCol, workId) : null), [workId]);
   return useFirestoreDoc<Work>(ref);
 }
+
+// Um item da galeria do Detalhe, já normalizado para os componentes
+// (WorkGallery, MediaViewer). Vídeo traz sempre `thumbnailUrl` do
+// backoffice; se faltar, o cartão mostra o gradiente.
+export type GalleryItem = {
+  key: string;
+  type: 'photo' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+};
+
+// Itens da galeria de um trabalho: `media[]` por `order`. Sem `media`
+// (trabalhos anteriores ao backoffice, ou só com capa) usa-se a capa.
+export function galleryItems(work: Work): GalleryItem[] {
+  const media = (work.media ?? []).filter((m) => m && typeof m.url === 'string' && m.url.trim());
+  if (media.length === 0) {
+    const cover = work.photoUrl?.trim();
+    return cover ? [{ key: 'cover', type: 'photo', url: cover }] : [];
+  }
+  return [...media]
+    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
+    .map((m, i) => ({
+      key: `${i}-${m.url}`,
+      type: m.type === 'video' ? 'video' : 'photo',
+      url: m.url.trim(),
+      thumbnailUrl: m.thumbnailUrl?.trim() || undefined,
+    }));
+}

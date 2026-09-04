@@ -1,27 +1,35 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { colors, fonts } from '../theme/theme';
-import Photo from '../components/Photo';
+import WorkGallery from '../components/WorkGallery';
+import MediaViewer from '../components/MediaViewer';
 import { EmptyState, ErrorState } from '../components/ListState';
 import { BackIcon, ShareIcon, CalendarIcon, CarIcon } from '../components/Icons';
-import { useWork } from '../data/works';
-import { LOCAL_WORK_PHOTOS } from '../data/localPhotos';
+import { galleryItems, useWork } from '../data/works';
 import { categoryFullName } from '../data/categories';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate } from '../utils/dates';
+import { useAppWidth } from '../utils/layout';
 
 type Route = RouteProp<RootStackParamList, 'WorkDetail'>;
 
 // Detalhe de um trabalho do portfólio, lido em tempo real. Se o trabalho não
 // existir ou tiver sido despublicado (as regras negam a leitura), mostra
 // "já não está disponível" em vez de rebentar — pode chegar-se aqui por um
-// alerta antigo.
+// alerta antigo. O topo é a galeria (works.media[], deslizável); tocar num
+// item abre-o em ecrã inteiro (MediaViewer), onde o vídeo reproduz.
 export default function WorkDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<Route>();
   const { data: work, loading, missing, error } = useWork(route.params.workId);
+  const screenW = useAppWidth();
+  const heroW = screenW - 36;
+  // Proporção 4:3 para as fotos respirarem (decisão do Fábio, Secção 5b).
+  const heroH = Math.round((heroW * 3) / 4);
+  const items = useMemo(() => (work ? galleryItems(work) : []), [work]);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -52,13 +60,23 @@ export default function WorkDetailScreen() {
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.hero}>
-              <Photo url={work.photoUrl} fallback={LOCAL_WORK_PHOTOS[work.id]} seed={work.id} />
-              <View style={styles.heroOverlay} />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{categoryFullName(work.category)}</Text>
-              </View>
-              <Text style={styles.heroTitle}>{work.title}</Text>
+            <View style={styles.heroWrap}>
+              <WorkGallery
+                items={items}
+                seed={work.id}
+                width={heroW}
+                height={heroH}
+                onOpen={items.length > 0 ? setViewerIndex : undefined}
+                overlay={
+                  <>
+                    <View style={styles.heroOverlay} />
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{categoryFullName(work.category)}</Text>
+                    </View>
+                    <Text style={styles.heroTitle}>{work.title}</Text>
+                  </>
+                }
+              />
             </View>
 
             <View style={styles.meta}>
@@ -95,6 +113,8 @@ export default function WorkDetailScreen() {
               <Text style={styles.ctaText}>Pedir orçamento semelhante</Text>
             </Pressable>
           </View>
+
+          <MediaViewer items={items} initialIndex={viewerIndex ?? 0} visible={viewerIndex !== null} onClose={() => setViewerIndex(null)} />
         </>
       )}
     </SafeAreaView>
@@ -106,12 +126,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, minHeight: 42 },
   iconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  hero: { position: 'relative', margin: 18, marginTop: 12, height: 210, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },
-  heroOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
+  heroWrap: { marginHorizontal: 18, marginTop: 12 },
+  // Escurece só a metade de baixo, onde está o título — a foto fica visível.
+  heroOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%', backgroundColor: 'rgba(0,0,0,0.45)' },
   badge: { position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: colors.hairline, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
   badgeText: { fontFamily: fonts.eyebrow, fontSize: 7.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   heroTitle: { position: 'absolute', left: 14, right: 14, bottom: 12, fontFamily: fonts.bodyExtraBold, fontSize: 16, color: colors.ink, lineHeight: 21 },
-  meta: { flexDirection: 'row', gap: 16, paddingHorizontal: 18, marginTop: 4, flexWrap: 'wrap' },
+  meta: { flexDirection: 'row', gap: 16, paddingHorizontal: 18, marginTop: 6, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkFaint },
   desc: { paddingHorizontal: 18, marginTop: 14, fontFamily: fonts.body, fontSize: 12, lineHeight: 19, color: colors.inkMuted },

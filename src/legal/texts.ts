@@ -13,7 +13,9 @@
 // Isto cobre a proteção de dados pessoais na app. Não é aconselhamento
 // jurídico: confirma com um advogado/contabilista antes do lançamento.
 
-export const LEGAL_VERSION = '2026-09-03';
+// Histórico: 2026-09-03 (primeira versão); 2026-09-04 (foto de perfil
+// opcional + Cloudinary como subcontratante, Secção 5b).
+export const LEGAL_VERSION = '2026-09-04';
 
 // Dados da empresa (preenchidos pelo Fábio a 2026-09-03). A marca é
 // "Marble Studios"; a entidade legal é a Cacto Elegante, Lda. Se algum
@@ -51,6 +53,11 @@ export const RETENTION = {
   inactiveAccountYears: 3,
   // Prazo legal de conservação de documentos de faturação em Portugal.
   invoicingYears: 10,
+  // Prazo para o ficheiro da foto de perfil sair do alojamento depois de o
+  // cliente a remover ou apagar a conta. A app só limpa o campo no
+  // Firestore (apagar no Cloudinary exige a API assinada); até a Secção 6
+  // automatizar, a equipa apaga à mão pela tag `uid_<uid>` na Media Library.
+  avatarFileDays: 30,
 };
 
 const PRIVACY: LegalText = {
@@ -75,10 +82,13 @@ const PRIVACY: LegalText = {
       bullets: [
         'Dados da conta, que tu nos dás no registo: nome, email, número de telemóvel e password. A password é guardada de forma cifrada pelo serviço de autenticação, e nunca é visível para a equipa.',
         'Dados de serviço, registados pela equipa quando fazes um trabalho connosco: o teu carro ou chão (modelo, e matrícula quando for necessária para o serviço), o trabalho realizado, produtos aplicados, datas de checkup e fotografias do trabalho.',
+        'Foto de perfil, opcional: só se a escolheres no Perfil, da galeria ou da câmara. É a única fotografia tua que a app guarda, serve apenas para a tua conta (e para a equipa te reconhecer na tua ficha), e podes trocá-la ou removê-la quando quiseres.',
         'Preferências: que notificações queres receber, e se aceitaste receber ofertas e novidades.',
         'Dados técnicos mínimos: um identificador do dispositivo para entregar notificações push (só se as ativares no telemóvel) e registos de erros da app, sem conteúdo pessoal.',
       ],
-      after: ['Não recolhemos localização, contactos, fotografias do teu telemóvel nem dados de pagamento. A app não tem pagamentos.'],
+      after: [
+        'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além da que escolheres para foto de perfil. A app não tem pagamentos.',
+      ],
     },
     {
       title: '3. Para que usamos os dados e com que base legal',
@@ -87,6 +97,7 @@ const PRIVACY: LegalText = {
         `Criar e gerir a tua conta, mostrar-te os teus carros, chãos e histórico de trabalhos: execução do contrato de prestação de serviços entre ti e a ${COMPANY.brand}.`,
         'Lembrar-te de checkups e contactar-te (por notificação ou telefone) sobre um trabalho teu: execução do contrato e interesse legítimo em garantir a qualidade do serviço. Estas comunicações são operacionais, não são publicidade.',
         'Enviar-te ofertas e novidades (novos trabalhos no portfólio, eventos, promoções): apenas com o teu consentimento, que dás e retiras no Perfil, em "Ofertas e novidades". Está desligado por defeito.',
+        'Mostrar a tua foto de perfil na tua conta: consentimento, que dás ao escolher a foto e retiras ao removê-la.',
         'Emitir faturas e cumprir obrigações fiscais e de garantia: obrigação legal.',
         'Manter a app segura e prevenir abusos: interesse legítimo.',
       ],
@@ -106,6 +117,7 @@ const PRIVACY: LegalText = {
       bullets: [
         'Google Firebase (Google Ireland Ltd.): autenticação, base de dados e alojamento da app. A base de dados está em servidores na União Europeia (região "eur3", Europa). O serviço de autenticação pode processar dados fora da UE ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e dos termos de tratamento de dados da Google.',
         'Expo (Expo, Inc., EUA): serviço de entrega de notificações push, apenas quando as ativares. Recebe o identificador do dispositivo e o texto da notificação.',
+        'Cloudinary (Cloudinary Ltd., Israel e EUA): alojamento e entrega das fotografias e vídeos da app, ou seja, as fotografias dos trabalhos do portfólio e, se a escolheres, a tua foto de perfil. Os ficheiros podem ficar em servidores fora da União Europeia, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e da decisão de adequação da Comissão para Israel.',
       ],
       after: ['Podemos ainda partilhar dados quando a lei o exigir, por exemplo com a Autoridade Tributária no âmbito da faturação.'],
     },
@@ -114,7 +126,8 @@ const PRIVACY: LegalText = {
       paragraphs: [],
       bullets: [
         'Enquanto a tua conta existir, guardamos os dados da conta e o histórico de serviço, para que os possas consultar e para a equipa te acompanhar.',
-        'Quando apagas a conta (Perfil > Apagar conta), o teu nome, email e telemóvel são removidos de imediato do registo de cliente e deixas de poder entrar. O histórico de trabalhos fica guardado de forma anonimizada, ou seja, sem qualquer ligação a ti, para efeitos de garantia, portfólio e estatística.',
+        'Quando apagas a conta (Perfil > Apagar conta), o teu nome, email, telemóvel e foto de perfil são removidos de imediato do registo de cliente e deixas de poder entrar. O histórico de trabalhos fica guardado de forma anonimizada, ou seja, sem qualquer ligação a ti, para efeitos de garantia, portfólio e estatística.',
+        `A foto de perfil deixa de aparecer de imediato quando a removes ou apagas a conta; o ficheiro é eliminado do alojamento no prazo máximo de ${RETENTION.avatarFileDays} dias.`,
         `Contas sem qualquer atividade durante ${RETENTION.inactiveAccountYears} anos são apagadas da mesma forma.`,
         `Faturas e documentos fiscais são conservados fora da app pelo prazo legal de ${RETENTION.invoicingYears} anos.`,
       ],
@@ -124,7 +137,7 @@ const PRIVACY: LegalText = {
       paragraphs: ['Tens direito a:'],
       bullets: [
         'Aceder aos teus dados e receber uma cópia.',
-        'Retificar dados errados. Nome e telemóvel corrigem-se em Perfil > Dados pessoais.',
+        'Retificar dados errados. Nome e telemóvel corrigem-se em Perfil > Dados pessoais; a foto de perfil troca-se ou remove-se tocando no avatar, no Perfil.',
         'Apagar a conta e os dados, em Perfil > Apagar conta, ou pedindo-nos por email.',
         'Retirar o consentimento para marketing a qualquer momento, em Perfil > Ofertas e novidades. Isso não afeta a legalidade do que foi feito antes.',
         'Opor-te ou pedir a limitação do tratamento, e receber os teus dados num formato de uso corrente (portabilidade).',
@@ -194,6 +207,7 @@ const TERMS: LegalText = {
       title: '5. Portfólio e fotografias',
       paragraphs: [
         `As fotografias dos trabalhos publicadas no portfólio pertencem à ${COMPANY.brand}. Ao contratar um serviço, aceitas que o resultado possa ser fotografado e publicado no portfólio da app e nas redes sociais da ${COMPANY.brand}, sem identificar o proprietário e com a matrícula ocultada. Se não quiseres que o teu carro ou chão apareça, basta dizê-lo à equipa antes ou depois do trabalho, e retiramos as fotografias.`,
+        'A foto de perfil que escolheres é só para a tua conta: não é publicada nem partilhada, e apenas a equipa a vê na tua ficha. Usa uma foto tua, ou de que tenhas o direito de usar.',
       ],
     },
     {

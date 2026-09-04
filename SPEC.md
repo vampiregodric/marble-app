@@ -27,6 +27,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 ## Estrutura do ecrã inicial (cliente)
 - Slideshow/carrossel no topo
 - Por baixo, secções para cada departamento/área de negócio (acima)
+- **Fotos dos cartões de departamento (decidido 2026-09-04):** cada um dos seis cartões mostra como fundo uma foto **escolhida pela equipa no backoffice** (Destaques > Fotos dos serviços: carregar uma foto ou usar a capa de um trabalho publicado), não a do trabalho mais recente nem um ícone. Sem foto, o cartão fica num gradiente dourado só com o nome e a tagline.
 
 ## Funcionalidades — Base de dados de clientes e produtos
 - Cada cliente é adicionado à base de dados
@@ -46,7 +47,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Portfólio de trabalhos
 - Cada trabalho concluído (carro, chão epóxi, ou trabalho gráfico) entra no portfólio dentro da app
-- **Galeria por trabalho (pedido 2026-09-03):** um trabalho pode ter várias fotos e vídeo (ex: 4 fotos + 1 vídeo), não só uma imagem. A foto de capa continua a ser a que aparece nos cartões do Portfólio e do carrossel; no Detalhe abre-se a galeria completa. Implicações: modelo `works.media[]` (tipo foto/vídeo, URL, miniatura), galeria deslizável + leitor de vídeo no Detalhe, e upload múltiplo no backoffice (Secção 5), que é também quem decide onde alojar fotos e vídeos.
+- **Galeria por trabalho (pedido 2026-09-03, construída 2026-09-04 — Secção 5b):** um trabalho pode ter várias fotos e vídeo (ex: 4 fotos + 1 vídeo), não só uma imagem. A foto de capa continua a ser a que aparece nos cartões do Portfólio e do carrossel; no Detalhe a foto do topo é uma galeria deslizável (`works.media[]`, contador "3 / 7", pontos) e tocar em qualquer item abre-o em ecrã inteiro, deslizável, onde o vídeo reproduz com controlos nativos (decisão do Fábio: ecrã inteiro para tudo, não vídeo inline). O upload múltiplo e o alojamento (Cloudinary) são do backoffice (Secção 5).
 - **Quem carrega fotos: só a equipa, no backoffice (confirmado 2026-09-03).** O cliente nunca faz upload de fotos de trabalhos na app — a app só mostra. As regras do Firestore refletem isso (`works` sem escrita pelo cliente).
 - Cliente tem preferências (checkboxes) para escolher que categorias de trabalho quer ser notificado: carros / chãos / gráfico
 - Quando um novo trabalho é adicionado numa categoria, os clientes com opt-in nessa categoria recebem notificação push ("Novo trabalho feito pela Marble Studios")
@@ -87,7 +88,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Ecrã de Perfil (protótipo desenhado)
 - Cabeçalho: avatar, nome, "cliente desde"
-- **Foto de perfil (confirmado 2026-09-03):** o cliente vai poder pôr a sua própria foto de perfil — é a única foto que o cliente carrega na app (as fotos de trabalhos são só da equipa, via backoffice). Ainda não está construído: o ícone de câmara no avatar é, por agora, só visual. Precisa de: escolher imagem no telemóvel, alojamento (o mesmo que a Secção 5 decidir para as fotos dos trabalhos), guardar em `clients/{uid}.avatarUrl`, e acrescentar "foto de perfil" aos dados pessoais na política de privacidade (subir `LEGAL_VERSION`). Apagar conta já remove `avatarUrl`.
+- **Foto de perfil (confirmado 2026-09-03, construída 2026-09-04 — Secção 5b):** o cliente põe a sua própria foto de perfil — é a única foto que o cliente carrega na app (as fotos de trabalhos são só da equipa, via backoffice). Tocar no avatar abre um menu: "Escolher da galeria", "Tirar foto" e, quando há foto, "Remover foto". A foto é recortada em quadrado, reduzida a 1024 px no telemóvel e guardada no Cloudinary (preset `marble-avatars`); `clients/{uid}.avatarUrl` fica com o URL de entrega. Aparece no Perfil, no botão de Perfil do Início e na ficha do cliente no backoffice. A política de privacidade declara-a (opcional, base legal = consentimento) e promete apagar o ficheiro do alojamento em 30 dias depois de removida ou de a conta ser apagada — a app só limpa o campo; a Secção 6 automatiza a eliminação no Cloudinary.
 - Cartão "Ação pendente": mostra o passo atual do fluxo de acompanhamento (ex: checkup a confirmar), com CTA para agendar
 - "Os teus carros & chãos": lista de veículos/pisos associados ao cliente, cada um com estado ("Checkup pendente" / "Em dia")
 - "Preferências de notificação": toggle por categoria (Automotive Aesthetics, Epoxy Floors, Graphic Solutions)

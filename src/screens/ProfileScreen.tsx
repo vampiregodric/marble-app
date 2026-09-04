@@ -5,22 +5,18 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
+import Avatar from '../components/Avatar';
+import ActionSheet, { SheetAction } from '../components/ActionSheet';
 import { CameraIcon, ChevronRightIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { pendingCheckup, useVehicles } from '../data/vehicles';
 import { CATEGORIES } from '../data/categories';
+import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
+import { avatarUploadConfigured, uploadAvatar } from '../media/cloudinary';
 import { Client, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
-
-function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '';
-  const first = parts[0][0] ?? '';
-  const last = parts.length > 1 ? parts[parts.length - 1][0] ?? '' : '';
-  return (first + last).toUpperCase();
-}
 
 // Linha secundária de um carro/chão: a última visita (carro) ou a data de
 // instalação (chão). Sem data de serviço, mostra quando foi registado.
@@ -54,8 +50,16 @@ export default function ProfileScreen() {
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
 
+  // Foto de perfil (Secção 5b): menu no avatar → galeria/câmara → redução
+  // no telemóvel → upload para o Cloudinary → clients/{uid}.avatarUrl.
+  const [avatarMenu, setAvatarMenu] = useState(false);
+  // Fração 0..1 enquanto envia; null quando não há envio.
+  const [uploading, setUploading] = useState<number | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
   const displayName = client?.name || user?.displayName || user?.email || '';
   const since = formatMonthYear(client?.clientSince);
+  const avatarUrl = client?.avatarUrl?.trim() || '';
   const prefs: Client['notificationPrefs'] = {
     automotive: true,
     epoxy: true,
@@ -101,21 +105,72 @@ export default function ProfileScreen() {
     }
   };
 
+  // O seletor tem de arrancar ainda dentro do toque (no browser o diálogo de
+  // ficheiros só abre com ativação do utilizador), por isso não se espera
+  // por nada antes de chamar pickAvatar.
+  const changeAvatar = (source: AvatarSource) => {
+    setAvatarMenu(false);
+    setAvatarError(null);
+    const run = async () => {
+      const uri = await pickAvatar(source);
+      if (!uri || !user) return;
+      setUploading(0);
+      const url = await uploadAvatar(uri, user.uid, setUploading);
+      await updateClient({ avatarUrl: url });
+    };
+    run()
+      .catch((err) => setAvatarError(err instanceof Error ? err.message : 'Não foi possível guardar a foto.'))
+      .finally(() => setUploading(null));
+  };
+
+  const removeAvatar = async () => {
+    setAvatarMenu(false);
+    setAvatarError(null);
+    try {
+      await updateClient({ avatarUrl: '' });
+    } catch (err) {
+      setAvatarError(authErrorMessage(err));
+    }
+  };
+
+  const avatarActions: SheetAction[] = [
+    { label: 'Escolher da galeria', onPress: () => changeAvatar('library') },
+    ...(canUseCamera ? [{ label: 'Tirar foto', onPress: () => changeAvatar('camera') }] : []),
+    ...(avatarUrl ? [{ label: 'Remover foto', onPress: removeAvatar, destructive: true }] : []),
+  ];
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initialsOf(displayName)}</Text>
-            <View style={styles.avatarEdit}>
-              <CameraIcon />
-            </View>
-          </View>
+          <Pressable
+            style={styles.avatarWrap}
+            onPress={() => setAvatarMenu(true)}
+            disabled={!client || uploading !== null || !avatarUploadConfigured}
+            accessibilityRole="button"
+            accessibilityLabel={avatarUrl ? 'Mudar ou remover a foto de perfil' : 'Escolher foto de perfil'}
+          >
+            <Avatar url={avatarUrl} name={displayName} size={56} />
+            {uploading !== null ? (
+              <View style={styles.avatarBusy}>
+                <Text style={styles.avatarBusyText}>{Math.round(uploading * 100)}%</Text>
+              </View>
+            ) : avatarUploadConfigured ? (
+              <View style={styles.avatarEdit}>
+                <CameraIcon />
+              </View>
+            ) : null}
+          </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.name} numberOfLines={1}>
               {displayName}
             </Text>
             <Text style={styles.since}>{since ? `Cliente desde ${since}` : user?.email}</Text>
+            {uploading !== null ? (
+              <Text style={styles.avatarHint}>A enviar a foto…</Text>
+            ) : avatarError ? (
+              <Text style={styles.avatarErrorText}>{avatarError}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -272,6 +327,8 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <ActionSheet visible={avatarMenu} title="Foto de perfil" actions={avatarActions} onClose={() => setAvatarMenu(false)} />
     </SafeAreaView>
   );
 }
@@ -279,17 +336,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 16 },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.goldDim,
-    borderWidth: 1,
-    borderColor: colors.hairlineStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontFamily: fonts.eyebrow, fontSize: 16, color: colors.goldBright },
+  avatarWrap: { position: 'relative' },
   avatarEdit: {
     position: 'absolute',
     bottom: -2,
@@ -303,9 +350,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarBusy: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarBusyText: { fontFamily: fonts.eyebrow, fontSize: 11, color: colors.goldBright },
   headerText: { flex: 1 },
   name: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
   since: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkFaint, marginTop: 2 },
+  avatarHint: { fontFamily: fonts.body, fontSize: 10.5, color: colors.goldBright, marginTop: 4 },
+  avatarErrorText: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 14, color: colors.danger, marginTop: 4 },
   termsCard: {
     margin: 18,
     marginBottom: 0,

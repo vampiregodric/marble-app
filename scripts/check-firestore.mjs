@@ -95,5 +95,14 @@ try {
   pass(`clients: bloqueado sem login (${e.code}) — correto`);
 }
 
+// 7. Fotos dos cartões do Início (settings/home) públicas — Secção 5b.
+try {
+  const snap = await getDoc(doc(db, 'settings', 'home'));
+  const covers = snap.exists() ? Object.keys(snap.data().departmentCovers ?? {}) : [];
+  pass(`settings/home: ${snap.exists() ? `existe, fotos para ${covers.length ? covers.join(', ') : 'nenhum departamento'}` : 'não existe (a app mostra gradientes)'}`);
+} catch (e) {
+  fail(`settings/home: ${e.code ?? e.message} — regras sem a match /settings?`);
+}
+
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');
 process.exit(ok ? 0 : 1);

@@ -308,11 +308,26 @@ async function seed() {
     batch.set(db.collection('notifications').doc(id), { photoUrl: '', ...data });
   }
 
+  // --- settings/home: fotos dos cartões de departamento do Início (Secção
+  // 5b). Só o Automotive leva foto (o Jaguar); os outros ficam no gradiente
+  // até a equipa escolher no backoffice (Destaques > Fotos dos serviços).
+  // `merge` para não apagar as fotos que a equipa já tenha escolhido.
+  batch.set(
+    db.collection('settings').doc('home'),
+    {
+      departmentCovers: {
+        automotive: { photoUrl: JAGUAR_PHOTO, thumbnailUrl: JAGUAR_MEDIA[0].thumbnailUrl, publicId: JAGUAR_ID },
+      },
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+
   await batch.commit();
   console.log(
     `Seed concluído: 1 client de exemplo, ${Object.keys(vehicles).length} vehicles, ` +
       `${Object.keys(works).length} works (1 rascunho), ${Object.keys(events).length} events, ` +
-      `${Object.keys(notifications).length} notifications → cliente ${clientId}.`
+      `${Object.keys(notifications).length} notifications → cliente ${clientId}; settings/home com a foto do Automotive.`
   );
 }
 

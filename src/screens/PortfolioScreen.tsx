@@ -7,7 +7,6 @@ import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
 import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
 import { usePublishedWorks } from '../data/works';
-import { LOCAL_WORK_PHOTOS } from '../data/localPhotos';
 import { CATEGORIES } from '../data/categories';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
@@ -83,7 +82,7 @@ export default function PortfolioScreen() {
               accessibilityRole="button"
               accessibilityLabel={w.title}
             >
-              <Photo url={w.photoUrl} fallback={LOCAL_WORK_PHOTOS[w.id]} seed={w.id} />
+              <Photo url={w.photoUrl} seed={w.id} />
               <View style={styles.cardOverlay} />
               <View style={styles.catBadge}>
                 <Text style={styles.catBadgeText}>{CATEGORIES.find((m) => m.key === w.category)?.label ?? w.category}</Text>

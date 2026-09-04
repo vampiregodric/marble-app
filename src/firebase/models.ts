@@ -8,10 +8,36 @@ export const COLLECTIONS = {
   works: 'works',
   events: 'events',
   notifications: 'notifications',
+  // Definições escolhidas pela equipa (por agora só `settings/home`).
+  settings: 'settings',
 } as const;
 
 // Categorias tal como usadas no filtro do Portfólio (PortfolioScreen).
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
+
+// Os seis cartões de departamento do ecrã Início. A lista com nomes e
+// taglines vive no código (app: src/data/departments.ts; backoffice:
+// src/utils/departments.ts) — só a foto de cada um é conteúdo.
+export type DepartmentId = 'automotive' | 'epoxy' | 'graphic' | 'ai' | 'ads' | 'xps';
+
+// Foto de fundo de um cartão de departamento, escolhida pela equipa no
+// backoffice (Destaques > Fotos dos serviços): carregada para o Cloudinary
+// ou copiada da capa de um trabalho publicado. A app usa `thumbnailUrl`
+// quando existe (o cartão é pequeno) e cai para `photoUrl`.
+export interface DepartmentCover {
+  photoUrl: string;
+  thumbnailUrl?: string;
+  publicId?: string;
+}
+
+// Documento único `settings/home` (Secção 5b): o que a equipa define para
+// o ecrã Início além do carrossel. Leitura pública, escrita só da equipa.
+// Ausente ou sem `departmentCovers` → os cartões mostram o gradiente.
+export interface HomeSettings {
+  id: 'home';
+  departmentCovers?: Partial<Record<DepartmentId, DepartmentCover>>;
+  updatedAt?: Timestamp;
+}
 
 // Prova de consentimento (RGPD, Secção 3). Guardamos QUANDO e QUE VERSÃO o
 // cliente aceitou — sem isto não há como demonstrar o consentimento.
@@ -36,6 +62,10 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
+  // Foto de perfil escolhida pelo cliente na app (Secção 5b): URL de
+  // entrega do Cloudinary já recortado em quadrado (src/media/cloudinary.ts).
+  // Vazio ou ausente = sem foto (a app mostra as iniciais). É o único
+  // ficheiro que o cliente carrega; "Apagar conta" remove o campo.
   avatarUrl?: string;
   clientSince: Timestamp;
   // Preenchido pelo backoffice (Secção 5) em fichas criadas pela equipa
@@ -119,9 +149,8 @@ export interface Work {
   description: string;
   // Capa: aparece nos cartões do Portfólio e no carrossel do Início.
   photoUrl?: string;
-  // Galeria completa, mostrada no Detalhe (ainda não construída na app —
-  // fica para quando o backoffice conseguir carregar média). Ausente ou
-  // vazio = só a capa.
+  // Galeria completa, mostrada no Detalhe (Secção 5b: deslizável no topo e
+  // visualizador em ecrã inteiro com vídeo). Ausente ou vazio = só a capa.
   media?: WorkMedia[];
   products: WorkProduct[];
   // Curadoria manual da equipa para o carrossel do Início (ver SPEC.md).

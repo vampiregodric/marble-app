@@ -20,65 +20,9 @@ export function CarIcon({ size = 17, color = '#c6a15b' }: IconProps) {
   );
 }
 
-export function DropletIcon({ size = 17, color = '#c6a15b' }: IconProps) {
-  return (
-    <Svg width={size} height={size} {...base}>
-      <Path
-        d="M12 3c3 4 5.5 7.3 5.5 10.2A5.5 5.5 0 0 1 12 18.7a5.5 5.5 0 0 1-5.5-5.5C6.5 10.3 9 7 12 3Z"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-export function PenIcon({ size = 17, color = '#c6a15b' }: IconProps) {
-  return (
-    <Svg width={size} height={size} {...base}>
-      <Path
-        d="M4 20l1.2-4.8a2 2 0 0 1 .5-.9L15.5 4.5a1.5 1.5 0 0 1 2.1 0l1.9 1.9a1.5 1.5 0 0 1 0 2.1L9.7 18.3a2 2 0 0 1-.9.5L4 20Z"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-export function SparkIcon({ size = 17, color = '#c6a15b' }: IconProps) {
-  return (
-    <Svg width={size} height={size} {...base}>
-      <Path
-        d="M12 3 13.6 9.4 20 11l-6.4 1.6L12 19l-1.6-6.4L4 11l6.4-1.6Z"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-export function TrendUpIcon({ size = 17, color = '#c6a15b' }: IconProps) {
-  return (
-    <Svg width={size} height={size} {...base}>
-      <Path d="M3 17 9 11l4 4 8-8" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M15 6h6v6" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" opacity={0.6} />
-    </Svg>
-  );
-}
-
-export function BoxIcon({ size = 17, color = '#c6a15b' }: IconProps) {
-  return (
-    <Svg width={size} height={size} {...base}>
-      <Path d="M12 3 20 7v10l-8 4-8-4V7Z" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 3v18M4 7l8 4 8-4" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" opacity={0.6} />
-    </Svg>
-  );
-}
+// Os ícones de departamento (gota, caneta, faísca, tendência, caixa) saíram
+// na Secção 5b: os cartões do Início passaram a mostrar a foto escolhida
+// pela equipa. O CarIcon fica — o Detalhe usa-o junto do modelo do carro.
 
 export function CalendarIcon({ size = 18, color = '#c6a15b' }: IconProps) {
   return (
