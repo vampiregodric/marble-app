@@ -290,7 +290,11 @@ uma vez por projeto, no PowerShell dele, a partir da pasta do projeto:
 npx.cmd firebase-tools functions:secrets:set CLOUDINARY_API_KEY --project dev
 ```
 
-e o mesmo para `CLOUDINARY_API_SECRET`. Sem eles o deploy das funções que
+e o mesmo para `CLOUDINARY_API_SECRET`. **Depois** disso, muda
+`CLOUDINARY_CLEANUP=off` para `on` em `functions/.env` e faz deploy outra
+vez — só aí a `onClientUpdated` passa a declarar os segredos (declará-los
+sem valor faz o deploy inteiro falhar, foi por isso que o interruptor
+existe). Sem eles o deploy das funções que
 os declaram falha; com eles em falta em execução, a limpeza no Cloudinary
 é só registada nos logs (nada rebenta). O cloud name (público) está em
 `functions/.env`. Logs: `npx.cmd firebase-tools functions:log --project dev`.
