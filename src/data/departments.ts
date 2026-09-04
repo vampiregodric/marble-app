@@ -9,8 +9,9 @@ export type Department = {
   id: DepartmentId;
   name: string;
   tagline: string;
-  // Departamentos com portfólio abrem o Portfólio já filtrado. Os outros
-  // (AI Business, Marble Ads, Xtreme) ganham página própria nas Secções 9 e 10.
+  // Todos os cartões abrem a página de serviços do departamento (Secção 9,
+  // conteúdo em departmentContent.ts). Os que têm portfólio mostram lá os
+  // trabalhos recentes desta categoria e ligam ao Portfólio filtrado.
   category?: WorkCategory;
   badge?: string;
 };

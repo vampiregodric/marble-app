@@ -11,6 +11,8 @@ import EventsScreen from '../screens/EventsScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import WorkDetailScreen from '../screens/WorkDetailScreen';
+import DepartmentScreen from '../screens/DepartmentScreen';
+import RequestQuoteScreen from '../screens/RequestQuoteScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
 import LegalScreen from '../screens/LegalScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
@@ -113,6 +115,8 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       WorkDetail: 'work/:workId',
+      Department: 'services/:id',
+      RequestQuote: 'request-quote',
       PersonalData: 'profile/personal-data',
       Legal: 'legal/:doc',
       DeleteAccount: 'profile/delete-account',
@@ -155,6 +159,8 @@ export default function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="Department" component={DepartmentScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="RequestQuote" component={RequestQuoteScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
