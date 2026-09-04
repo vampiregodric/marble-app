@@ -131,9 +131,11 @@ export const TEXTS = {
       description: `${wasScheduled ? `Estava agendado para ${formatCheckupSlot(req)} — o dia fica livre.` : `Tinha pedido ${formatCheckupSlot({ day: req.day, period: req.period })}.`} O ${vehicleWord(vehicle)} sai dos checkups pendentes; não é preciso ligar.`,
     };
   },
-  // Ao cliente: a equipa aprovou o pedido, ou ele confirmou a proposta.
-  checkupScheduled(vehicle: Vehicle, req: CheckupRequest) {
-    const note = req.teamNote?.trim() ? ` ${req.teamNote.trim()}` : '';
+  // Ao cliente: a equipa aprovou o pedido, ou ele confirmou a proposta. A
+  // nota da equipa só entra quando foi escrita ao aprovar — se o cliente
+  // confirmou uma proposta, a nota era a pergunta da proposta e já foi lida.
+  checkupScheduled(vehicle: Vehicle, req: CheckupRequest, withTeamNote = true) {
+    const note = withTeamNote && req.teamNote?.trim() ? ` ${req.teamNote.trim()}` : '';
     return {
       title: `Checkup agendado: ${formatCheckupSlot(req)}`,
       description: `O checkup gratuito do teu ${vehicle.name} está marcado para ${formatCheckupSlot(req)}.${note} Se precisares de mudar, altera no Perfil.`,

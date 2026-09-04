@@ -527,19 +527,74 @@ opcionais; (3) a equipa recebe alerta interno + o cliente alerta de
 confirmação, **e email para quotes@marble.pt** (Resend, remetente
 app@marble.pt); (4) página Pedidos completa no backoffice; (5) prazo
 prometido: **1 dia útil**; (6) retenção: **12 meses depois de fechado**.
-**Para a Secção 8:** usar a mesma coleção com `type: 'checkup'` e
+**Para a Secção 8 (nota original):** usar a mesma coleção com `type: 'checkup'` e
 `vehicleId` — `validNewRequest` já aceita os dois; `handleRequestCreated`
 e os textos (`requestKind`) já distinguem o tipo; a página Pedidos mostra
-"Pedido de checkup". Basta o botão "Agendar agora" gravar o doc (e
-`vehicles.checkupRequestedAt` é da Function ou da regra a decidir lá).
+"Pedido de checkup". **Não foi por aí (2026-09-04):** a Secção 8 correu
+em paralelo e o fluxo decidido pelo Fábio (disponibilidade da equipa,
+aprovação, proposta de outro dia, confirmação do cliente) não cabe em
+recebido → em contacto → fechado. O pedido de checkup vive em
+`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` ficou sem
+uso e pode sair na Secção 7b.
 **Para as Secções 9 e 10:** `navigation.navigate('RequestQuote', { department: 'ai' | 'ads' | 'xps' })`
 — os três formulários já existem em `requestForms.ts`.
 **Para a Secção 11:** `RESEND_API_KEY` no prod, `BACKOFFICE_URL` do prod em
 `functions/.env.prod` (ou o equivalente), preset `marble-requests`,
 App Check.
 
-### Secção 8 — Fluxo de agendamento de checkup
+### Secção 7b — Backoffice: checkups (aprovar, propor outro dia, disponibilidade)
 **Estado:** Por fazer
+**Depende de:** Secção 7 e Secção 8 no master (é no checkout do
+backoffice, que era da 7). **Pode correr em paralelo com a Secção 12 —
+Inglês**: não toca na app, só no backoffice (e na cópia de `models.ts`).
+**Objetivo:** A equipa gere os pedidos de checkup da Secção 8 no
+backoffice, em vez do script `npm run checkup:admin` que faz o mesmo até
+lá. Decisão do Fábio (2026-09-04): "temos de ter um lugar onde nos avisa
+que o cliente quer o checkup — no backoffice".
+- **Página nova "Checkups"** (rota `/checkups`, item na barra lateral com
+  a contagem de pedidos a aguardar aprovação), três blocos:
+  1. **A aprovar** — `vehicles` com `checkupRequest.status == 'pending'`
+     (já vêm todos no `DataContext`, é filtrar): cliente (link à ficha +
+     telemóvel), carro/chão, dia e período pedidos, nota do cliente;
+     botões **Aprovar** (hora opcional "HH:MM" + nota) e **Propor outro
+     dia** (dia, período, hora opcional, nota). Escrevem
+     `checkupRequest.status/time/teamNote/decidedAt` — exatamente o que
+     `scripts/checkup-admin.mjs` (`approve`, `propose`) da app escreve;
+     copiar dali. Propostas à espera do cliente (`proposed`) aparecem
+     aqui também, com "Aprovar na mesma" e "Propor outro dia".
+  2. **Agendados** — `approved`, por ordem de dia/hora: "Marcar em dia"
+     (o que já existe: `checkupStatus: 'ok'` + `checkupDoneAt`) e "Propor
+     outro dia".
+  3. **Disponibilidade** — editor de `settings/checkups`
+     (`CheckupAvailability`): grelha seg–dom × manhã/tarde, dias fechados
+     (input date + "Fechar dia" / "Reabrir"), semanas à frente (1–12),
+     antecedência mínima; `setDoc` com merge, como `saveDepartmentCover`.
+- **Painel:** os alertas internos já lá chegam (`team_alert` da Function);
+  acrescentar um link "Ver em Checkups" e, na tabela "Checkups pendentes",
+  a coluna com o estado do pedido (Pedido / Proposta / Agendado). **Ficha
+  do cliente:** o mesmo estado na linha do carro/chão; `VehicleModal` com
+  o estado `'declined'` ("Cancelou o checkup").
+- **`models.ts` do backoffice** sincronizado com o da app
+  (`CheckupRequest`, `CheckupAvailability`, `CHECKUP_*`, `CheckupStatus`
+  com `'declined'`), `CHECKUP.declined` em `utils/format.ts`. Tirar
+  `'checkup'` de `RequestType` (Secção 7) se ninguém o usar.
+- **Deploy** do backoffice no dev (`npm run deploy:dev`) no fim.
+**Contrato já pronto (Secção 8):** as regras deixam a equipa escrever
+tudo (`isAdmin()`); a Cloud Function `onVehicleUpdated` reage às
+escritas da equipa — `proposed` → alerta "Proposta de checkup" ao cliente
+(com push), `approved` → "Checkup agendado"; o cliente confirma/cancela
+na app e a equipa recebe alerta interno. Ver DEVELOPMENT.md,
+"Agendamento de checkup", e `functions/src/handlers.ts` →
+`handleVehicleUpdated`. Para testar: app web (`npm run dev-token`) na
+conta de teste + a página nova; ou `npm run checkup:admin -- <chave> list`.
+
+### Secção 8 — Fluxo de agendamento de checkup
+**Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
+verificado no dev (app web na 8084, runner local, trigger publicado,
+`check:firestore:auth` com 12 casos). O lado da equipa no backoffice
+(aprovar / propor outro dia / disponibilidade) é a **Secção 7b**, acima —
+até lá o script `npm run checkup:admin` faz exatamente o mesmo. Ver
+"Decisões" e "Nota" no fim desta secção.
 **Depende de:** Secção 1, Secção 6
 **Objetivo:** O botão "Agendar agora" no cartão de "Ação pendente" do
 Perfil (`src/screens/ProfileScreen.tsx`) ainda não faz nada. Decidir e
@@ -553,6 +608,61 @@ uma Cloud Function (`functions/`) cria um `team_alert` "Ligar a X: pediu
 checkup do Y para dia Z" no Painel que já existe. O job diário já trata
 `checkupRequestedAt` como "confirmado". A cópia de `models.ts` do
 backoffice sincroniza-se depois de a 7 entrar.
+**Decisões (2026-09-04, Fábio, nesta sessão):** (1) o cliente escolhe
+entre **opções que a equipa define no backoffice** — horário semanal
+(seg–dom × manhã/tarde), dias fechados, semanas à frente, antecedência
+mínima — com nota opcional; sem calendário completo ("nós escolhemos
+quando dá, porque há de ser sempre fácil e não atrapalha nada"); (2) o
+pedido fica **a aguardar aprovação**; a equipa **aprova** (hora opcional)
+**ou propõe outro dia**, e o cliente recebe alerta com push para confirmar
+na app ou escolher outro dia; (3) o cliente pode **alterar e cancelar**;
+cancelar = "considera que não quis fazer" (sai dos checkups pendentes, a
+equipa não insiste; pode voltar a pedir); (4) o lugar da equipa é o
+backoffice, que a Secção 7 estava a ocupar → passou para a **Secção 7b**.
+**Nota (2026-09-04):** construído nesta sessão. **Modelo** (`models.ts`
+da app e `functions/src/types.ts`): `Vehicle.checkupRequest`
+(`CheckupRequest`: `day` "AAAA-MM-DD", `period` `morning|afternoon`,
+`note`, `status` `pending → proposed | approved → cancelled`,
+`requestedAt`; da equipa `time` "HH:MM", `teamNote`, `decidedAt`;
+`confirmedAt`, `cancelledAt`), `checkupRequestedAt` (o job já o lia),
+`CheckupStatus` com `'declined'`, `settings/checkups`
+(`CheckupAvailability`, `CHECKUP_AVAILABILITY_DEFAULT` seg–sex,
+`CHECKUP_LIMITS`). **Regras** (`match /vehicles`, `ownerCheckupWrite`): o
+dono só pode pedir/alterar (mapa inteiro validado, `requestedAt ==
+request.time`), confirmar a proposta (`proposed → approved`) e cancelar;
+o resto é `isAdmin()`. **App:** `src/data/checkups.ts` (disponibilidade
+em tempo real, opções, estado por carro/chão, textos "seg, 7 set, de
+manhã"), `src/data/vehicles.ts` (`requestCheckup`,
+`confirmCheckupProposal`, `cancelCheckupRequest`),
+`src/components/CheckupSheet.tsx` (folha no estilo da app: chips de dias
+e de período, nota até 300 caracteres; sem calendário nem ícones),
+Perfil com o cartão por estado — Ação pendente ("Agendar agora"), A
+aguardar aprovação ("Alterar" / "Cancelar pedido"), Proposta da equipa
+("Confirmar" / "Escolher outro dia" / "Cancelar"), Agendado ("Alterar" /
+"Cancelar") — e as linhas dos carros/chãos tocáveis (Pedido / Proposta /
+Agendado / Sem checkup "toca para voltar a pedir"). **Functions:**
+`onVehicleUpdated` → `handleVehicleUpdated` (`handlers.ts`) + textos em
+`texts.ts`: pedido/alteração → alerta interno com dia, nota e telemóvel e
+`followUp.checkupConfirmedAt` no trabalho (nunca há alerta "não
+confirmou" falso); proposta → `message` ao cliente; aprovado/confirmado →
+"Checkup agendado" (+ alerta interno se foi o cliente a confirmar);
+cancelado → alerta interno + `checkupStatus: 'declined'`; voltar a pedir
+→ `'pending'`. **Scripts:** `npm run functions:jobs -- <chave> --vehicle
+<id> [--before estado]` (simula o trigger), `npm run checkup:admin --
+<chave> list|show|approve|propose|done|reset|availability` (o papel da
+equipa até à Secção 7b), seed com `settings/checkups`,
+`check:firestore:auth` com os casos do pedido. **Verificado** no web
+(8084, conta de teste, com o master das Secções 7 e 10 já junto): pedir →
+"A aguardar aprovação" + alerta interno; proposta (script) → "Proposta de
+checkup" nos Alertas + cartão "Proposta da equipa" → Confirmar →
+"Agendado" + "Checkup agendado" nos Alertas + alerta interno; Cancelar →
+"Sem checkup" + alerta interno + `declined`; voltar a pedir a partir da
+linha → `pending` outra vez; aprovação pelo script com o trigger
+publicado. Regras, índices e Functions publicados no dev. Não se usou a
+coleção `requests` da Secção 7 (ver nota lá). **Fica para a Secção 7b:**
+tudo o que é backoffice (acima). **Para a Secção 12:** os textos do
+cartão, da folha e dos alertas desta secção estão em `ProfileScreen.tsx`,
+`CheckupSheet.tsx`, `src/data/checkups.ts` e `functions/src/texts.ts`.
 
 ### Secção 9 — Conteúdo estático: AI Business & Marble Ads
 **Estado:** Feito (2026-09-04). Página de serviços genérica para os cinco
@@ -725,7 +835,9 @@ e 12 estarem no master.
 ### Secção 12 — Inglês
 **Estado:** Por fazer
 **Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
-**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11
+**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11.
+Pode correr em paralelo com a **Secção 7b** (só backoffice) e com a
+parte 1 da Secção 11 (não toca em `src/`).
 **Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
 Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
 próprio, a não ser que o Fábio queira): textos dos ecrãs, estados vazios,

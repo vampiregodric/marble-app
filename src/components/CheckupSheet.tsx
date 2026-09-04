@@ -67,6 +67,7 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
       onClose();
     } catch (err) {
       setError(checkupErrorMessage(err));
+    } finally {
       setBusy(false);
     }
   };

@@ -80,7 +80,7 @@ export function serverNow(): FieldValue {
 
 // ---------- Agendamento de checkup (Secção 8) ----------
 
-export type VehicleUpdateSummary = { teamAlerts: number; messages: number; confirmedWorks: number; declined: boolean };
+export type VehicleUpdateSummary = { teamAlerts: number; messages: number; confirmedWorks: number; declined: boolean; reopened?: boolean };
 
 function sameTs(a?: Timestamp, b?: Timestamp): boolean {
   return !a && !b ? true : !!a && !!b && a.isEqual(b);
@@ -152,14 +152,21 @@ export async function handleVehicleUpdated(db: Firestore, before: Vehicle | null
   if (req.status === 'pending' && (statusChanged || newRound)) {
     const changed = !!prev && prev.status !== 'cancelled';
     await team(TEXTS.checkupRequested(client ?? ({ id: after.clientId, name: '', email: '' } as Client), after, req, changed));
+    // Tinha cancelado antes ("não quis") e mudou de ideias: volta aos
+    // checkups pendentes do backoffice.
+    if (after.checkupStatus === 'declined') {
+      await db.collection('vehicles').doc(after.id).update({ checkupStatus: 'pending', updatedAt: Timestamp.fromDate(now) });
+      summary.reopened = true;
+    }
     summary.confirmedWorks = await confirmFollowUps(db, after.id, now, log);
     log(`checkup ${changed ? 'alterado' : 'pedido'} → alerta interno · ${clientLabel} · ${after.name} · ${req.day} ${req.period}`);
   } else if (req.status === 'proposed' && (statusChanged || decisionChanged || slotChanged)) {
     await toClient(TEXTS.checkupProposed(after, req));
     log(`proposta da equipa → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);
   } else if (req.status === 'approved' && (statusChanged || decisionChanged || slotChanged)) {
-    await toClient(TEXTS.checkupScheduled(after, req));
-    if (prev?.status === 'proposed' && client && hasAppAccount(client)) await team(TEXTS.checkupProposalConfirmed(client, after, req));
+    const clientConfirmed = prev?.status === 'proposed';
+    await toClient(TEXTS.checkupScheduled(after, req, !clientConfirmed));
+    if (clientConfirmed && client && hasAppAccount(client)) await team(TEXTS.checkupProposalConfirmed(client, after, req));
     summary.confirmedWorks = await confirmFollowUps(db, after.id, now, log);
     log(`checkup agendado → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);
   } else if (req.status === 'cancelled' && statusChanged) {

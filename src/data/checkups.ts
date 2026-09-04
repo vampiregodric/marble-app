@@ -117,12 +117,15 @@ export type CheckupState = 'ok' | 'todo' | 'requested' | 'proposed' | 'scheduled
 
 export function checkupState(v: Vehicle): CheckupState {
   if (v.checkupStatus === 'ok') return 'ok';
+  // Um pedido em curso manda, mesmo que o carro/chão ainda esteja
+  // 'declined' de um cancelamento anterior (a Function repõe 'pending'
+  // segundos depois de o cliente voltar a pedir).
   const req = v.checkupRequest;
+  if (req?.status === 'pending') return 'requested';
+  if (req?.status === 'proposed') return 'proposed';
+  if (req?.status === 'approved') return 'scheduled';
   if (req?.status === 'cancelled' || v.checkupStatus === 'declined') return 'declined';
-  if (!req) return 'todo';
-  if (req.status === 'pending') return 'requested';
-  if (req.status === 'proposed') return 'proposed';
-  return 'scheduled';
+  return 'todo';
 }
 
 // Há algo que o cliente possa fazer com este carro/chão? (abre a folha ou

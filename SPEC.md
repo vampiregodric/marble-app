@@ -49,6 +49,12 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Cliente sem conta na app: em vez do lembrete, a equipa recebe logo um alerta interno para lhe ligar.
 - "Confirmar o checkup" na app é a Secção 8; até lá, "confirmado" = a equipa marcou o carro/chão em dia no backoffice.
 
+**Decidido (2026-09-04, Secção 8 — agendar o checkup na app):**
+- Ao tocar em "Agendar agora" o cliente escolhe um **dia e um período (manhã/tarde)** entre os que a equipa abriu no backoffice — horário semanal (seg–dom × manhã/tarde), dias fechados, quantas semanas à frente, antecedência mínima — e deixa uma nota opcional. Sem calendário completo: "nós no backoffice escolhemos quando dá, porque há de ser sempre fácil e não atrapalha nada".
+- O pedido fica **a aguardar aprovação**. A equipa **aprova** (com hora concreta, se quiser) **ou propõe outro dia**; o cliente recebe um alerta com push e, no caso da proposta, confirma na app ou escolhe outro dia. Só depois é que está agendado.
+- O cliente pode **alterar e cancelar**. Cancelar = "considera que não quis fazer": o carro/chão sai dos checkups pendentes e a equipa não insiste; pode voltar a pedir na app quando quiser.
+- O lado da equipa vive no **backoffice** (página "Checkups" — Secção 7b, depois de a Secção 7 entrar); até existir, o script `npm run checkup:admin` faz o mesmo. O pedido vive no próprio carro/chão (`vehicles/{id}.checkupRequest`), não na coleção `requests` da Secção 7.
+
 ## Carrossel do ecrã inicial
 - Curadoria **manual** pela equipa (confirmado) — não é automático por "mais recentes". Implica um ecrã de gestão no backoffice para escolher/ordenar destaques.
 

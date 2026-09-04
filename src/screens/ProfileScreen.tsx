@@ -342,8 +342,11 @@ export default function ProfileScreen() {
               title = `A equipa propõe ${formatCheckupSlot(req)}`;
               desc = `${pending.name}. ${req.teamNote?.trim() || 'O dia que pediste não dá. Confirma esta proposta ou escolhe outro dia.'}`;
             } else if (req && state === 'scheduled') {
+              // A nota da equipa só se mostra se veio com a aprovação; se o
+              // cliente confirmou uma proposta, a nota era a pergunta dela.
+              const teamNote = !req.confirmedAt ? req.teamNote?.trim() : '';
               title = `Checkup agendado: ${formatCheckupSlot(req)}`;
-              desc = `${pending.name}. ${req.teamNote?.trim() || 'Até lá! Se precisares de mudar o dia, altera aqui.'}`;
+              desc = `${pending.name}. ${teamNote || 'Até lá! Se precisares de mudar o dia, altera aqui.'}`;
             }
             return (
               <View style={[styles.pendingCard, good && styles.pendingCardOk]}>
