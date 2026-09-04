@@ -61,3 +61,7 @@ credentials.json
 
 # functions/.env NÃO tem segredos (cloud name público + interruptores) — vai para o git
 !functions/.env
+
+# Logs da Firebase CLI
+firebase-debug.log
+firebase-debug.*.log
