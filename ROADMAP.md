@@ -561,7 +561,9 @@ acrescentar `xps` (e depois `inozetek`, com o `DepartmentId` novo) a
 cartão do Início e a rota já funcionam.
 
 ### Secção 10 — Distribuição: Xtreme Polishing Systems & Inozetek
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-04). O cartão da Xtreme abre a sua página de
+distribuição; a Inozetek fica preparada sem cartão. Dois passos ficam à
+espera de factos do Fábio (ver "Fica pendente").
 **Depende de:** nada
 **Objetivo:** O cartão "Xtreme Polishing Systems" na Home precisa de
 ligar a algo real (link externo? página própria?). Preparar o mesmo
@@ -577,6 +579,74 @@ a ser escolhível no backoffice sem mais código.
 app. A Inozetek fica com o conteúdo preparado mas **sem cartão** até a
 parceria ser oficial (SPEC) — o `DepartmentId` novo exige o backoffice,
 que é da Secção 7.
+**Decisões (2026-09-04, Fábio):** (1) **o site da Marble vem primeiro** e
+a página da app passa depois a espelhá-lo; até lá a página mostra
+categorias de produto com texto (resinas, pigmentos metálicos, flakes e
+quartzo, acabamentos e selantes, ferramentas e kits) e o botão é "Pedir
+cotação" (pedido de orçamento com `department: 'xps'`), porque **não há
+loja online** — sem URL inventado. (2) A Inozetek é só **uma das marcas**
+de PPF/vinil que a Marble aplica (há outras); a distribuição em Portugal
+está em cima da mesa mas não é oficial → sem cartão, e na página
+Automotive uma menção factual ("películas de marcas de referência, como a
+Inozetek"), não "distribuidores oficiais". (3) A página da Xtreme mostra
+os **trabalhos recentes em epóxi** (fotos reais dos pavimentos feitos com
+os produtos): `category: 'Epoxy Floors'` no `xps` de `DEPARTMENTS`, só na
+app — são os trabalhos publicados pela equipa no backoffice, os 6 mais
+recentes; uma seleção curada por departamento precisaria do backoffice
+(Destaques) e fica como ideia.
+**Nota (2026-09-04):** construído nesta sessão, só na app (backoffice,
+regras/índices do Firestore e `functions/` intocados).
+`src/data/departmentContent.ts`: entrada `xps` (headline, intro, 5
+categorias, 4 passos "Como comprar", investimento, cta `quote` "Pedir
+cotação"); dois campos novos opcionais em `DepartmentContent` — `labels`
+(rótulos "O que vendemos" / "Como comprar" em vez de "O que fazemos" /
+"Como funciona") e `related` (cartões "Ver também" que abrem outra página
+de departamento, `navigation.push`, só para destinos com conteúdo: Xtreme
+→ "Preferes que sejamos nós a instalar?" → Epoxy Floors, e Epoxy → "Queres
+fazer o teu próprio chão?" → Xtreme); `INOZETEK_CONTENT_PT` exportado
+(rascunho da futura página, não usado por ninguém). `DepartmentScreen`:
+rótulos por conteúdo e o bloco "Ver também" (`RelatedLinks`). Página
+Epoxy: bloco "Quartzo, comercial e industrial" (o Fábio listou quartzo
+entre os sistemas). Verificado no web (8083, dados do dev): cartão do
+Início → página da Xtreme com selo "Oficial", 5 categorias, passos, 2
+trabalhos de epóxi recentes com foto, "Ver também" → Epoxy Floors e de
+volta, "Pedir cotação" → ecrã de reserva com "Xtreme Polishing Systems",
+Automotive com a menção à Inozetek; sem erros na consola; `npm run
+typecheck` limpo.
+**Fica pendente (factos do Fábio, sem código novo além de texto):**
+(a) quando o site da Marble existir, alinhar os textos da entrada `xps`
+com ele e, se houver loja online, trocar o cta para `{ kind: 'link',
+label: 'Comprar na loja', url }` com o URL real da loja da Marble (não o
+do fabricante nos EUA, que tiraria a venda à Marble) e reescrever o passo
+2 "Pede uma cotação"; (b) confirmar envios/entregas, venda a
+particulares e condições para profissionais — comentário `FACTOS A
+CONFIRMAR` por cima da entrada `xps`.
+**Ligar a Inozetek quando a parceria for oficial (3 passos, precisa do
+backoffice):**
+1. `DepartmentId` ganha `'inozetek'` nos dois `src/firebase/models.ts`
+   (app e backoffice, iguais) e a linha `{ id: 'inozetek', name:
+   'Inozetek', tagline: 'PPF & vinil', category: 'Automotive', badge:
+   'Oficial' }` entra nos dois `DEPARTMENTS` (app
+   `src/data/departments.ts`, backoffice `src/utils/departments.ts`, sem
+   `category`/`badge` lá), a seguir à Xtreme (ordem do SPEC).
+2. Em `departmentContent.ts`, `INOZETEK_CONTENT_PT` passa a ser a entrada
+   `inozetek` de `PT` (confirmar os factos do rascunho: stock em Portugal,
+   venda a aplicadores), a intro da Automotive passa a "distribuidores
+   oficiais Inozetek" e a Automotive ganha um `related` para `inozetek`.
+3. No backoffice, Destaques > Fotos dos serviços, a equipa escolhe a foto
+   do cartão novo (sem código); `npm run typecheck` nos dois projetos e
+   publicar o backoffice (`deploy:dev`). O pedido de orçamento (Secção 7)
+   aceita o departamento novo sem alterações, porque usa `DepartmentId`.
+**Trabalho seguinte identificado (Fábio, 2026-09-04) — tags nos
+trabalhos:** nos trabalhos de epóxi deve dar para pôr **2 tags**: a marca
+(Xtreme Polishing Systems) e o sistema (Metallic Epoxy, Solid Colour
+Epoxy, Quartz Epoxy, Flake Epoxy); nos carros, primeiro o **serviço**
+(PPF, vinil, detailing…) e depois a marca ou marcas. Hoje
+`works.products[]` (`{ brand, item }`, texto livre no formulário do
+backoffice, chips "marca · item" no Detalhe) aguenta isto por convenção,
+mas o pedido é um campo próprio com lista fixa — toca no formulário de
+trabalhos do backoffice (Secção 7) e no Detalhe/Portfólio da app. Fica
+como secção pequena, **depois de a Secção 7 entrar no master**.
 
 ### Secção 11 — Preparação para lançamento nas lojas
 **Estado:** Por fazer

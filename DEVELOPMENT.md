@@ -454,24 +454,38 @@ dentro da página. Regras:
 
 - **O conteúdo é código, não Firestore.** Tudo em
   `src/data/departmentContent.ts` (`CONTENT.pt[id]`: `headline`, `intro`,
-  `services[]`, `steps[]`, `pricing`, `cta`). Para mudar um texto edita-se
-  aí e sai numa versão nova da app. Não há coleção, regras nem ecrã de
-  backoffice para isto. O nome e a tagline vêm de `DEPARTMENTS`
-  (`src/data/departments.ts`); a foto do topo é a do cartão
-  (`settings/home.departmentCovers`, escolhida no backoffice).
+  `services[]`, `steps[]`, `pricing`, `labels?`, `related?`, `cta`). Para
+  mudar um texto edita-se aí e sai numa versão nova da app. Não há
+  coleção, regras nem ecrã de backoffice para isto. O nome e a tagline
+  vêm de `DEPARTMENTS` (`src/data/departments.ts`); a foto do topo é a do
+  cartão (`settings/home.departmentCovers`, escolhida no backoffice).
 - **Um departamento novo = uma entrada nova.** `hasDepartmentContent(id)`
   decide se o cartão do Início abre a página; sem entrada o cartão fica
-  inerte (é o caso da Xtreme até à Secção 10). Para a Inozetek é preciso
-  ainda o `DepartmentId` em `models.ts` (app e backoffice, iguais) e a
-  linha em `DEPARTMENTS`.
+  inerte. Todos os seis têm entrada desde a Secção 10. Para a Inozetek
+  (sem cartão até a parceria ser oficial) é preciso ainda o
+  `DepartmentId` em `models.ts` (app e backoffice, iguais) e a linha em
+  `DEPARTMENTS`; o conteúdo já está escrito em `INOZETEK_CONTENT_PT` —
+  passos exatos no ROADMAP, Secção 10.
 - **`cta`** é `{ kind: 'quote', label }` (abre `RequestQuote` com
   `{ department }`) ou `{ kind: 'link', label, url }` (abre um URL externo
-  — loja da Xtreme).
+  — a loja online da Xtreme, quando existir; até lá a Xtreme usa `quote`,
+  "Pedir cotação"). Nunca inventar URLs: o link tem de ser a loja da
+  Marble, não o site do fabricante.
+- **`labels`** (Secção 10) troca os rótulos "O que fazemos" / "Como
+  funciona" por outros ("O que vendemos" / "Como comprar" na distribuição).
+- **`related`** (Secção 10) é a secção "Ver também": cartões
+  `{ department, title, text }` que abrem outra página de departamento
+  (`navigation.push('Department')`, para o "voltar" regressar à página
+  de origem). Xtreme ↔ Epoxy Floors. `RelatedLinks` só mostra destinos
+  com conteúdo, para nunca abrir uma página vazia.
 - **Idiomas:** `CONTENT.en` existe e está vazio; `departmentContent(id,
   locale)` cai para PT. Quando a app inteira ganhar inglês, preenche-se.
 - **Trabalhos recentes:** os departamentos com `category` mostram os 6
   trabalhos publicados mais recentes dessa categoria, com a mesma escuta
   do Portfólio (`usePublishedWorks`, filtro em memória) — sem índice novo.
+  A Xtreme tem `category: 'Epoxy Floors'` só para isto (os pavimentos
+  feitos com os produtos dela); a cópia da lista no backoffice
+  (`src/utils/departments.ts`) não precisa do campo, que só a app usa.
 - **`RequestQuote`** é o ecrã da Secção 7. Enquanto ela não entrar,
   `src/screens/RequestQuoteScreen.tsx` é um ecrã de reserva ("em breve" +
   email) que a Secção 7 substitui por completo; a rota e os params
