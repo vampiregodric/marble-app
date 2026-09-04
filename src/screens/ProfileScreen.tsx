@@ -13,10 +13,12 @@ import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
 import { checkupErrorMessage, checkupState, CheckupState, formatCheckupSlot } from '../data/checkups';
+import { useMyRequests } from '../data/requests';
+import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
 import { avatarUploadConfigured, uploadAvatar } from '../media/cloudinary';
-import { Client, Vehicle } from '../firebase/models';
+import { Client, REQUEST_STATUS_LABEL, ServiceRequest, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
 
@@ -56,6 +58,31 @@ const CARD_TAG: Record<CheckupState, string> = {
 
 type PrefKey = keyof Client['notificationPrefs'];
 
+// Linha de um pedido: departamento e o que foi pedido, com o estado que a
+// equipa lhe deu (Recebido / Em contacto / Fechado).
+function RequestRow({ request }: { request: ServiceRequest }) {
+  const dept = DEPARTMENTS.find((d) => d.id === request.department)?.name ?? request.department;
+  const what = request.services.length ? request.services.join(', ') : request.fields[0]?.value || request.message;
+  const closed = request.status === 'closed';
+  return (
+    <View style={styles.assetRow}>
+      <View style={styles.assetText}>
+        <Text style={styles.assetName} numberOfLines={1}>
+          {request.workTitle ? `Semelhante a: ${request.workTitle}` : dept}
+        </Text>
+        <Text style={styles.assetSub} numberOfLines={1}>
+          {request.workTitle ? `${dept} · ` : ''}
+          {what}
+          {request.createdAt ? ` · ${timeAgo(request.createdAt).toLowerCase()}` : ''}
+        </Text>
+      </View>
+      <View style={[styles.assetStatus, closed ? styles.assetStatusOk : styles.assetStatusPending]}>
+        <Text style={[styles.assetStatusText, closed ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>{REQUEST_STATUS_LABEL[request.status]}</Text>
+      </View>
+    </View>
+  );
+}
+
 function Toggle({ on }: { on: boolean }) {
   return (
     <View style={[styles.toggle, on && styles.toggleOn]}>
@@ -72,6 +99,9 @@ export default function ProfileScreen() {
   const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, signOut } = useAuth();
   const { data: vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(user?.uid);
   const pending = pendingCheckup(vehicles);
+  // Pedidos de orçamento (Secção 7), em tempo real — o estado muda quando a
+  // equipa o altera no backoffice.
+  const { data: requests } = useMyRequests(user?.uid);
 
   // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
   const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
@@ -421,6 +451,21 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <Text style={styles.secTitle}>Os teus pedidos</Text>
+        <View style={styles.assetList}>
+          {requests.length === 0 ? (
+            <View style={styles.assetEmpty}>
+              <Text style={styles.assetEmptyTitle}>Ainda não pediste nenhum orçamento.</Text>
+              <Text style={styles.assetEmptyDesc}>Pede a partir de um trabalho do Portfólio ("Pedir orçamento semelhante") ou aqui.</Text>
+            </View>
+          ) : (
+            requests.map((r) => <RequestRow key={r.id} request={r} />)
+          )}
+          <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('RequestQuote')} accessibilityRole="button">
+            <Text style={styles.ghostBtnText}>Pedir orçamento</Text>
+          </Pressable>
+        </View>
+
         <Text style={styles.secTitle}>Notificações</Text>
         <View style={styles.prefList}>
           {/* Operacionais: fazem parte do serviço, não dependem de consentimento. */}
@@ -593,6 +638,8 @@ const styles = StyleSheet.create({
   assetStatusTextPending: { color: colors.goldBright },
   assetStatusTextFaint: { color: colors.inkFaint },
   assetEmpty: { borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, padding: 14, gap: 4, alignItems: 'center' },
+  ghostBtn: { borderWidth: 1, borderColor: colors.hairlineStrong, borderRadius: 24, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  ghostBtnText: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   assetEmptyTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.inkMuted, textAlign: 'center' },
   assetEmptyDesc: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 15, color: colors.inkFaint, textAlign: 'center' },
   prefList: { paddingHorizontal: 18 },

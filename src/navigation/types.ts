@@ -17,11 +17,13 @@ export type RootStackParamList = {
   // Página de serviços de um departamento (Secção 9), aberta pelo cartão
   // do Início. Conteúdo em src/data/departmentContent.ts.
   Department: { id: DepartmentId };
-  // Pedido de orçamento (Secção 7). `workId` vem do Detalhe ("Pedir
-  // orçamento semelhante"), `department` das páginas de departamento.
-  RequestQuote: { workId?: string; department?: DepartmentId };
   PersonalData: undefined;
   // Política de privacidade / termos — acessível sem login (registo).
   Legal: { doc: LegalDoc };
   DeleteAccount: undefined;
+  // Pedido de orçamento (Secção 7). A partir do Detalhe vem `workId`
+  // ("orçamento semelhante"); a partir de uma página de departamento
+  // (Secção 9: AI Business, Marble Ads; Secção 10: Xtreme) vem `department`.
+  // Sem nada, o formulário pede o departamento.
+  RequestQuote: { workId?: string; department?: DepartmentId } | undefined;
 };

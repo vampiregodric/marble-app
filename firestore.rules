@@ -22,6 +22,12 @@ rules_version = '2';
 //   alterar, confirmar a proposta da equipa, cancelar) e nada mais.
 // - `notifications`: só o dono lê; a única alteração permitida ao cliente é
 //   marcar como lida (`read`) — nada mais muda pelo SDK de cliente.
+// - `requests` (Secção 7, 2026-09-04): pedidos de orçamento (e, na Secção 8,
+//   de checkup). O cliente cria os seus — sempre com conta: quem não tem
+//   fica com uma na hora — e lê-os; nunca os altera. A criação é validada
+//   campo a campo (validNewRequest): tipos, tamanhos (REQUEST_LIMITS em
+//   src/firebase/models.ts) e só os campos do formulário — `status` nasce
+//   'new', e `notes`, `flagged`, etc. são da equipa e das Functions.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
 // (update, já permitido) e apaga o utilizador do Auth. `delete: false`
@@ -44,6 +50,38 @@ service cloud.firestore {
 
     function ownsResource() {
       return signedIn() && request.auth.uid == resource.data.clientId;
+    }
+
+    function isStr(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    // Um pedido acabado de criar pela app (Secção 7). As regras não iteram
+    // listas, por isso `services`, `fields` e `photos` só têm o tamanho
+    // limitado; o conteúdo é texto que a equipa lê no backoffice.
+    function validNewRequest(d) {
+      return d.keys().hasOnly(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
+          'workId', 'workTitle', 'vehicleId', 'services', 'fields', 'message', 'photos', 'platform', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
+          'services', 'fields', 'message', 'createdAt', 'updatedAt'])
+        && d.clientId == request.auth.uid
+        && d.type in ['quote', 'checkup']
+        && d.status == 'new'
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && isStr(d.email, 120)
+        && d.phone is string && d.phone.size() >= 9 && d.phone.size() <= 30
+        && d.contactPreference in ['call', 'whatsapp', 'email']
+        && d.department in ['automotive', 'epoxy', 'graphic', 'ai', 'ads', 'xps']
+        && d.services is list && d.services.size() <= 12
+        && d.fields is list && d.fields.size() <= 8
+        && isStr(d.message, 2000)
+        && (!('photos' in d) || (d.photos is list && d.photos.size() <= 5))
+        && (!('workId' in d) || isStr(d.workId, 100))
+        && (!('workTitle' in d) || isStr(d.workTitle, 200))
+        && (!('vehicleId' in d) || isStr(d.vehicleId, 100))
+        && (!('platform' in d) || d.platform in ['android', 'ios', 'web'])
+        && d.createdAt == request.time
+        && d.updatedAt == request.time;
     }
 
     // Portfólio: conteúdo público de marketing, mas só depois de publicado.
@@ -139,6 +177,13 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
           && request.resource.data.read is bool);
       allow create, delete: if isAdmin();
+    }
+
+    // Pedidos de orçamento / checkup (Secção 7). Ver nota no topo.
+    match /requests/{requestId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if isAdmin() || (signedIn() && validNewRequest(request.resource.data));
+      allow update, delete: if isAdmin();
     }
   }
 }

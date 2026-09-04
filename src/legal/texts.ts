@@ -14,8 +14,10 @@
 // jurídico: confirma com um advogado/contabilista antes do lançamento.
 
 // Histórico: 2026-09-03 (primeira versão); 2026-09-04 (foto de perfil
-// opcional + Cloudinary como subcontratante, Secção 5b).
-export const LEGAL_VERSION = '2026-09-04';
+// opcional + Cloudinary como subcontratante, Secção 5b); 2026-09-05
+// (pedidos de orçamento: conta criada a partir do pedido, fotos do pedido,
+// prazo de 12 meses, emails via Resend — Secção 7).
+export const LEGAL_VERSION = '2026-09-05';
 
 // Dados da empresa (preenchidos pelo Fábio a 2026-09-03). A marca é
 // "Marble Studios"; a entidade legal é a Cacto Elegante, Lda. Se algum
@@ -58,6 +60,10 @@ export const RETENTION = {
   // Firestore (apagar no Cloudinary exige a API assinada); até a Secção 6
   // automatizar, a equipa apaga à mão pela tag `uid_<uid>` na Media Library.
   avatarFileDays: 30,
+  // Pedidos de orçamento/checkup: dados pessoais (contactos, texto, fotos)
+  // apagados N meses depois de o pedido ser fechado pela equipa (Secção 7,
+  // decisão do Fábio a 2026-09-04). O job diário das Functions faz isto.
+  requestMonths: 12,
 };
 
 const PRIVACY: LegalText = {
@@ -82,12 +88,13 @@ const PRIVACY: LegalText = {
       bullets: [
         'Dados da conta, que tu nos dás no registo: nome, email, número de telemóvel e password. A password é guardada de forma cifrada pelo serviço de autenticação, e nunca é visível para a equipa.',
         'Dados de serviço, registados pela equipa quando fazes um trabalho connosco: o teu carro ou chão (modelo, e matrícula quando for necessária para o serviço), o trabalho realizado, produtos aplicados, datas de checkup e fotografias do trabalho.',
-        'Foto de perfil, opcional: só se a escolheres no Perfil, da galeria ou da câmara. É a única fotografia tua que a app guarda, serve apenas para a tua conta (e para a equipa te reconhecer na tua ficha), e podes trocá-la ou removê-la quando quiseres.',
+        'Foto de perfil, opcional: só se a escolheres no Perfil, da galeria ou da câmara. Serve apenas para a tua conta (e para a equipa te reconhecer na tua ficha), e podes trocá-la ou removê-la quando quiseres.',
+        'Pedidos de orçamento e de checkup, que tu fazes na app: o que pretendes, o teu carro, espaço ou empresa, a tua mensagem, a forma como preferes ser contactado e, se as juntares, fotografias do carro ou do espaço. Se ainda não tiveres conta, o pedido cria-a com o nome, email e telemóvel que indicares, e recebes um email para definires a password.',
         'Preferências: que notificações queres receber, e se aceitaste receber ofertas e novidades.',
         'Dados técnicos mínimos: um identificador do dispositivo para entregar notificações push (só se as ativares no telemóvel) e registos de erros da app, sem conteúdo pessoal.',
       ],
       after: [
-        'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além da que escolheres para foto de perfil. A app não tem pagamentos.',
+        'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além das que escolheres para a foto de perfil ou para um pedido de orçamento. A app não tem pagamentos.',
       ],
     },
     {
@@ -96,6 +103,7 @@ const PRIVACY: LegalText = {
       bullets: [
         `Criar e gerir a tua conta, mostrar-te os teus carros, chãos e histórico de trabalhos: execução do contrato de prestação de serviços entre ti e a ${COMPANY.brand}.`,
         'Lembrar-te de checkups e contactar-te (por notificação ou telefone) sobre um trabalho teu: execução do contrato e interesse legítimo em garantir a qualidade do serviço. Estas comunicações são operacionais, não são publicidade.',
+        'Responder a um pedido de orçamento ou de checkup que fizeste na app, incluindo a confirmação de que o recebemos: diligências pré-contratuais a teu pedido (artigo 6.º, n.º 1, alínea b) do RGPD).',
         'Enviar-te ofertas e novidades (novos trabalhos no portfólio, eventos, promoções): apenas com o teu consentimento, que dás e retiras no Perfil, em "Ofertas e novidades". Está desligado por defeito.',
         'Mostrar a tua foto de perfil na tua conta: consentimento, que dás ao escolher a foto e retiras ao removê-la.',
         'Emitir faturas e cumprir obrigações fiscais e de garantia: obrigação legal.',
@@ -117,7 +125,8 @@ const PRIVACY: LegalText = {
       bullets: [
         'Google Firebase (Google Ireland Ltd.): autenticação, base de dados e alojamento da app. A base de dados está em servidores na União Europeia (região "eur3", Europa). O serviço de autenticação pode processar dados fora da UE ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e dos termos de tratamento de dados da Google.',
         'Expo (Expo, Inc., EUA): serviço de entrega de notificações push, apenas quando as ativares. Recebe o identificador do dispositivo e o texto da notificação.',
-        'Cloudinary (Cloudinary Ltd., Israel e EUA): alojamento e entrega das fotografias e vídeos da app, ou seja, as fotografias dos trabalhos do portfólio e, se a escolheres, a tua foto de perfil. Os ficheiros podem ficar em servidores fora da União Europeia, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e da decisão de adequação da Comissão para Israel.',
+        'Cloudinary (Cloudinary Ltd., Israel e EUA): alojamento e entrega das fotografias e vídeos da app, ou seja, as fotografias dos trabalhos do portfólio, a tua foto de perfil se a escolheres, e as fotografias que juntares a um pedido de orçamento. Os ficheiros podem ficar em servidores fora da União Europeia, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e da decisão de adequação da Comissão para Israel.',
+        'Resend (Resend, Inc., EUA): envio dos emails da app, ou seja, a confirmação de um pedido de orçamento para ti e o aviso do pedido para a equipa. Recebe o teu nome, email e o conteúdo do pedido, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia.',
       ],
       after: ['Podemos ainda partilhar dados quando a lei o exigir, por exemplo com a Autoridade Tributária no âmbito da faturação.'],
     },
@@ -129,6 +138,7 @@ const PRIVACY: LegalText = {
         'Quando apagas a conta (Perfil > Apagar conta), o teu nome, email, telemóvel e foto de perfil são removidos de imediato do registo de cliente e deixas de poder entrar. O histórico de trabalhos fica guardado de forma anonimizada, ou seja, sem qualquer ligação a ti, para efeitos de garantia, portfólio e estatística.',
         `A foto de perfil deixa de aparecer de imediato quando a removes ou apagas a conta; o ficheiro é eliminado do alojamento no prazo máximo de ${RETENTION.avatarFileDays} dias.`,
         `Contas sem qualquer atividade durante ${RETENTION.inactiveAccountYears} anos são apagadas da mesma forma.`,
+        `Pedidos de orçamento e de checkup ficam guardados enquanto estiverem em curso e até ${RETENTION.requestMonths} meses depois de a equipa os fechar; depois ficam sem dados pessoais (contactos, texto e fotografias apagados). Apagar a conta apaga também os dados pessoais dos teus pedidos.`,
         `Faturas e documentos fiscais são conservados fora da app pelo prazo legal de ${RETENTION.invoicingYears} anos.`,
       ],
     },
@@ -194,6 +204,7 @@ const TERMS: LegalText = {
       title: '3. Marcações, orçamentos e ofertas',
       paragraphs: [
         'Os pedidos que fazes na app (agendar um checkup, pedir um orçamento) são pedidos: só ficam confirmados quando a equipa te responder. Um orçamento apresentado na app não é vinculativo até ser confirmado por escrito pela equipa.',
+        'Pedir um orçamento sem ter conta cria-te uma conta na app com os dados que indicares no pedido (nome, email e telemóvel), para acompanhares o pedido e receberes a resposta. Recebes um email para definires a password; podes apagar a conta quando quiseres.',
         'As ofertas enviadas pela app (por exemplo, uma lavagem gratuita) são válidas nas condições e prazos indicados em cada oferta, e podem ser retiradas se houver abuso.',
       ],
     },

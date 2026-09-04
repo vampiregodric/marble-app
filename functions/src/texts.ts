@@ -1,4 +1,9 @@
-import { CATEGORY_NAME, CheckupRequest, Client, MarbleEvent, Vehicle, Work } from './types';
+import { CATEGORY_NAME, CheckupRequest, Client, CONTACT_PREFERENCE_LABEL, DEPARTMENT_NAME, MarbleEvent, ServiceRequest, Vehicle, Work } from './types';
+import { textToHtml } from './email';
+
+// Prazo de resposta prometido nos pedidos de orçamento (o mesmo que a app
+// mostra: REQUEST_RESPONSE_PROMISE em src/firebase/models.ts).
+const RESPONSE_PROMISE = 'no prazo de 1 dia útil';
 
 // Textos das notificações automáticas, em português, no tom da app. Tudo
 // o que o cliente lê vive aqui, para mudar num sítio só. Os títulos são
@@ -27,7 +32,7 @@ function vehicleWord(v: Vehicle): string {
   return v.type === 'floor' ? 'chão' : 'carro';
 }
 
-function firstName(c: Client): string {
+function firstName(c: Client | { name: string }): string {
   return (c.name || '').trim().split(/\s+/)[0] || 'Cliente';
 }
 
@@ -50,6 +55,16 @@ export function formatCheckupSlot(req: Pick<CheckupRequest, 'day' | 'period' | '
 
 function phoneText(c: Client): string {
   return c.phone ? `Telemóvel: ${c.phone}.` : 'Sem telemóvel na ficha.';
+}
+
+// "PPF, Detailing · BMW M4 2022" — o resumo de um pedido numa linha.
+function requestSummary(r: ServiceRequest): string {
+  const parts = [r.services.join(', '), ...r.fields.map((f) => f.value)].filter(Boolean);
+  return parts.join(' · ') || r.message.trim().slice(0, 80);
+}
+
+function requestKind(r: ServiceRequest): string {
+  return r.type === 'checkup' ? 'pedido de checkup' : 'pedido de orçamento';
 }
 
 export const TEXTS = {
@@ -133,6 +148,65 @@ export const TEXTS = {
     };
   },
 
+  // ---------- Pedidos de orçamento (Secção 7) ----------
+
+  // Alerta interno no Painel do backoffice.
+  requestTeamAlert(r: ServiceRequest) {
+    const what = requestSummary(r);
+    return {
+      title: `Novo ${requestKind(r)}: ${DEPARTMENT_NAME[r.department] ?? r.department}`,
+      description: `${r.name || 'Cliente'} · ${r.phone || 'sem telemóvel'} (${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference})${what ? ` · ${what}` : ''}${r.workTitle ? ` · semelhante a "${r.workTitle}"` : ''}. Ver em Pedidos.`,
+    };
+  },
+  // Alerta operacional ao cliente (ecrã Alertas + push).
+  requestConfirmation(r: ServiceRequest) {
+    return {
+      title: 'Recebemos o teu pedido',
+      description: `${firstName(r)}, obrigado pelo ${requestKind(r)} (${DEPARTMENT_NAME[r.department] ?? r.department}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
+    };
+  },
+  // Email à equipa (quotes@marble.pt) com tudo o que o cliente escreveu.
+  requestTeamEmail(r: ServiceRequest, backofficeUrl: string) {
+    const dept = DEPARTMENT_NAME[r.department] ?? r.department;
+    const lines = [
+      `Novo ${requestKind(r)} — ${dept}`,
+      '',
+      `Cliente: ${r.name || '—'}`,
+      `Telemóvel: ${r.phone || '—'}`,
+      `Email: ${r.email || '—'}`,
+      `Contactar por: ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}`,
+      r.workTitle ? `Orçamento semelhante a: ${r.workTitle}` : '',
+      '',
+      r.services.length ? `Pretende: ${r.services.join(', ')}` : '',
+      ...r.fields.map((f) => `${f.label}: ${f.value}`),
+      '',
+      'Mensagem:',
+      r.message.trim() || '—',
+      '',
+      r.photos?.length ? `Fotos (${r.photos.length}):\n${r.photos.map((p) => p.url).join('\n')}` : '',
+      '',
+      `Ver no backoffice: ${backofficeUrl}`,
+      r.platform ? `Enviado pela app (${r.platform}) a ${formatDay(r.createdAt.toDate(), true)}.` : '',
+    ].filter((l) => l !== undefined);
+    const text = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+    return { subject: `[Pedido] ${dept} — ${r.name || 'cliente'}`, text, html: textToHtml(text) };
+  },
+  // Email de confirmação ao cliente.
+  requestClientEmail(r: ServiceRequest) {
+    const dept = DEPARTMENT_NAME[r.department] ?? r.department;
+    const text = [
+      `Olá ${firstName(r)},`,
+      '',
+      `Recebemos o teu ${requestKind(r)} (${dept}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
+      '',
+      r.services.length ? `Pediste: ${r.services.join(', ')}.` : '',
+      '',
+      'Se quiseres acrescentar alguma coisa, responde a este email.',
+      '',
+      'Marble Studios',
+    ].join('\n');
+    return { subject: 'Recebemos o teu pedido — Marble Studios', text, html: textToHtml(text) };
+  },
   retentionWarning(deleteOn: Date) {
     return {
       title: 'A tua conta vai ser apagada',

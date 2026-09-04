@@ -12,8 +12,8 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 3. **Graphic Solutions** — trabalhos gráficos
 4. **AI Business** — consultoria e ferramentas de IA para otimizar outras empresas (antes "AI Optimization")
 5. **Marble Ads** — gestão de publicidade paga (Google Ads, Meta Ads) para empresas clientes (antes "Paid Advertising")
-6. **Xtreme Polishing Systems** — cartão próprio de distribuição, tagline "Buy your epoxy here", selo "Oficial" (antes "Epoxy Distribution")
-7. *(Futuro)* Distribuidores oficiais da **Inozetek** (PPF e vinil para carros) — provavelmente a seguir ao cartão da Xtreme Polishing Systems
+6. **Xtreme Polishing Systems** — cartão próprio de distribuição, tagline "Buy your epoxy here", selo "Oficial" (antes "Epoxy Distribution"). **Página (Secção 10, 2026-09-04):** categorias de produto com texto (resinas, pigmentos metálicos, flakes e quartzo, acabamentos e selantes, ferramentas e kits), "Como comprar" em 4 passos, trabalhos recentes em epóxi, ligação a Epoxy Floors ("preferes que sejamos nós a instalar?") e botão "Pedir cotação". **Decisão do Fábio:** o site da Marble vem primeiro e a página da app passa depois a espelhá-lo; não há loja online ainda, por isso não há link de compra (quando houver, o botão passa a "Comprar na loja" com o URL real da loja da Marble).
+7. *(Futuro)* Distribuidores oficiais da **Inozetek** (PPF e vinil para carros) — provavelmente a seguir ao cartão da Xtreme Polishing Systems. **Clarificação (2026-09-04, Fábio):** hoje a Inozetek é só uma das marcas de PPF/vinil que a Marble aplica (há outras); a distribuição em Portugal está em cima da mesa mas não é oficial. Por isso não há cartão nem "distribuidores oficiais" na app — a página Automotive diz "películas de marcas de referência, como a Inozetek" — e o conteúdo da futura página fica preparado no código (ROADMAP, Secção 10, 3 passos para ligar).
 
 ## Plataformas
 - Android + iOS (App Store)
@@ -28,7 +28,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Slideshow/carrossel no topo
 - Por baixo, secções para cada departamento/área de negócio (acima)
 - **Fotos dos cartões de departamento (decidido 2026-09-04):** cada um dos seis cartões mostra como fundo uma foto **escolhida pela equipa no backoffice** (Destaques > Fotos dos serviços: carregar uma foto ou usar a capa de um trabalho publicado), não a do trabalho mais recente nem um ícone. Sem foto, o cartão fica num gradiente dourado só com o nome e a tagline.
-- **Tocar num cartão abre a página de serviços do departamento (decidido 2026-09-04, Secção 9)** — não o Portfólio. Todos os departamentos, incluindo Automotive, Epoxy e Graphic, têm uma página com a mesma estrutura: foto (a do cartão), nome, tagline e headline, intro, "O que fazemos" (3–5 blocos), "Como funciona" (passos numerados), "Investimento" (por agora "sob consulta" em todos) e um botão final "Pedir orçamento"/"Pedir proposta" que abre o pedido de orçamento já com o departamento. Os três com portfólio mostram ainda os trabalhos recentes da categoria (fotos reais) e um "Ver portfólio" que abre o Portfólio filtrado. O conteúdo é estático, no código (`src/data/departmentContent.ts`), só em português por agora, com a estrutura pronta para inglês. A Xtreme Polishing Systems (e a Inozetek) ganham a sua página na Secção 10 com o mesmo ecrã.
+- **Tocar num cartão abre a página de serviços do departamento (decidido 2026-09-04, Secção 9)** — não o Portfólio. Todos os departamentos, incluindo Automotive, Epoxy e Graphic, têm uma página com a mesma estrutura: foto (a do cartão), nome, tagline e headline, intro, "O que fazemos" (3–5 blocos), "Como funciona" (passos numerados), "Investimento" (por agora "sob consulta" em todos) e um botão final "Pedir orçamento"/"Pedir proposta" que abre o pedido de orçamento já com o departamento. Os três com portfólio mostram ainda os trabalhos recentes da categoria (fotos reais) e um "Ver portfólio" que abre o Portfólio filtrado. O conteúdo é estático, no código (`src/data/departmentContent.ts`), só em português por agora, com a estrutura pronta para inglês. A Xtreme Polishing Systems ganhou a sua página na Secção 10 (2026-09-04) com o mesmo ecrã, com rótulos "O que vendemos" / "Como comprar" e uma secção "Ver também" que liga a Xtreme e a Epoxy Floors nos dois sentidos; a Inozetek fica preparada no código, sem cartão, até a parceria ser oficial.
 
 ## Funcionalidades — Base de dados de clientes e produtos
 - Cada cliente é adicionado à base de dados
@@ -56,6 +56,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Cada trabalho concluído (carro, chão epóxi, ou trabalho gráfico) entra no portfólio dentro da app
 - **Galeria por trabalho (pedido 2026-09-03, construída 2026-09-04 — Secção 5b):** um trabalho pode ter várias fotos e vídeo (ex: 4 fotos + 1 vídeo), não só uma imagem. A foto de capa continua a ser a que aparece nos cartões do Portfólio e do carrossel; no Detalhe a foto do topo é uma galeria deslizável (`works.media[]`, contador "3 / 7", pontos) e tocar em qualquer item abre-o em ecrã inteiro, deslizável, onde o vídeo reproduz com controlos nativos (decisão do Fábio: ecrã inteiro para tudo, não vídeo inline). O upload múltiplo e o alojamento (Cloudinary) são do backoffice (Secção 5).
 - **Quem carrega fotos: só a equipa, no backoffice (confirmado 2026-09-03).** O cliente nunca faz upload de fotos de trabalhos na app — a app só mostra. As regras do Firestore refletem isso (`works` sem escrita pelo cliente).
+- **Tags nos trabalhos (pedido 2026-09-04, por construir):** um trabalho de epóxi deve levar 2 tags — a marca (Xtreme Polishing Systems) e o sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy); um trabalho de carro leva primeiro o serviço (PPF, vinil, detailing…) e depois a marca ou marcas usadas. Hoje os "produtos usados" (`works.products[]`, marca + item em texto livre) já mostram isto no Detalhe como chips; o pedido é um campo próprio com lista fixa, no formulário do backoffice e no Detalhe/Portfólio da app (ROADMAP, Secção 10, "Trabalho seguinte").
 - Cliente tem preferências (checkboxes) para escolher que categorias de trabalho quer ser notificado: carros / chãos / gráfico
 - Quando um novo trabalho é adicionado numa categoria, os clientes com opt-in nessa categoria recebem notificação push ("Novo trabalho feito pela Marble Studios")
 
@@ -87,6 +88,14 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Ainda por desenhar: ecrã de detalhe ao abrir um trabalho específico
 - Imagens ainda placeholder, a aguardar fotos reais
 
+## Pedido de orçamento (decidido 2026-09-04, construído na Secção 7)
+- Entra-se pelo "Pedir orçamento semelhante" do Detalhe, pelas páginas dos departamentos (AI Business, Marble Ads; futuro Xtreme) e por "Pedir orçamento" no Perfil.
+- **O pedido cria conta (decisão do Fábio):** quem não tem conta escreve nome, email e telemóvel — os mesmos dados do registo — e a app cria-lhe a conta na hora (fica com sessão; recebe um email para definir a password). Email já com conta → pede só a password. Com sessão, os dados vêm da conta. Logo, todos os pedidos ficam ligados a um cliente.
+- **Campos por departamento:** o que pretende (opções, ex: PPF / vinil / detailing; metallic / flake / cor sólida), o carro (marca, modelo, ano) ou o espaço (tipo + m²) ou a empresa (nome, site), mensagem livre, fotos opcionais (até 5) e como prefere ser contactado (chamada / WhatsApp / email).
+- **A equipa recebe:** alerta interno no Painel do backoffice, email para **quotes@marble.pt** (remetente app@marble.pt, via Resend — a ligar pelo Fábio) e o pedido na página **Pedidos** do backoffice, com estados recebido → em contacto → fechado e notas internas. O cliente recebe "Recebemos o teu pedido" nos Alertas (com push), email de confirmação, e vê o estado em "Os teus pedidos" no Perfil.
+- **Prazo prometido ao cliente:** resposta no prazo de **1 dia útil**.
+- **RGPD:** base legal = diligências pré-contratuais; os dados pessoais do pedido são apagados **12 meses** depois de fechado (e ao apagar a conta). Um cliente com mais de 3 pedidos em 24 h fica marcado como possível spam.
+
 ## Ecrã de Eventos (protótipo desenhado)
 - Nova tab na barra inferior (5 tabs agora): Início, Portfólio, **Eventos**, Alertas, Perfil
 - Lista de eventos onde a Marble Studios vai estar (feiras, car meets, open days), com foto, data, local
@@ -111,7 +120,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Foto grande no topo (real: Jaguar F-Type roxo do Fábio, `work-jaguar-purple.jpg`), badge de categoria, título
 - Data, modelo/produto, descrição completa
 - Chips de produtos usados (ex: Inozetek, Xtreme Polishing Systems) — liga a distribuição ao portfólio
-- CTA fixo em baixo: "Pedir orçamento semelhante"
+- CTA fixo em baixo: "Pedir orçamento semelhante" — **feito (Secção 7, 2026-09-04):** abre o formulário de pedido de orçamento com o trabalho como contexto (foto de capa + título) e o departamento pela categoria
 - Sem barra de navegação (ecrã empilhado, não é uma tab) — seta de voltar + partilhar no topo
 
 ## Por confirmar / em aberto

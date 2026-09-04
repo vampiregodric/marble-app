@@ -7,6 +7,7 @@
 // Segredos (uma vez por projeto, ver DEVELOPMENT.md):
 //   npx.cmd firebase-tools functions:secrets:set CLOUDINARY_API_KEY --project dev
 //   npx.cmd firebase-tools functions:secrets:set CLOUDINARY_API_SECRET --project dev
+//   npx.cmd firebase-tools functions:secrets:set RESEND_API_KEY --project dev
 
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -19,7 +20,8 @@ import { CloudinaryConfig } from './cloudinary';
 import { handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from './handlers';
 import { runDailyJobs } from './jobs';
 import { pushNotification } from './push';
-import { AppNotification, Client, Vehicle, Work } from './types';
+import { handleRequestWritten, RequestEmailConfig } from './requests';
+import { AppNotification, Client, ServiceRequest, Vehicle, Work } from './types';
 
 initializeApp();
 // Firestore está em eur3 (Europa); europe-west1 (Bélgica) é a região v2
@@ -35,6 +37,24 @@ const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', { default: '
 // onClientUpdated limita-se a registar que ficou por apagar.
 const CLOUDINARY_CLEANUP = process.env.CLOUDINARY_CLEANUP === 'on';
 const cloudinarySecrets = CLOUDINARY_CLEANUP ? [defineSecret('CLOUDINARY_API_KEY'), defineSecret('CLOUDINARY_API_SECRET')] : [];
+
+// Emails dos pedidos de orçamento pelo Resend (Secção 7). O mesmo
+// interruptor: só se declara o segredo RESEND_API_KEY com QUOTE_EMAIL=on em
+// functions/.env, depois de o Fábio o guardar no Secret Manager. Desligado,
+// o pedido chega na mesma ao Painel e ao ecrã Alertas — só o email fica por
+// enviar (registado nos logs).
+const QUOTE_EMAIL = process.env.QUOTE_EMAIL === 'on';
+const emailSecrets = QUOTE_EMAIL ? [defineSecret('RESEND_API_KEY')] : [];
+const EMAIL_FROM = defineString('EMAIL_FROM', { default: 'Marble Studios <app@marble.pt>' });
+const QUOTES_EMAIL_TO = defineString('QUOTES_EMAIL_TO', { default: 'quotes@marble.pt' });
+const BACKOFFICE_URL = defineString('BACKOFFICE_URL', { default: 'https://marble-studios-backoffice-dev.web.app' });
+
+function emailConfig(): RequestEmailConfig | null {
+  if (!QUOTE_EMAIL) return null;
+  const apiKey = emailSecrets[0].value();
+  if (!apiKey) return null;
+  return { apiKey, from: EMAIL_FROM.value(), to: QUOTES_EMAIL_TO.value(), backofficeUrl: BACKOFFICE_URL.value() };
+}
 
 function cloudinaryConfig(): CloudinaryConfig | null {
   if (!CLOUDINARY_CLEANUP) return null;
@@ -67,7 +87,15 @@ export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', se
   if (!event.data) return;
   const before = { id: event.params.uid, ...event.data.before.data() } as Client;
   const after = { id: event.params.uid, ...event.data.after.data() } as Client;
-  await handleClientUpdated(cloudinaryConfig(), event.params.uid, before, after, log);
+  await handleClientUpdated(getFirestore(), cloudinaryConfig(), event.params.uid, before, after, log);
+});
+
+// Pedido de orçamento (Secção 7): criado → alerta interno, confirmação ao
+// cliente e emails; fotos removidas ou pedido apagado → limpeza no Cloudinary.
+export const onRequestWritten = onDocumentWritten({ document: 'requests/{id}', secrets: [...emailSecrets, ...cloudinarySecrets] }, async (event) => {
+  const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as ServiceRequest) : null;
+  const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as ServiceRequest) : null;
+  await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig() }, new Date(), log);
 });
 
 // Agendamento de checkup (Secção 8): o cliente pediu/alterou/cancelou na

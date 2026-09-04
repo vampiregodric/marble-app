@@ -10,6 +10,8 @@
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --work <workId>      # simula o trigger de trabalho (publicação + carro/chão)
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --avatar <uid>       # simula a limpeza no Cloudinary (precisa das variáveis
 //                                                                          #   CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no ambiente)
+//   npm run run-jobs -- ../serviceAccountKey.dev.json --request <id>       # simula o trigger de um pedido de orçamento acabado de criar
+//                                                                          #   (alerta interno, confirmação; email só com RESEND_API_KEY no ambiente)
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --vehicle <id>       # simula o trigger de agendamento de checkup (Secção 8) a
 //                                                                          #   partir do estado atual de vehicles/{id}.checkupRequest;
 //                                                                          #   --before none|pending|proposed|approved força o estado anterior
@@ -25,7 +27,8 @@ import { CloudinaryConfig } from '../cloudinary';
 import { guessPreviousRequest, handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from '../handlers';
 import { runDailyJobs } from '../jobs';
 import { pushNotification } from '../push';
-import { AppNotification, CheckupRequestStatus, Client, Vehicle, Work } from '../types';
+import { handleRequestWritten, RequestEmailConfig } from '../requests';
+import { AppNotification, CheckupRequestStatus, Client, ServiceRequest, Vehicle, Work } from '../types';
 
 const args = process.argv.slice(2);
 const keyPath = args.find((a) => !a.startsWith('--'));
@@ -35,7 +38,7 @@ const flag = (name: string): string | undefined => {
 };
 
 if (!keyPath) {
-  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--vehicle id [--before estado]]');
+  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--request id] [--vehicle id [--before estado]]');
   process.exit(1);
 }
 const key = JSON.parse(readFileSync(keyPath, 'utf8')) as { project_id: string };
@@ -56,12 +59,22 @@ const cloudinary: CloudinaryConfig | null =
     ? { cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'kr9bmaqh', apiKey: process.env.CLOUDINARY_API_KEY, apiSecret: process.env.CLOUDINARY_API_SECRET }
     : null;
 
+const email: RequestEmailConfig | null = process.env.RESEND_API_KEY
+  ? {
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.EMAIL_FROM || 'Marble Studios <app@marble.pt>',
+      to: process.env.QUOTES_EMAIL_TO || 'quotes@marble.pt',
+      backofficeUrl: process.env.BACKOFFICE_URL || 'https://marble-studios-backoffice-dev.web.app',
+    }
+  : null;
+
 async function main(): Promise<void> {
   console.log(`Projeto: ${key.project_id} · agora = ${now.toISOString()}`);
   const pushId = flag('push');
   const workId = flag('work');
   const avatarUid = flag('avatar');
   const vehicleId = flag('vehicle');
+  const requestId = flag('request');
 
   if (vehicleId) {
     const snap = await db.collection('vehicles').doc(vehicleId).get();
@@ -77,6 +90,14 @@ async function main(): Promise<void> {
     console.log(`checkupRequest: ${prev?.status ?? '(nenhum)'} → ${after.checkupRequest.status} · ${after.checkupRequest.day} ${after.checkupRequest.period}`);
     const summary = await handleVehicleUpdated(db, before, after, now, log);
     console.log('resultado:', summary);
+    return;
+  }
+  if (requestId) {
+    const snap = await db.collection('requests').doc(requestId).get();
+    if (!snap.exists) throw new Error(`requests/${requestId} não existe`);
+    // Como o trigger: se já foi processado, não repete (apaga `processedAt` no doc para forçar).
+    await handleRequestWritten(db, null, { id: snap.id, ...snap.data() } as ServiceRequest, { email, cloudinary }, now, log);
+    console.log(email ? 'email: Resend ligado (RESEND_API_KEY no ambiente)' : 'email: desligado (sem RESEND_API_KEY no ambiente)');
     return;
   }
 
@@ -96,7 +117,7 @@ async function main(): Promise<void> {
   if (avatarUid) {
     const snap = await db.collection('clients').doc(avatarUid).get();
     const after = { id: snap.id, ...snap.data() } as Client;
-    const n = await handleClientUpdated(cloudinary, avatarUid, { ...after, avatarUrl: 'https://res.cloudinary.com/x/image/upload/v1/antiga' }, after, log);
+    const n = await handleClientUpdated(db, cloudinary, avatarUid, { ...after, avatarUrl: 'https://res.cloudinary.com/x/image/upload/v1/antiga' }, after, log);
     console.log(`apagados: ${n}`);
     return;
   }

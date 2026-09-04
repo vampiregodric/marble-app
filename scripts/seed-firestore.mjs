@@ -308,6 +308,57 @@ async function seed() {
     batch.set(db.collection('notifications').doc(id), { photoUrl: '', ...data });
   }
 
+  // --- requests: dois pedidos de orçamento (Secção 7) da conta de teste,
+  // um por responder e um fechado. `processedAt` já preenchido para a Cloud
+  // Function não criar alertas/emails ao semear.
+  const requests = {
+    'request-example-new': {
+      type: 'quote',
+      status: 'new',
+      clientId,
+      name: 'Cliente de Teste',
+      email: TEST_EMAIL,
+      phone: '912 345 678',
+      contactPreference: 'whatsapp',
+      department: 'automotive',
+      workId: 'work-example',
+      workTitle: 'Jaguar F-Type — PPF Colorido',
+      services: ['PPF', 'Detailing'],
+      fields: [{ key: 'car', label: 'Carro', value: 'Porsche 911 Carrera 2021' }],
+      message: 'Gostava de proteger a frente toda com PPF e fazer um detail completo. Tenho disponibilidade a partir da próxima semana.',
+      platform: 'android',
+      processedAt: hour(3),
+      createdAt: hour(3),
+      updatedAt: hour(3),
+    },
+    'request-example-closed': {
+      type: 'quote',
+      status: 'closed',
+      clientId,
+      name: 'Cliente de Teste',
+      email: TEST_EMAIL,
+      phone: '912 345 678',
+      contactPreference: 'call',
+      department: 'epoxy',
+      services: ['Metallic epoxy'],
+      fields: [
+        { key: 'space', label: 'Espaço', value: 'Garagem' },
+        { key: 'area', label: 'Área aproximada (m²)', value: '40' },
+      ],
+      message: 'Garagem de 40 m², chão em betão, quero um acabamento metálico escuro.',
+      notes: 'Orçamento enviado por WhatsApp (1 850 €). Aceite; marcado para outubro.',
+      platform: 'ios',
+      processedAt: day(20),
+      contactedAt: day(19),
+      closedAt: day(12),
+      createdAt: day(20),
+      updatedAt: day(12),
+    },
+  };
+  for (const [id, data] of Object.entries(requests)) {
+    batch.set(db.collection('requests').doc(id), data);
+  }
+
   // --- settings/home: fotos dos cartões de departamento do Início (Secção
   // 5b). Só o Automotive leva foto (o Jaguar); os outros ficam no gradiente
   // até a equipa escolher no backoffice (Destaques > Fotos dos serviços).
@@ -349,7 +400,7 @@ async function seed() {
   console.log(
     `Seed concluído: 1 client de exemplo, ${Object.keys(vehicles).length} vehicles, ` +
       `${Object.keys(works).length} works (1 rascunho), ${Object.keys(events).length} events, ` +
-      `${Object.keys(notifications).length} notifications → cliente ${clientId}; settings/home com a foto do Automotive; settings/checkups (seg–sex).`
+      `${Object.keys(notifications).length} notifications, ${Object.keys(requests).length} requests → cliente ${clientId}; settings/home com a foto do Automotive; settings/checkups (seg–sex).`
   );
 }
 

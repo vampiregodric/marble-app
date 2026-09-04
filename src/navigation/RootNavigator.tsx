@@ -116,10 +116,10 @@ const linking: LinkingOptions<RootStackParamList> = {
       },
       WorkDetail: 'work/:workId',
       Department: 'services/:id',
-      RequestQuote: 'request-quote',
       PersonalData: 'profile/personal-data',
       Legal: 'legal/:doc',
       DeleteAccount: 'profile/delete-account',
+      RequestQuote: 'request',
     },
   },
 };
@@ -131,7 +131,7 @@ function openFromPush(data: PushOpenData) {
   if (data.notificationId) markNotificationRead(data.notificationId).catch(() => {});
   if (data.relatedWorkId) navigationRef.navigate('WorkDetail', { workId: data.relatedWorkId });
   else if (data.relatedEventId) navigationRef.navigate('Tabs', { screen: 'Events' });
-  else if (data.relatedVehicleId) navigationRef.navigate('Tabs', { screen: 'Profile' });
+  else if (data.relatedVehicleId || data.relatedRequestId) navigationRef.navigate('Tabs', { screen: 'Profile' });
   else navigationRef.navigate('Tabs', { screen: 'Alerts' });
 }
 
