@@ -7,9 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "pt.marble.app"
     },
     "android": {
+      "package": "pt.marble.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,6 +32,14 @@
           "photosPermission": "A Marble Studios usa as tuas fotografias só para escolheres a tua foto de perfil.",
           "cameraPermission": "A Marble Studios usa a câmara só para tirares a tua foto de perfil.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#C6A15B",
+          "defaultChannel": "default"
         }
       ]
     ]

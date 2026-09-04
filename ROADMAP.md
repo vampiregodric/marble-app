@@ -406,7 +406,14 @@ backoffice quando a equipa tiver vídeos reais; o preset `marble-avatars`
 ainda guarda na pasta `works` (cosmético, Fábio corrige no Cloudinary).
 
 ### Secção 6 — Notificações push automáticas
-**Estado:** Por fazer
+**Estado:** Feito no código e verificado no dev (2026-09-04). Cloud
+Functions (acompanhamento por trabalho, novo trabalho, lembrete de evento,
+retenção, limpeza no Cloudinary, push), push na app com pedido de
+permissão no momento certo e abertura do ecrã certo ao tocar, backoffice
+com o plano de acompanhamento por trabalho e a coluna Push. **Pendente do
+Fábio:** ativar o Blaze no dev (deploy das Functions), segredos do
+Cloudinary, login no Expo + development build Android para ver o push
+real. Ver nota no fim.
 **Depende de:** Secção 1, Secção 3 (consentimento), Secção 4
 **Objetivo:** Cloud Functions com scheduler para o fluxo descrito no
 SPEC.md (**nota:** o SDK `firebase` JS instalado só faz FCM na web; em
@@ -446,6 +453,41 @@ e no job de retenção) que chama a Admin API do Cloudinary (API key/secret
 só em variáveis das Functions, nunca na app nem no backoffice) e apaga os
 ficheiros com a tag `uid_<uid>`. Até lá é manual (ver README do
 backoffice).
+**Nota (2026-09-04):** decisões do Fábio nesta sessão — (1) Blaze no dev
+(não GitHub Actions); (2) **chãos não têm oferta** (a lavagem grátis é só
+para carros); (3) **a cadência não é geral: a equipa define o
+acompanhamento trabalho a trabalho ao registar o trabalho concluído**
+("PPF completo tem checkup a 1 semana e lavagem a 1 mês; só retrovisores
+não; detail não; teto estrelado sim") — cartão "Acompanhamento pós-serviço"
+no formulário do trabalho do backoffice, com plano padrão 7 / 3 / 30 e
+tudo ajustável/desligável (`works.followUp`, `WorkFollowUp` em
+`models.ts`); (4) development build Android via EAS para testar o push
+real (o Expo Go no Android já não recebe push remoto desde o SDK 53).
+Construído: `functions/` (TypeScript, v2, `europe-west1`; `dailyJobs` às
+10:00 de Lisboa, `onNotificationCreated` → push, `onWorkWritten` →
+`new_work` + `lastServiceAt`, `onClientUpdated` → Cloudinary por tag;
+lógica separada do wiring e corrível localmente com `npm run
+functions:jobs`), app (`src/push/`, cartão "Ativar notificações" no ecrã
+Alertas, `openFromPush` no `RootNavigator`, `lastActiveAt`, token removido
+ao sair/apagar conta, `assets/notification-icon.png` a partir do logo,
+`eas.json`, pacote `pt.marble.app`, login por token de dev no web), backoffice
+(secção de acompanhamento no formulário do trabalho com datas e estados,
+"Marcar em dia" grava `checkupDoneAt`, coluna Push na lista de Alertas,
+modelo sincronizado). Campos novos: `clients.pushTokens/lastActiveAt/
+retentionWarnedAt`, `vehicles.checkupDoneAt/checkupRequestedAt`,
+`works.followUp/newWorkNotifiedAt`, `events.reminderSentAt`,
+`notifications.push`. Verificado contra o dev com o script de jobs
+(checkup → alerta interno ao dia 3 → oferta recusada por falta de
+consentimento; `new_work` só a quem tem categoria e consentimento;
+lembrete de evento na véspera; aviso e anonimização por inatividade; push
+com token inválido → `DeviceNotRegistered` e token removido) e no browser
+(app web com login por token: alertas a chegar em tempo real; backoffice:
+formulário, Painel com o alerta interno, coluna Push). Regras e índices do
+Firestore não mudaram. Ver DEVELOPMENT.md, "Notificações push e Cloud
+Functions". Para a Secção 8: o job já trata `vehicles.checkupRequestedAt`
+como confirmação — basta o botão "Agendar agora" gravá-lo. Para a Secção
+11: Blaze + segredos + deploy das Functions no prod, `google-services.json`
+do prod, credencial FCM do prod no EAS.
 
 ### Secção 7 — Ecrã de pedido de orçamento
 **Estado:** Por fazer
@@ -498,6 +540,12 @@ ocultada, salvo pedido em contrário) e ajustar o texto se ele quiser
 outra regra; (b) revisão dos dois textos por advogado, quando os textos estiverem
 estáveis; se o texto mudar,
 subir `LEGAL_VERSION` e correr `npm run build:legal`.
+**Da Secção 6:** o prod precisa do plano Blaze, dos segredos do Cloudinary
+(`functions:secrets:set … --project prod`) e do deploy das Functions
+(`deploy --project prod --only functions`); registar a app Android do prod
+no Firebase (`pt.marble.app`) e usar o seu `google-services.json` na build
+de produção; carregar a credencial FCM V1 do prod no EAS. Sem isto não há
+push nem lembretes em produção.
 
 ---
 

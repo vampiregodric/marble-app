@@ -95,6 +95,17 @@ export interface Client {
   // o utilizador Auth já não existe, e o doc fica só para manter a ligação
   // (anónima) a vehicles/works. Ver AuthContext.deleteAccount.
   deletedAt?: Timestamp;
+  // Tokens do Expo Push Service dos telemóveis onde o cliente ativou as
+  // notificações (Secção 6). A app acrescenta o do dispositivo ao ativar e
+  // ao entrar, remove-o ao terminar sessão; as Cloud Functions tiram os que
+  // o Expo diz já não existirem. Vários = vários telemóveis.
+  pushTokens?: string[];
+  // Última vez que o cliente abriu a app com sessão (a app grava no máximo
+  // uma vez por dia). O job de retenção (Secção 6) conta a inatividade daqui.
+  lastActiveAt?: Timestamp;
+  // O job de retenção já avisou que a conta vai ser apagada por inatividade.
+  // Limpa-se sozinho se o cliente voltar a abrir a app.
+  retentionWarnedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -112,7 +123,16 @@ export interface Vehicle {
   // Matrícula (carros). Só a equipa vê; a app não a mostra.
   plate?: string;
   lastServiceAt?: Timestamp;
+  // 'pending' aparece como "Ação pendente" no Perfil. A Cloud Function do
+  // lembrete de checkup (Secção 6) põe-no a 'pending'; a equipa volta a
+  // 'ok' no backoffice ("Marcar em dia").
   checkupStatus: CheckupStatus;
+  // Quando a equipa marcou o checkup como feito. O job de acompanhamento
+  // usa-o para saber que o lembrete foi atendido (não alerta a equipa).
+  checkupDoneAt?: Timestamp;
+  // Quando o cliente confirmou/pediu o checkup na app. Reservado à
+  // Secção 8 (o botão "Agendar agora"); o job já o respeita.
+  checkupRequestedAt?: Timestamp;
   photoUrl?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
@@ -138,6 +158,36 @@ export interface WorkMedia {
   publicId?: string;
 }
 
+// Acompanhamento pós-serviço de um trabalho (Secção 6). A equipa define-o
+// no backoffice ao registar o trabalho concluído — decisão do Fábio
+// (2026-09-04): é por trabalho, porque um PPF completo tem checkup e um
+// detail não. Cada passo tem um prazo em dias; ausente ou null = passo
+// desligado. Os campos `*At`/`offerSkipped` são escritos SÓ pelas Cloud
+// Functions (job diário às 10:00 de Lisboa); o backoffice preserva-os.
+export interface WorkFollowUp {
+  // Lembrete de checkup ao cliente, N dias depois de `completedAt`
+  // (operacional, vai sempre). Ao enviar, o carro/chão fica 'pending'. Se o
+  // cliente não tem conta na app, vira logo um alerta interno para ligar.
+  checkupDays?: number | null;
+  // Alerta interno à equipa se o checkup continuar por confirmar N dias
+  // depois do lembrete. Só conta com `checkupDays`.
+  teamAlertDays?: number | null;
+  // Oferta de lavagem grátis, N dias depois de `completedAt`. Só carros
+  // (chãos não têm oferta — decisão do Fábio). Marketing: exige
+  // consent.marketing; sem ele fica `offerSkipped`.
+  offerDays?: number | null;
+  // true enquanto houver passos por executar — o job só lê estes trabalhos.
+  active: boolean;
+  checkupSentAt?: Timestamp;
+  // O job viu o checkup feito/pedido depois do lembrete — o alerta interno
+  // deixa de fazer sentido.
+  checkupConfirmedAt?: Timestamp;
+  teamAlertSentAt?: Timestamp;
+  offerSentAt?: Timestamp;
+  // Porque é que a oferta não foi enviada quando chegou a data.
+  offerSkipped?: 'no_consent' | 'no_account';
+}
+
 // Um trabalho concluído, publicado no Portfólio.
 export interface Work {
   id: string;
@@ -161,6 +211,12 @@ export interface Work {
   featuredOrder?: number;
   published: boolean;
   completedAt: Timestamp;
+  // Acompanhamento pós-serviço (checkup, alerta interno, oferta). Ausente =
+  // nenhum. Só faz sentido com `vehicleId`.
+  followUp?: WorkFollowUp;
+  // Quando a publicação gerou os alertas `new_work` (Cloud Function). Não
+  // se repete se o trabalho for despublicado e publicado outra vez.
+  newWorkNotifiedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -171,6 +227,8 @@ export interface MarbleEvent {
   location: string;
   date: Timestamp;
   photoUrl?: string;
+  // O job diário já enviou o lembrete "amanhã" (Cloud Function, Secção 6).
+  reminderSentAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -181,7 +239,7 @@ export type NotificationType =
   | 'new_work' // novo trabalho na categoria com opt-in — MARKETING, exige consent.marketing
   | 'event_reminder' // MARKETING, exige consent.marketing
   | 'message' // mensagem direta da equipa sobre o serviço do cliente (backoffice) — OPERACIONAL
-  | 'team_alert'; // alerta interno à equipa (cliente não confirmou checkup) — Secção 6
+  | 'team_alert'; // alerta interno à equipa (ex: cliente não confirmou o checkup) — nunca vai ao cliente
 
 // Tipos que só podem ser enviados com consent.marketing === true.
 export const MARKETING_NOTIFICATION_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>([
@@ -205,4 +263,26 @@ export interface AppNotification {
   relatedEventId?: string;
   relatedVehicleId?: string;
   createdAt: Timestamp;
+  // Resultado do push para o telemóvel, escrito pela Cloud Function que
+  // reage à criação do doc (Secção 6). Ausente = ainda não processado, ou
+  // `team_alert` (não há push interno). O doc é sempre a fonte de verdade —
+  // o push é um acréscimo; sem telemóvel registado o alerta fica só na app.
+  push?: NotificationPush;
+}
+
+export interface NotificationPush {
+  // sent = entregue ao Expo; no_device = cliente sem telemóvel com
+  // notificações ativas; skipped = consentimento em falta ou conta sem app;
+  // error = o Expo recusou.
+  status: 'sent' | 'no_device' | 'skipped' | 'error';
+  at: Timestamp;
+  // Quantos telemóveis receberam (status sent).
+  devices?: number;
+  error?: string;
+  // IDs dos tickets do Expo, para o job diário confirmar a entrega e tirar
+  // tokens de telemóveis onde a app foi desinstalada.
+  tickets?: string[];
+  pendingReceipt?: boolean;
+  // O Expo aceitou mas o telemóvel não recebeu (ex: DeviceNotRegistered).
+  receiptError?: string;
 }

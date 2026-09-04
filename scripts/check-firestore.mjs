@@ -52,10 +52,10 @@ try {
   );
 }
 
-// 2. A query do carrossel (índice featured/published/completedAt).
+// 2. A query do carrossel (índice featured/published/featuredOrder — Secção 5).
 try {
   const snap = await getDocs(
-    query(collection(db, 'works'), where('featured', '==', true), where('published', '==', true), orderBy('completedAt', 'desc'))
+    query(collection(db, 'works'), where('featured', '==', true), where('published', '==', true), orderBy('featuredOrder', 'asc'))
   );
   pass(`works em destaque: ${snap.size} doc(s)`);
 } catch (e) {

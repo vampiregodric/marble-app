@@ -15,6 +15,8 @@ import { doc, onSnapshot, setDoc, updateDoc, deleteField, serverTimestamp } from
 import { auth, db } from '../firebase/config';
 import { COLLECTIONS, Client } from '../firebase/models';
 import { LEGAL_VERSION } from '../legal/texts';
+import { forgetPushToken, syncPushToken } from '../push/push';
+import { signInWithDevTokenFromUrl } from './devToken';
 
 export type SignUpInput = {
   name: string;
@@ -57,6 +59,18 @@ function clientRef(uid: string) {
   return doc(db, COLLECTIONS.clients, uid);
 }
 
+// Grava clients/{uid}.lastActiveAt no máximo uma vez por dia (e uma vez por
+// sessão da app). É a "atividade" que o job de retenção da Secção 6 usa:
+// contas sem atividade há 3 anos são apagadas (src/legal/texts.ts).
+const lastActiveTouched = new Set<string>();
+function touchLastActive(uid: string, data: Omit<Client, 'id'>) {
+  if (data.deletedAt || lastActiveTouched.has(uid)) return;
+  lastActiveTouched.add(uid);
+  const last = data.lastActiveAt?.toMillis?.() ?? 0;
+  if (Date.now() - last < 24 * 60 * 60 * 1000) return;
+  updateDoc(clientRef(uid), { lastActiveAt: serverTimestamp() }).catch(() => {});
+}
+
 // O ID do doc em `clients` TEM de ser o uid do Auth — as regras do Firestore
 // dependem disso (ver models.ts e firestore.rules).
 async function createClientDoc(user: User, extra: { name: string; phone?: string; acceptedTerms: boolean }) {
@@ -86,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<Client | null>(null);
 
   useEffect(() => {
+    // Só web + projeto de dev: #token=… no URL entra sem password (testes).
+    signInWithDevTokenFromUrl().catch(() => {});
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setInitializing(false);
@@ -97,11 +113,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setClient(null);
       return;
     }
+    // Telemóvel onde as notificações já foram autorizadas: garante o token
+    // nesta conta, sem perguntar nada (src/push). Falhar não é grave.
+    syncPushToken(user.uid).catch(() => {});
     return onSnapshot(
       clientRef(user.uid),
       (snap) => {
         if (snap.exists()) {
-          setClient({ id: snap.id, ...(snap.data() as Omit<Client, 'id'>) });
+          const data = snap.data() as Omit<Client, 'id'>;
+          setClient({ id: snap.id, ...data });
+          touchLastActive(user.uid, data);
         } else {
           // Conta existe no Auth mas o doc falhou ao criar (ex: rede caiu a meio
           // do registo). Cria com o que sabemos para o Perfil não ficar vazio.
@@ -128,6 +149,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await createClientDoc(cred.user, { name: name.trim(), phone: phone.trim(), acceptedTerms: true });
       },
       async signOut() {
+        // Este telemóvel deixa de receber os alertas desta conta (senão o
+        // próximo cliente a entrar aqui recebia-os). Falhar, ex. offline,
+        // não impede sair — as Functions limpam tokens mortos com o tempo.
+        const uid = auth.currentUser?.uid;
+        if (uid) await forgetPushToken(uid).catch(() => {});
         await fbSignOut(auth);
       },
       async resetPassword(email) {
@@ -177,12 +203,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: '',
           phone: '',
           avatarUrl: deleteField(),
+          // Nenhum telemóvel deve continuar a receber alertas desta conta.
+          pushTokens: deleteField(),
           notificationPrefs: { automotive: false, epoxy: false, graphic: false },
           'consent.marketing': false,
           'consent.marketingUpdatedAt': serverTimestamp(),
           deletedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+        await forgetPushToken(user.uid).catch(() => {});
         await deleteUser(user);
       },
     }),

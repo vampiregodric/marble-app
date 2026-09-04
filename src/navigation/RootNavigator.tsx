@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { NavigationContainer, DarkTheme, LinkingOptions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -15,6 +15,9 @@ import PersonalDataScreen from '../screens/PersonalDataScreen';
 import LegalScreen from '../screens/LegalScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
 import AuthGate from '../components/AuthGate';
+import { markNotificationRead } from '../data/notifications';
+import { PushOpenData, usePushOpens } from '../push/push';
+import { navigationRef } from './navigationRef';
 import { RootStackParamList, TabParamList } from './types';
 
 // Perfil e Alertas precisam de conta — sem sessão mostram o ecrã de login no
@@ -117,9 +120,38 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
+// Toque num push (Secção 6): abre o mesmo sítio que tocar no alerta no ecrã
+// Alertas (o trabalho, a tab Eventos, o Perfil com o carro/chão) e marca-o
+// como lido. Os ids vêm no `data` do push (Cloud Functions → push.ts).
+function openFromPush(data: PushOpenData) {
+  if (data.notificationId) markNotificationRead(data.notificationId).catch(() => {});
+  if (data.relatedWorkId) navigationRef.navigate('WorkDetail', { workId: data.relatedWorkId });
+  else if (data.relatedEventId) navigationRef.navigate('Tabs', { screen: 'Events' });
+  else if (data.relatedVehicleId) navigationRef.navigate('Tabs', { screen: 'Profile' });
+  else navigationRef.navigate('Tabs', { screen: 'Alerts' });
+}
+
 export default function RootNavigator() {
+  // Arranque a frio a partir de um push: o toque chega antes de o
+  // NavigationContainer estar pronto — guarda-se e abre-se em onReady.
+  const pendingPush = useRef<PushOpenData | null>(null);
+  usePushOpens((data) => {
+    if (navigationRef.isReady()) openFromPush(data);
+    else pendingPush.current = data;
+  });
+
   return (
-    <NavigationContainer theme={navTheme} linking={linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      linking={linking}
+      onReady={() => {
+        if (pendingPush.current) {
+          openFromPush(pendingPush.current);
+          pendingPush.current = null;
+        }
+      }}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ presentation: 'card' }} />

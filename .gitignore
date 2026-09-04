@@ -51,3 +51,10 @@ serviceAccountKey*.json
 # generated native folders
 /ios
 /android
+
+# Cloud Functions (Secção 6): código compilado e dependências
+functions/lib/
+functions/node_modules/
+
+# EAS Build: chaves locais (nunca commitar)
+credentials.json

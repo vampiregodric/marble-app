@@ -37,7 +37,8 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   galeria `media[]` deslizável no topo e visualizador em ecrã inteiro
   (fotos + vídeo)
 - `src/screens/EventsScreen.tsx` — Eventos: `events` (Próximos/Passados)
-- `src/screens/AlertsScreen.tsx` — Alertas: `notifications` do uid
+- `src/screens/AlertsScreen.tsx` — Alertas: `notifications` do uid; no
+  telemóvel, cartão "Ativar notificações" até o push estar ativo
 - `src/screens/ProfileScreen.tsx` — Perfil: `clients/{uid}` + `vehicles`;
   tocar no avatar muda/remove a foto de perfil (Cloudinary)
 
@@ -55,8 +56,11 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 4. **Painel da equipa (backoffice)** — feito (2026-09-03): projeto
    separado em `C:\Users\VGodr\Projects\marble-backoffice`, publicado em
    https://marble-studios-backoffice-dev.web.app. Ver "Backoffice" abaixo.
-5. **Notificações push** — Firebase Cloud Messaging + lógica dos lembretes
-   automáticos (checkup 1 semana depois, etc.) ainda por implementar.
+5. **Notificações push** — feito (Secção 6, 2026-09-04): Cloud Functions
+   em `functions/` (acompanhamento por trabalho, novo trabalho, eventos,
+   retenção, Cloudinary) + `expo-notifications` na app. Ver "Notificações
+   push e Cloud Functions" abaixo. Pendente: Blaze + deploy no dev,
+   development build Android.
 6. **Fotos reais** — feito (Secções 5 e 5b, 2026-09-04): tudo no
    **Cloudinary** (plano gratuito). A equipa carrega as fotos e vídeos dos
    trabalhos no backoffice; a app só recebe URLs (`photoUrl` = capa,
@@ -210,6 +214,182 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
   `expo-image-manipulator`) estão todos no Expo Go — não é preciso build.
   O `app.json` leva o plugin do `expo-image-picker` com os textos de
   permissão em português (só contam em builds da Secção 11).
+
+## Notificações push e Cloud Functions (Secção 6)
+
+Duas peças novas: **Cloud Functions** (`functions/`, TypeScript, Node 22,
+firebase-functions v2, região `europe-west1`) que criam os alertas
+automáticos e mandam o push, e **push no telemóvel** na app
+(`expo-notifications` + Expo Push Service). Regra de ouro que atravessa
+tudo: **o doc em `notifications` é a fonte de verdade** — é o que aparece
+no ecrã Alertas; o push é um acréscimo, e sem telemóvel registado o alerta
+fica só na app. As Functions criam docs com exatamente o formato do
+backoffice (`marble-backoffice/src/data/writes.ts` → `sendNotification`).
+
+### O que as Functions fazem
+
+| Function | Dispara | Faz |
+|---|---|---|
+| `onNotificationCreated` | doc novo em `notifications` (backoffice ou jobs) | push para `clients.pushTokens`; escreve `push` no doc (`sent`/`no_device`/`skipped`/`error`); tira tokens `DeviceNotRegistered`. `team_alert` nunca leva push. |
+| `onWorkWritten` | `works/{id}` criado/alterado | passou a publicado → `new_work` a quem tem "Ofertas e novidades" **e** a categoria ligada (uma vez: `newWorkNotifiedAt`); com carro/chão ligado, `vehicles.lastServiceAt` ← `completedAt` se for mais recente. |
+| `onClientUpdated` | `clients/{uid}` alterado | `avatarUrl` removido/trocado (ou conta apagada) → apaga no Cloudinary os ficheiros com a tag `uid_<uid>`, menos a foto atual. Cumpre os 30 dias da política de privacidade em segundos. |
+| `dailyJobs` | todos os dias às **10:00 de Lisboa** | recibos de push de ontem; acompanhamento pós-serviço; lembrete de eventos ("Amanhã: …", só com consentimento de marketing); retenção de contas (aviso aos 3 anos − 30 dias, anonimização + Auth + Cloudinary aos 3 anos; abrir a app cancela). |
+
+Consentimento (RGPD, Secção 3) aplicado em `functions/src/consent.ts`
+com as mesmas regras do backoffice: sem conta na app → nada;
+`offer`/`new_work`/`event_reminder` só com `consent.marketing`; `new_work`
+ainda exige a categoria; `checkup_reminder`/`message` vão sempre. O trigger
+do push volta a verificar (o cliente pode ter desligado entretanto).
+
+### Acompanhamento pós-serviço (é por trabalho)
+
+Decisão do Fábio (2026-09-04): **não há cadência geral** — um PPF completo
+tem checkup, só retrovisores não, um detail não, um teto estrelado sim. A
+equipa define-o no backoffice **ao registar o trabalho concluído**, no
+cartão "Acompanhamento pós-serviço" do formulário (só aparece com carro/
+chão ligado; ao ligar um, entra o plano padrão 7 / 3 / 30):
+
+- **Lembrete de checkup** ao cliente, N dias após `completedAt`
+  (operacional). Ao enviar, o carro/chão fica `checkupStatus: 'pending'`
+  ("Ação pendente" no Perfil). Cliente sem conta na app → em vez disso um
+  alerta interno "Ligar a … : checkup do …".
+- **Avisar a equipa se não confirmar**, N dias após o lembrete: `team_alert`
+  no Painel do backoffice com o telemóvel do cliente. "Confirmado" =
+  `vehicles.checkupDoneAt` (a equipa marcou em dia) ou
+  `vehicles.checkupRequestedAt` (o cliente pediu na app — Secção 8)
+  posteriores ao lembrete.
+- **Oferta: lavagem grátis**, N dias após `completedAt`, **só carros**
+  (chãos não têm oferta — decisão do Fábio). Marketing: sem
+  `consent.marketing` na data fica `offerSkipped: 'no_consent'` e o
+  formulário diz-o à equipa (que pode falar por telefone); não se envia
+  meses depois se o cliente mudar de ideias.
+
+Tudo vive em `works.followUp` (`WorkFollowUp` em `models.ts`): os dias, as
+marcas `*At` que só as Functions escrevem, e `active` (o job só lê
+trabalhos com `active == true` e fecha-o quando não resta nada). O
+formulário mostra as datas calculadas antes e "Enviado a …" depois.
+
+### Deploy, segredos e logs
+
+Só o **dev** a partir do Claude (autorizado em `.claude/settings.json`);
+prod na Secção 11. Exige o plano **Blaze** no projeto (cartão associado;
+custo ~0 a este volume — as Functions v2 têm 2 M invocações/mês grátis e
+o job diário faz umas dezenas de leituras).
+
+```bash
+npx.cmd firebase-tools deploy --project dev --only functions
+```
+
+(`firebase.json` compila `functions/` antes do deploy.) Os segredos do
+Cloudinary — API key e API secret da conta, em Settings → API Keys na
+consola do Cloudinary — vivem no **Secret Manager**, nunca no código nem
+nos `.env`. Só o Fábio os introduz (o Claude não vê valores de segredos),
+uma vez por projeto, no PowerShell dele, a partir da pasta do projeto:
+
+```bash
+npx.cmd firebase-tools functions:secrets:set CLOUDINARY_API_KEY --project dev
+```
+
+e o mesmo para `CLOUDINARY_API_SECRET`. Sem eles o deploy das funções que
+os declaram falha; com eles em falta em execução, a limpeza no Cloudinary
+é só registada nos logs (nada rebenta). O cloud name (público) está em
+`functions/.env`. Logs: `npx.cmd firebase-tools functions:log --project dev`.
+
+### Testar sem deploy (e sem esperar pelas 10:00)
+
+A lógica está separada do wiring (`functions/src/index.ts` só liga
+triggers a `push.ts`, `handlers.ts` e `jobs/`), por isso corre localmente
+contra o dev com a chave de service account — **escreve a sério** (cria
+alertas, marca passos como enviados):
+
+```bash
+npm run functions:build
+npm run functions:jobs -- ../serviceAccountKey.dev.json --only followUps --now 2026-09-12
+```
+
+Opções: `--now AAAA-MM-DD` (esse dia às 10:00 de Lisboa), `--only`
+(`receipts|followUps|events|retention`), `--push <notificationId>` (push de
+um alerta já criado — com um token inválido o Expo responde
+`DeviceNotRegistered` e o token sai da conta), `--work <workId>` (simula o
+trigger de publicação), `--avatar <uid>` (limpeza no Cloudinary; precisa de
+`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` no ambiente). Foi assim que a
+Secção 6 verificou o fluxo inteiro (checkup → alerta interno → oferta
+recusada por falta de consentimento; aviso e anonimização por
+inatividade; `new_work` só a quem tem categoria e consentimento).
+
+### Push no telemóvel (app)
+
+- `src/push/push.native.ts` (iOS/Android) e `push.ts` (web, inerte). A
+  permissão **nunca é pedida no arranque**: o ecrã Alertas mostra um cartão
+  "Recebe os alertas no telemóvel" e o pedido do sistema só aparece ao tocar
+  em "Ativar notificações" (`enablePush`). Recusada → "Abrir definições".
+  Já autorizada → ao entrar, `syncPushToken` garante o token na conta sem
+  perguntar. Terminar sessão e apagar conta tiram o token
+  (`forgetPushToken`), senão o próximo cliente neste telemóvel recebia os
+  alertas do anterior. Token em `clients/{uid}.pushTokens` (lista: vários
+  telemóveis).
+- **Tocar num push** abre o mesmo que tocar no alerta no ecrã Alertas
+  (trabalho / tab Eventos / Perfil) e marca-o como lido —
+  `RootNavigator.tsx` → `openFromPush`, via `navigationRef`; funciona com a
+  app fechada (arranque a frio espera pelo `onReady`). Os ids viajam no
+  `data` do push (`functions/src/push.ts` → `pushData`).
+- `lastActiveAt` em `clients/{uid}`: a app grava-o no máximo uma vez por
+  dia (`AuthContext.touchLastActive`) — é a "atividade" do job de
+  retenção.
+- **Expo Go no Android já não recebe push remoto** (SDK 53+). Para ver um
+  push a sério é preciso a **development build** (ver abaixo); no Expo Go e
+  no web `pushSupported` é false e o cartão não aparece. Sem
+  `extra.eas.projectId` no `app.json` também não (é o que
+  `getExpoPushTokenAsync` exige).
+- Ícone da barra de notificações (Android exige silhueta branca com
+  transparência): `assets/notification-icon.png`, gerado a partir do
+  logótipo real (`assets/logo.png`) — não é um sino genérico. Cor de
+  destaque dourada e canal `default` no plugin `expo-notifications`
+  (`app.json`).
+
+### Development build (Android) com EAS
+
+Substitui o Expo Go no telemóvel do Fábio: é "o Expo Go desta app", com o
+push a funcionar, e liga-se ao mesmo servidor (`marble-app-phone`, 8081).
+Passos (uma vez):
+
+1. Conta Expo (grátis) e login na CLI, **pelo Fábio**, no PowerShell dele:
+   `npx.cmd eas-cli login` (a password fica na CLI do Expo).
+2. `npx.cmd eas-cli init` na pasta do projeto — cria o projeto no EAS e
+   escreve `extra.eas.projectId` no `app.json` (commitar).
+3. App Android no Firebase (pacote `pt.marble.app`, definido em `app.json`
+   em `android.package` e `ios.bundleIdentifier`):
+   `npx.cmd firebase-tools apps:create ANDROID "Marble Studios App" --package-name pt.marble.app --project dev`
+   e `npx.cmd firebase-tools apps:sdkconfig ANDROID <appId> --project dev --out google-services.json`.
+   O ficheiro fica na raiz e em `android.googleServicesFile` (só tem
+   identificadores públicos; pode ir para o git). O prod precisa do seu
+   próprio (Secção 11).
+4. Credencial FCM V1 no EAS (é o que deixa o Expo entregar no Android): em
+   https://expo.dev → projeto → Credentials → Android → Service
+   Credentials → FCM V1 → carregar a chave de service account do Firebase
+   (a mesma `serviceAccountKey.dev.json` serve). Ou `npx.cmd eas-cli credentials`
+   (interativo).
+5. Build na nuvem: `npx.cmd eas-cli build --profile development --platform android`
+   (perfis em `eas.json`; o keystore é gerado pelo EAS). Demora 10–20 min
+   na fila gratuita; no fim há um link/QR para instalar o APK no telemóvel.
+6. No telemóvel: abrir a app instalada → ela procura o servidor de
+   desenvolvimento (`exp://<IP>:8081`, o mesmo do Expo Go) → Perfil → entrar
+   → Alertas → "Ativar notificações". Enviar um alerta no backoffice: chega
+   como push.
+
+Depois disto, `expo-dev-client` faz com que `expo start` sirva a dev build
+e o Expo Go ao mesmo tempo — os dois continuam a funcionar (o Expo Go sem
+push).
+
+### Login por token de dev na app web
+
+Igual ao backoffice: `npm run dev-token -- ./serviceAccountKey.dev.json teste.seccao2@example.com`
+imprime `http://localhost:8082/#token=…` (1 hora). A app
+(`src/auth/devToken.ts`) só o aceita no browser **e** quando o projeto
+acaba em `-dev`; em produção é código morto. Serve para o Claude verificar
+Alertas e Perfil sem escrever a password de ninguém — foi assim que a
+Secção 6 viu os alertas automáticos a chegar ao ecrã Alertas em tempo
+real.
 
 ## Firebase: os dois projetos
 

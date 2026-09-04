@@ -38,9 +38,15 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 1. Trabalho é registado no sistema (ex: aplicação de PPF colorido)
 2. **+1 semana** → notificação ao cliente para agendar um checkup
 3. Se o cliente **não confirmar/agendar** o checkup na app → alerta interno para a equipa ligar ao cliente
-4. **+1 mês** após o checkup → oferta automática de lavagem grátis ao cliente, para o trazer de volta ao espaço
+4. **+1 mês** → oferta automática de lavagem grátis ao cliente, para o trazer de volta ao espaço
 
-*(Mesma lógica de acompanhamento aplicável a trabalhos de epóxi/chão — a confirmar detalhes específicos)*
+**Decidido (2026-09-04, Secção 6):**
+- **O acompanhamento é definido trabalho a trabalho, pela equipa, ao registar o trabalho concluído no backoffice** — não há cadência geral. Um PPF completo tem checkup a 1 semana e lavagem a 1 mês; só retrovisores não tem; um detail não tem; um teto estrelado tem. O formulário do trabalho traz o plano padrão (checkup 7 dias, alerta à equipa 3 dias depois do lembrete, lavagem 30 dias) e cada passo liga-se/desliga-se e ajusta-se em dias.
+- **Chãos (epóxi) não têm oferta** — a lavagem grátis é só para carros. O checkup e o alerta interno aplicam-se aos dois.
+- Os prazos contam a partir da data de conclusão do trabalho; os envios saem às 10:00 (hora de Lisboa).
+- O lembrete de checkup é operacional (vai sempre); a oferta é marketing (só com "Ofertas e novidades" ligado — sem isso, a equipa vê no backoffice que não foi enviada e pode falar por telefone).
+- Cliente sem conta na app: em vez do lembrete, a equipa recebe logo um alerta interno para lhe ligar.
+- "Confirmar o checkup" na app é a Secção 8; até lá, "confirmado" = a equipa marcou o carro/chão em dia no backoffice.
 
 ## Carrossel do ecrã inicial
 - Curadoria **manual** pela equipa (confirmado) — não é automático por "mais recentes". Implica um ecrã de gestão no backoffice para escolher/ordenar destaques.
@@ -54,7 +60,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Implicações técnicas identificadas (a validar)
 - Vai ser necessário um **backoffice/painel de administração** para a equipa gerir: clientes, carros/produtos, trabalhos/portfólio, notificações, lembretes automáticos. **Confirmado (2026-09-03): é uma aplicação separada** da app do cliente, não faz parte deste projeto React Native — ver ROADMAP.md, Secção 5.
-- Sistema de notificações push com regras/gatilhos temporais (agendamento automático de lembretes)
+- Sistema de notificações push com regras/gatilhos temporais (agendamento automático de lembretes) — **feito (Secção 6, 2026-09-04):** Cloud Functions + Expo Push Service; a permissão de notificações só é pedida no ecrã Alertas, ao tocar em "Ativar notificações", nunca no arranque; tocar no push abre o trabalho/evento/perfil certo.
 - Preferências de notificação por categoria, por cliente
 
 ## Decisões de arquitetura (confirmadas)
@@ -108,7 +114,6 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Sem barra de navegação (ecrã empilhado, não é uma tab) — seta de voltar + partilhar no topo
 
 ## Por confirmar / em aberto
-- Detalhes do fluxo de acompanhamento para trabalhos de epóxi/chão (é igual ao dos carros?)
 - Fotos do espaço (ainda não enviadas)
 - Logótipo final (ficheiro isolado, ainda não enviado)
 - Informação de contacto/negócio (morada, horário, telefone, redes sociais) para secção "sobre"/rodapé
