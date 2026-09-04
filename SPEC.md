@@ -88,6 +88,14 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Ainda por desenhar: ecrã de detalhe ao abrir um trabalho específico
 - Imagens ainda placeholder, a aguardar fotos reais
 
+## Pedido de orçamento (decidido 2026-09-04, construído na Secção 7)
+- Entra-se pelo "Pedir orçamento semelhante" do Detalhe, pelas páginas dos departamentos (AI Business, Marble Ads; futuro Xtreme) e por "Pedir orçamento" no Perfil.
+- **O pedido cria conta (decisão do Fábio):** quem não tem conta escreve nome, email e telemóvel — os mesmos dados do registo — e a app cria-lhe a conta na hora (fica com sessão; recebe um email para definir a password). Email já com conta → pede só a password. Com sessão, os dados vêm da conta. Logo, todos os pedidos ficam ligados a um cliente.
+- **Campos por departamento:** o que pretende (opções, ex: PPF / vinil / detailing; metallic / flake / cor sólida), o carro (marca, modelo, ano) ou o espaço (tipo + m²) ou a empresa (nome, site), mensagem livre, fotos opcionais (até 5) e como prefere ser contactado (chamada / WhatsApp / email).
+- **A equipa recebe:** alerta interno no Painel do backoffice, email para **quotes@marble.pt** (remetente app@marble.pt, via Resend — a ligar pelo Fábio) e o pedido na página **Pedidos** do backoffice, com estados recebido → em contacto → fechado e notas internas. O cliente recebe "Recebemos o teu pedido" nos Alertas (com push), email de confirmação, e vê o estado em "Os teus pedidos" no Perfil.
+- **Prazo prometido ao cliente:** resposta no prazo de **1 dia útil**.
+- **RGPD:** base legal = diligências pré-contratuais; os dados pessoais do pedido são apagados **12 meses** depois de fechado (e ao apagar a conta). Um cliente com mais de 3 pedidos em 24 h fica marcado como possível spam.
+
 ## Ecrã de Eventos (protótipo desenhado)
 - Nova tab na barra inferior (5 tabs agora): Início, Portfólio, **Eventos**, Alertas, Perfil
 - Lista de eventos onde a Marble Studios vai estar (feiras, car meets, open days), com foto, data, local
@@ -112,7 +120,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Foto grande no topo (real: Jaguar F-Type roxo do Fábio, `work-jaguar-purple.jpg`), badge de categoria, título
 - Data, modelo/produto, descrição completa
 - Chips de produtos usados (ex: Inozetek, Xtreme Polishing Systems) — liga a distribuição ao portfólio
-- CTA fixo em baixo: "Pedir orçamento semelhante"
+- CTA fixo em baixo: "Pedir orçamento semelhante" — **feito (Secção 7, 2026-09-04):** abre o formulário de pedido de orçamento com o trabalho como contexto (foto de capa + título) e o departamento pela categoria
 - Sem barra de navegação (ecrã empilhado, não é uma tab) — seta de voltar + partilhar no topo
 
 ## Por confirmar / em aberto

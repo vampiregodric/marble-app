@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { shrinkImage } from './images';
 
 // Escolher a foto de perfil: galeria ou câmara, recorte quadrado nativo
 // (iOS/Android) e redução a 1024 px no próprio telemóvel antes de subir —
@@ -38,20 +38,6 @@ export async function pickAvatar(source: AvatarSource): Promise<string | null> {
   }
   if (result.canceled || !result.assets?.length) return null;
   const asset = result.assets[0];
-  return shrink(asset.uri, asset.width, asset.height);
-}
-
-// Reduz o lado maior a MAX_AVATAR_DIMENSION e grava em JPEG. Sem dimensões
-// conhecidas (pode acontecer no browser) reduz pela largura na mesma.
-async function shrink(uri: string, width?: number, height?: number): Promise<string> {
-  const ctx = ImageManipulator.manipulate(uri);
-  if (!width || !height) {
-    ctx.resize({ width: MAX_AVATAR_DIMENSION });
-  } else if (width > MAX_AVATAR_DIMENSION || height > MAX_AVATAR_DIMENSION) {
-    if (width >= height) ctx.resize({ width: MAX_AVATAR_DIMENSION });
-    else ctx.resize({ height: MAX_AVATAR_DIMENSION });
-  }
-  const rendered = await ctx.renderAsync();
-  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
-  return saved.uri;
+  // Redução partilhada com as fotos dos pedidos de orçamento (images.ts).
+  return shrinkImage(asset.uri, MAX_AVATAR_DIMENSION, asset.width, asset.height);
 }

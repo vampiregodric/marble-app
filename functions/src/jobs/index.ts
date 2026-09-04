@@ -5,6 +5,7 @@ import { loadAppClients, runEventReminders } from './events';
 import { JobLog, runFollowUps } from './followUps';
 import { runReceipts } from './receipts';
 import { runRetention } from './retention';
+import { runRequestRetention } from '../requests';
 
 // O job diário (10:00 Lisboa) — a ordem importa pouco, mas os recibos de
 // ontem vão primeiro para tirar tokens mortos antes dos envios de hoje.
@@ -36,5 +37,7 @@ export async function runDailyJobs(db: Firestore, deps: DailyDeps, now: Date, lo
   const clients = only && only !== 'events' && only !== 'retention' ? undefined : await loadAppClients(db);
   await run('events', () => runEventReminders(db, now, log, clients));
   await run('retention', () => runRetention(db, { auth: deps.auth, cloudinary: deps.cloudinary }, now, log, clients));
+  // Pedidos de orçamento fechados há mais de 12 meses (Secção 7).
+  await run('requests', () => runRequestRetention(db, now, log));
   return summary;
 }

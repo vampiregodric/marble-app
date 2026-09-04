@@ -495,11 +495,48 @@ Functions no prod, `google-services.json`
 do prod, credencial FCM do prod no EAS.
 
 ### Secção 7 — Ecrã de pedido de orçamento
-**Estado:** Por fazer
+**Estado:** Feito e verificado no dev (2026-09-04). Ecrã `RequestQuote`
+(a partir do Detalhe com `workId`, de um departamento com `department`,
+ou do Perfil), formulário por departamento (`src/data/requestForms.ts`:
+opções, carro/espaço/empresa, mensagem, fotos opcionais, contacto
+preferido), **conta criada na hora para quem não tem** (decisão do Fábio;
+email "definir password" do Firebase), coleção `requests` com regras
+validadas campo a campo e índice, Cloud Function `onRequestWritten`
+(anti-spam, alerta interno no Painel, "Recebemos o teu pedido" ao cliente
+com push, emails pelo Resend quando ligado, limpeza de fotos no
+Cloudinary), retenção de 12 meses no job diário e anonimização ao apagar
+conta, "Os teus pedidos" no Perfil, página **Pedidos** no backoffice
+(estados recebido → em contacto → fechado, notas, fotos, Painel e barra
+lateral), política de privacidade e termos atualizados
+(`LEGAL_VERSION` 2026-09-05). Functions publicadas no dev. Verificado no
+browser (fluxo com sessão, fluxo sem conta a criar conta, estado a mudar
+em tempo real no Perfil, alerta nos Alertas, backoffice) e com os scripts
+`check:firestore*` e `functions:jobs --request`. **Pendente do Fábio
+(não bloqueia):** preset `marble-requests` no Cloudinary (fotos), conta
+Resend + DNS do marble.pt + segredo `RESEND_API_KEY` + `QUOTE_EMAIL=on`
+(emails para quotes@marble.pt e ao cliente), traduzir o template "repor
+password" do Firebase Auth. Ver DEVELOPMENT.md, "Pedidos de orçamento".
 **Depende de:** Secção 1 (para guardar o pedido)
 **Objetivo:** O botão "Pedir orçamento semelhante" no Detalhe do Trabalho
 (`src/screens/WorkDetailScreen.tsx`) ainda não faz nada. Construir o
 formulário/fluxo de pedido de orçamento.
+**Nota (2026-09-04):** decisões do Fábio — (1) o pedido **cria conta**
+(os dados são os mesmos do registo; password definida por email); (2)
+campos por departamento: carro/chão + o que pretende, com opções, fotos
+opcionais; (3) a equipa recebe alerta interno + o cliente alerta de
+confirmação, **e email para quotes@marble.pt** (Resend, remetente
+app@marble.pt); (4) página Pedidos completa no backoffice; (5) prazo
+prometido: **1 dia útil**; (6) retenção: **12 meses depois de fechado**.
+**Para a Secção 8:** usar a mesma coleção com `type: 'checkup'` e
+`vehicleId` — `validNewRequest` já aceita os dois; `handleRequestCreated`
+e os textos (`requestKind`) já distinguem o tipo; a página Pedidos mostra
+"Pedido de checkup". Basta o botão "Agendar agora" gravar o doc (e
+`vehicles.checkupRequestedAt` é da Function ou da regra a decidir lá).
+**Para as Secções 9 e 10:** `navigation.navigate('RequestQuote', { department: 'ai' | 'ads' | 'xps' })`
+— os três formulários já existem em `requestForms.ts`.
+**Para a Secção 11:** `RESEND_API_KEY` no prod, `BACKOFFICE_URL` do prod em
+`functions/.env.prod` (ou o equivalente), preset `marble-requests`,
+App Check.
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Por fazer

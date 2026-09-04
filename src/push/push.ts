@@ -12,6 +12,7 @@ export type PushOpenData = {
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
+  relatedRequestId?: string;
 };
 
 export const pushSupported = false;

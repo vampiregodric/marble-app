@@ -16,6 +16,7 @@ export type NotificationInput = {
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
+  relatedRequestId?: string;
 };
 
 export function notificationDoc(input: NotificationInput, now: Date): Record<string, unknown> {
@@ -31,6 +32,7 @@ export function notificationDoc(input: NotificationInput, now: Date): Record<str
   if (input.relatedWorkId) data.relatedWorkId = input.relatedWorkId;
   if (input.relatedEventId) data.relatedEventId = input.relatedEventId;
   if (input.relatedVehicleId) data.relatedVehicleId = input.relatedVehicleId;
+  if (input.relatedRequestId) data.relatedRequestId = input.relatedRequestId;
   return data;
 }
 

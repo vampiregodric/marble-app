@@ -75,7 +75,7 @@ export default function AlertsScreen() {
     }
     if (a.relatedWorkId) navigation.navigate('WorkDetail', { workId: a.relatedWorkId });
     else if (a.relatedEventId) navigation.navigate('Tabs', { screen: 'Events' });
-    else if (a.relatedVehicleId) navigation.navigate('Tabs', { screen: 'Profile' });
+    else if (a.relatedVehicleId || a.relatedRequestId) navigation.navigate('Tabs', { screen: 'Profile' });
   };
 
   const subtitle = loading ? 'A carregar…' : unreadCount === 0 ? 'Tudo lido' : unreadCount === 1 ? '1 por ler' : `${unreadCount} por ler`;

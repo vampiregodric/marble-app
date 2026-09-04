@@ -2,6 +2,7 @@ import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { CloudinaryConfig, deleteAvatarFiles, publicIdFromUrl } from './cloudinary';
 import { canReceive } from './consent';
 import { notificationDoc } from './notify';
+import { anonymizeClientRequests } from './requests';
 import { TEXTS } from './texts';
 import { Client, Work } from './types';
 
@@ -51,10 +52,14 @@ export async function handleWorkWritten(db: Firestore, before: Work | null, afte
   }
 }
 
-// clients/{uid} alterado: a foto de perfil foi removida, trocada, ou a conta
-// apagada (a app tira `avatarUrl` ao anonimizar) → apagar no Cloudinary os
-// ficheiros com a tag do cliente, menos a foto atual (se trocou).
-export async function handleClientUpdated(cfg: CloudinaryConfig | null, uid: string, before: Client, after: Client, log: Log = () => {}): Promise<number> {
+// clients/{uid} alterado:
+// 1. a conta foi apagada (app ou job de retenção) → os pedidos de orçamento
+//    do cliente perdem os dados pessoais (Secção 7);
+// 2. a foto de perfil foi removida, trocada, ou a conta apagada (a app tira
+//    `avatarUrl` ao anonimizar) → apagar no Cloudinary os ficheiros com a
+//    tag do cliente, menos a foto atual (se trocou).
+export async function handleClientUpdated(db: Firestore, cfg: CloudinaryConfig | null, uid: string, before: Client, after: Client, log: Log = () => {}): Promise<number> {
+  if (after.deletedAt && !before.deletedAt) await anonymizeClientRequests(db, uid, new Date(), log);
   const prev = before.avatarUrl?.trim() || '';
   const next = after.avatarUrl?.trim() || '';
   if (prev === next) return 0;
