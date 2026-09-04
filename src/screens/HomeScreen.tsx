@@ -24,6 +24,7 @@ import { useHomeSettings } from '../data/settings';
 import { useUnreadCount } from '../data/notifications';
 import { categoryFullName } from '../data/categories';
 import { DEPARTMENTS } from '../data/departments';
+import { hasDepartmentContent } from '../data/departmentContent';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { useAppWidth } from '../utils/layout';
@@ -142,7 +143,10 @@ export default function HomeScreen() {
 
         {/* Cartões de departamento: foto escolhida pela equipa como fundo,
             nome e tagline por cima. O selo "Oficial" é informação (Xtreme é
-            distribuidor oficial), por isso fica. */}
+            distribuidor oficial), por isso fica. Tocar abre a página de
+            serviços do departamento (Secção 9) — decisão do Fábio: serviços
+            primeiro, o Portfólio filtrado fica a um toque dentro da página.
+            Sem conteúdo (Xtreme até à Secção 10) o cartão fica inerte. */}
         <View style={styles.deptGrid}>
           {DEPARTMENTS.map((d) => {
             const cover = covers[d.id];
@@ -150,7 +154,7 @@ export default function HomeScreen() {
               <Pressable
                 key={d.id}
                 style={[styles.deptCard, { width: deptCardW }]}
-                onPress={d.category ? () => openPortfolio(d.category) : undefined}
+                onPress={hasDepartmentContent(d.id) ? () => navigation.navigate('Department', { id: d.id }) : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={d.name}
               >

@@ -545,14 +545,57 @@ App Check.
 Perfil (`src/screens/ProfileScreen.tsx`) ainda não faz nada. Decidir e
 construir: calendário dentro da app, ou só confirmação simples que avisa
 a equipa?
+**Plano (2026-09-04, Fábio):** corre em **paralelo com a Secção 7**, numa
+conversa própria, **sem tocar no backoffice** (que é da 7): o pedido fica
+no próprio carro/chão (`vehicles/{id}`: `checkupRequestedAt` + dia
+preferido + nota), as regras deixam o dono escrever só esses campos, e
+uma Cloud Function (`functions/`) cria um `team_alert` "Ligar a X: pediu
+checkup do Y para dia Z" no Painel que já existe. O job diário já trata
+`checkupRequestedAt` como "confirmado". A cópia de `models.ts` do
+backoffice sincroniza-se depois de a 7 entrar.
 
 ### Secção 9 — Conteúdo estático: AI Business & Marble Ads
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-04). Página de serviços genérica para os cinco
+departamentos com conteúdo (não só AI Business e Marble Ads — ver
+"Decisões"); a Xtreme fica para a Secção 10 com o mesmo ecrã.
 **Depende de:** nada
 **Objetivo:** As secções "AI Business" (consultoria de IA) e "Marble Ads"
 (Google/Meta Ads) na Home ainda só têm o cartão — precisam de uma página
 própria quando clicadas (provavelmente informativa + formulário de
 contacto, sem muita lógica de dados).
+**Decisões (2026-09-04, Fábio):** os cartões Automotive, Epoxy e Graphic
+também abrem uma página de serviços (não o Portfólio filtrado — "serviços
+primeiro"); o Portfólio filtrado fica a um toque dentro da página. Sem
+formulário próprio: o botão final abre o pedido de orçamento da Secção 7.
+Conteúdo só em português, estrutura pronta para inglês. Textos: rascunho
+do Claude a partir do SPEC, preço "sob consulta" em todos — **o Fábio
+ainda vai corrigir factos** (serviços concretos, resultados, preços) em
+`src/data/departmentContent.ts`.
+**Nota (2026-09-04):** construído nesta sessão, só na app (backoffice e
+Firestore intocados — o conteúdo é estático, no código).
+`src/data/departmentContent.ts`: `DepartmentContent` (headline, intro,
+services[], steps[], pricing, cta `quote` | `link`) por idioma
+(`CONTENT.pt`, `CONTENT.en` vazio → cai para PT), `departmentContent(id)`
+e `hasDepartmentContent(id)`. `src/screens/DepartmentScreen.tsx` (rota
+`Department { id }`, URL web `services/:id`): foto de
+`settings/home.departmentCovers` (a do cartão; gradiente sem foto), nome e
+tagline de `DEPARTMENTS`, headline, intro, "O que fazemos" em cartões,
+"Como funciona" com números e linha, "Trabalhos recentes" da categoria
+(reutiliza `usePublishedWorks`, filtro em memória, sem índice novo) com
+"Ver portfólio" → Portfólio filtrado, "Investimento", botão fixo em baixo.
+Sem ícones decorativos. Início: cada cartão com conteúdo abre a página
+(`hasDepartmentContent`); sem conteúdo o cartão fica inerte (Xtreme até à
+Secção 10). Contrato com a Secção 7: rota `RequestQuote { workId?,
+department? }` em `types.ts` e um **ecrã de reserva**
+`src/screens/RequestQuoteScreen.tsx` ("em breve" + email app@marble.pt)
+que a Secção 7 substitui por completo. Verificado no web (8083, dados do
+dev): AI Business, Automotive (foto do Jaguar no topo e 4 trabalhos
+recentes com fotos reais), cartão do Início → página, "Ver portfólio" →
+Portfólio só com Epoxy, "Pedir orçamento" → ecrã de reserva com o
+departamento; `npm run typecheck` limpo. **Para a Secção 10:** basta
+acrescentar `xps` (e depois `inozetek`, com o `DepartmentId` novo) a
+`CONTENT.pt`, com `cta: { kind: 'link', url }` para a loja online — o
+cartão do Início e a rota já funcionam.
 
 ### Secção 10 — Distribuição: Xtreme Polishing Systems & Inozetek
 **Estado:** Por fazer
@@ -560,6 +603,17 @@ contacto, sem muita lógica de dados).
 **Objetivo:** O cartão "Xtreme Polishing Systems" na Home precisa de
 ligar a algo real (link externo? página própria?). Preparar o mesmo
 tratamento para a Inozetek quando a parceria for oficial (ver SPEC.md).
+**Nota (Secção 9):** o ecrã genérico já existe — `DepartmentScreen` lê
+`src/data/departmentContent.ts`. Acrescentar a entrada `xps` a
+`CONTENT.pt` (headline, intro, o que vendem, como comprar, `cta: { kind:
+'link', label: 'Comprar na loja', url }`) e o cartão do Início abre-a
+sozinho. Para a Inozetek: novo `DepartmentId` em `models.ts` (app e
+backoffice), entrada em `DEPARTMENTS` e conteúdo — a foto do cartão passa
+a ser escolhível no backoffice sem mais código.
+**Plano (2026-09-04, Fábio):** corre em **paralelo com a 7 e a 8**, só na
+app. A Inozetek fica com o conteúdo preparado mas **sem cartão** até a
+parceria ser oficial (SPEC) — o `DepartmentId` novo exige o backoffice,
+que é da Secção 7.
 
 ### Secção 11 — Preparação para lançamento nas lojas
 **Estado:** Por fazer
@@ -588,6 +642,29 @@ subir `LEGAL_VERSION` e correr `npm run build:legal`.
 no Firebase (`pt.marble.app`) e usar o seu `google-services.json` na build
 de produção; carregar a credencial FCM V1 do prod no EAS. Sem isto não há
 push nem lembretes em produção.
+**Plano (2026-09-04, Fábio): em duas partes.** A **parte 1** arranca já,
+em paralelo com 7, 8 e 10, porque as contas das lojas demoram dias a
+aprovar: contas Apple Developer e Google Play (Fábio), plano Blaze e
+Functions no prod, ícones e splash finais em todos os tamanhos
+(`app.json`, `assets/`), perfil de produção do EAS, ficha da loja (PT/EN),
+formulários "Data safety"/"App Privacy" a partir da política, páginas
+legais publicadas (GitHub Pages). Não toca em `src/`. A **parte 2**
+(build de produção, screenshots finais, submissão) só depois de 7, 8, 10
+e 12 estarem no master.
+
+### Secção 12 — Inglês
+**Estado:** Por fazer
+**Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
+**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11
+**Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
+Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
+próprio, a não ser que o Fábio queira): textos dos ecrãs, estados vazios,
+erros, `src/data/departmentContent.ts` (`CONTENT.en`, estrutura já pronta),
+`src/data/categories.ts`, `DEPARTMENTS` (nome/tagline), datas
+(`src/utils/dates.ts`). Os textos legais ficam só em PT (a revisão jurídica
+é de um texto). Pesar `expo-localization` + um módulo `t()` simples em vez
+de uma biblioteca de i18n completa. Os alertas criados pelo backoffice e
+pelas Functions são escritos pela equipa em PT — decidir se ficam assim.
 
 ---
 

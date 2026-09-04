@@ -28,6 +28,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Slideshow/carrossel no topo
 - Por baixo, secções para cada departamento/área de negócio (acima)
 - **Fotos dos cartões de departamento (decidido 2026-09-04):** cada um dos seis cartões mostra como fundo uma foto **escolhida pela equipa no backoffice** (Destaques > Fotos dos serviços: carregar uma foto ou usar a capa de um trabalho publicado), não a do trabalho mais recente nem um ícone. Sem foto, o cartão fica num gradiente dourado só com o nome e a tagline.
+- **Tocar num cartão abre a página de serviços do departamento (decidido 2026-09-04, Secção 9)** — não o Portfólio. Todos os departamentos, incluindo Automotive, Epoxy e Graphic, têm uma página com a mesma estrutura: foto (a do cartão), nome, tagline e headline, intro, "O que fazemos" (3–5 blocos), "Como funciona" (passos numerados), "Investimento" (por agora "sob consulta" em todos) e um botão final "Pedir orçamento"/"Pedir proposta" que abre o pedido de orçamento já com o departamento. Os três com portfólio mostram ainda os trabalhos recentes da categoria (fotos reais) e um "Ver portfólio" que abre o Portfólio filtrado. O conteúdo é estático, no código (`src/data/departmentContent.ts`), só em português por agora, com a estrutura pronta para inglês. A Xtreme Polishing Systems (e a Inozetek) ganham a sua página na Secção 10 com o mesmo ecrã.
 
 ## Funcionalidades — Base de dados de clientes e produtos
 - Cada cliente é adicionado à base de dados
@@ -77,7 +78,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   `src/legal/texts.ts`. Entidade legal: Cacto Elegante, Lda., NIF
   519355849, Rua Quinta das Rosas 12A, 2840-131 Paio Pires; email de
   privacidade app@marble.pt.
-- **Idioma:** Português + Inglês
+- **Idioma:** Português + Inglês — a app é construída em português; o inglês entra de uma vez na Secção 12 do ROADMAP (decidido 2026-09-04), depois das secções de ecrãs e antes da submissão às lojas.
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 
 ## Ecrã de Portfólio (protótipo desenhado)
