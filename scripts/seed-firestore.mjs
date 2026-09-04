@@ -323,11 +323,33 @@ async function seed() {
     { merge: true }
   );
 
+  // --- settings/checkups: quando a equipa faz checkups (Secção 8). Igual ao
+  // plano por defeito da app (CHECKUP_AVAILABILITY_DEFAULT em models.ts):
+  // seg–sex, manhã e tarde, 3 semanas, a partir de amanhã. `merge` para não
+  // apagar o que a equipa já tenha definido no backoffice (Secção 7b).
+  batch.set(
+    db.collection('settings').doc('checkups'),
+    {
+      weekly: {
+        mon: ['morning', 'afternoon'],
+        tue: ['morning', 'afternoon'],
+        wed: ['morning', 'afternoon'],
+        thu: ['morning', 'afternoon'],
+        fri: ['morning', 'afternoon'],
+      },
+      closedDays: [],
+      weeksAhead: 3,
+      minDaysAhead: 1,
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+
   await batch.commit();
   console.log(
     `Seed concluído: 1 client de exemplo, ${Object.keys(vehicles).length} vehicles, ` +
       `${Object.keys(works).length} works (1 rascunho), ${Object.keys(events).length} events, ` +
-      `${Object.keys(notifications).length} notifications → cliente ${clientId}; settings/home com a foto do Automotive.`
+      `${Object.keys(notifications).length} notifications → cliente ${clientId}; settings/home com a foto do Automotive; settings/checkups (seg–sex).`
   );
 }
 

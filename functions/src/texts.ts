@@ -1,4 +1,4 @@
-import { CATEGORY_NAME, Client, MarbleEvent, Vehicle, Work } from './types';
+import { CATEGORY_NAME, CheckupRequest, Client, MarbleEvent, Vehicle, Work } from './types';
 
 // Textos das notificações automáticas, em português, no tom da app. Tudo
 // o que o cliente lê vive aqui, para mudar num sítio só. Os títulos são
@@ -29,6 +29,27 @@ function vehicleWord(v: Vehicle): string {
 
 function firstName(c: Client): string {
   return (c.name || '').trim().split(/\s+/)[0] || 'Cliente';
+}
+
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+// "seg, 7 set" a partir de "2026-09-07" (dia de calendário, sem fuso).
+export function formatCheckupDay(day: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return day;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return `${WEEKDAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+// "seg, 7 set, de manhã" ou, com hora da equipa, "seg, 7 set às 10:30".
+export function formatCheckupSlot(req: Pick<CheckupRequest, 'day' | 'period' | 'time'>): string {
+  const day = formatCheckupDay(req.day);
+  if (req.time) return `${day} às ${req.time}`;
+  return `${day}, ${req.period === 'morning' ? 'de manhã' : 'à tarde'}`;
+}
+
+function phoneText(c: Client): string {
+  return c.phone ? `Telemóvel: ${c.phone}.` : 'Sem telemóvel na ficha.';
 }
 
 export const TEXTS = {
@@ -69,6 +90,49 @@ export const TEXTS = {
       description: `${event.location} · ${formatDay(event.date.toDate(), true)}. Vem ter connosco.`,
     };
   },
+  // ---------- Agendamento de checkup (Secção 8) ----------
+
+  // Alerta interno: o cliente pediu (ou alterou) o dia do checkup na app.
+  // A equipa aprova ou propõe outro dia no backoffice (Secção 7b).
+  checkupRequested(client: Client, vehicle: Vehicle, req: CheckupRequest, changed: boolean) {
+    const note = req.note?.trim() ? ` Nota: "${req.note.trim()}".` : '';
+    return {
+      title: `${client.name || 'Cliente'} ${changed ? 'alterou o pedido de' : 'pediu'} checkup: ${vehicle.name}`,
+      description: `Quer o checkup do ${vehicleWord(vehicle)} ${formatCheckupSlot({ day: req.day, period: req.period })}.${note} Aprovar ou propor outro dia no backoffice. ${phoneText(client)}`,
+    };
+  },
+  // Alerta interno: o cliente confirmou o dia que a equipa propôs.
+  checkupProposalConfirmed(client: Client, vehicle: Vehicle, req: CheckupRequest) {
+    return {
+      title: `${client.name || 'Cliente'} confirmou o checkup: ${vehicle.name}`,
+      description: `Fica agendado para ${formatCheckupSlot(req)}. ${phoneText(client)}`,
+    };
+  },
+  // Alerta interno: o cliente cancelou — decisão do Fábio: "considera que
+  // não quis fazer", a equipa não insiste. Se já estava agendado, o dia fica livre.
+  checkupCancelled(client: Client, vehicle: Vehicle, req: CheckupRequest, wasScheduled: boolean) {
+    return {
+      title: `${client.name || 'Cliente'} cancelou o checkup: ${vehicle.name}`,
+      description: `${wasScheduled ? `Estava agendado para ${formatCheckupSlot(req)} — o dia fica livre.` : `Tinha pedido ${formatCheckupSlot({ day: req.day, period: req.period })}.`} O ${vehicleWord(vehicle)} sai dos checkups pendentes; não é preciso ligar.`,
+    };
+  },
+  // Ao cliente: a equipa aprovou o pedido, ou ele confirmou a proposta.
+  checkupScheduled(vehicle: Vehicle, req: CheckupRequest) {
+    const note = req.teamNote?.trim() ? ` ${req.teamNote.trim()}` : '';
+    return {
+      title: `Checkup agendado: ${formatCheckupSlot(req)}`,
+      description: `O checkup gratuito do teu ${vehicle.name} está marcado para ${formatCheckupSlot(req)}.${note} Se precisares de mudar, altera no Perfil.`,
+    };
+  },
+  // Ao cliente: o dia pedido não dá; a equipa propõe outro.
+  checkupProposed(vehicle: Vehicle, req: CheckupRequest) {
+    const note = req.teamNote?.trim() ? ` ${req.teamNote.trim()}` : '';
+    return {
+      title: `Proposta de checkup: ${formatCheckupSlot(req)}`,
+      description: `Para o teu ${vehicle.name}, a equipa propõe ${formatCheckupSlot(req)}.${note} Confirma no Perfil ou escolhe outro dia.`,
+    };
+  },
+
   retentionWarning(deleteOn: Date) {
     return {
       title: 'A tua conta vai ser apagada',

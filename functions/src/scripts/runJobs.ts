@@ -10,6 +10,9 @@
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --work <workId>      # simula o trigger de trabalho (publicação + carro/chão)
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --avatar <uid>       # simula a limpeza no Cloudinary (precisa das variáveis
 //                                                                          #   CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no ambiente)
+//   npm run run-jobs -- ../serviceAccountKey.dev.json --vehicle <id>       # simula o trigger de agendamento de checkup (Secção 8) a
+//                                                                          #   partir do estado atual de vehicles/{id}.checkupRequest;
+//                                                                          #   --before none|pending|proposed|approved força o estado anterior
 //
 // ATENÇÃO: escreve a sério no Firestore de dev (cria alertas, marca passos
 // como enviados). É o mesmo código que corre no Firebase.
@@ -19,10 +22,10 @@ import { cert, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { CloudinaryConfig } from '../cloudinary';
-import { handleClientUpdated, handleWorkWritten } from '../handlers';
+import { guessPreviousRequest, handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from '../handlers';
 import { runDailyJobs } from '../jobs';
 import { pushNotification } from '../push';
-import { AppNotification, Client, Work } from '../types';
+import { AppNotification, CheckupRequestStatus, Client, Vehicle, Work } from '../types';
 
 const args = process.argv.slice(2);
 const keyPath = args.find((a) => !a.startsWith('--'));
@@ -32,7 +35,7 @@ const flag = (name: string): string | undefined => {
 };
 
 if (!keyPath) {
-  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid]');
+  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--vehicle id [--before estado]]');
   process.exit(1);
 }
 const key = JSON.parse(readFileSync(keyPath, 'utf8')) as { project_id: string };
@@ -58,6 +61,24 @@ async function main(): Promise<void> {
   const pushId = flag('push');
   const workId = flag('work');
   const avatarUid = flag('avatar');
+  const vehicleId = flag('vehicle');
+
+  if (vehicleId) {
+    const snap = await db.collection('vehicles').doc(vehicleId).get();
+    if (!snap.exists) throw new Error(`vehicles/${vehicleId} não existe`);
+    const after = { id: snap.id, ...snap.data() } as Vehicle;
+    if (!after.checkupRequest) throw new Error(`vehicles/${vehicleId} não tem checkupRequest — pede o checkup na app primeiro`);
+    // Estado anterior: o indicado em --before, ou o plausível para a transição.
+    const beforeFlag = flag('before');
+    let prev = guessPreviousRequest(after.checkupRequest);
+    if (beforeFlag === 'none') prev = undefined;
+    else if (beforeFlag) prev = { ...after.checkupRequest, status: beforeFlag as CheckupRequestStatus };
+    const before: Vehicle = { ...after, checkupRequest: prev };
+    console.log(`checkupRequest: ${prev?.status ?? '(nenhum)'} → ${after.checkupRequest.status} · ${after.checkupRequest.day} ${after.checkupRequest.period}`);
+    const summary = await handleVehicleUpdated(db, before, after, now, log);
+    console.log('resultado:', summary);
+    return;
+  }
 
   if (pushId) {
     const snap = await db.collection('notifications').doc(pushId).get();

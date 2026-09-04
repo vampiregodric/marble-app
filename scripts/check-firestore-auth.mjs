@@ -2,8 +2,10 @@
 // Verifica as leituras PRIVADAS da app (Alertas e Perfil) tal como um cliente
 // com sessão as faz — mesmas queries que src/data/notifications.ts e
 // src/data/vehicles.ts — e que as regras só deixam marcar alertas como
-// lidos. Entra como o cliente com um custom token do Admin SDK, por isso não
-// precisa de password; precisa da chave de service account do dev.
+// lidos e pedir/confirmar/cancelar o checkup de um carro/chão (Secção 8),
+// nada mais. Entra como o cliente com um custom token do Admin SDK, por isso
+// não precisa de password; precisa da chave de service account do dev. O
+// carro/chão usado no teste do pedido é reposto no fim tal como estava.
 //
 // Uso:
 //   node scripts/check-firestore-auth.mjs ./serviceAccountKey.dev.json [email]
@@ -14,9 +16,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, getDocs, orderBy, query, updateDoc, where, limit } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where, limit } from 'firebase/firestore';
 
 const [keyPath, email = 'teste.seccao2@example.com'] = process.argv.slice(2);
 if (!keyPath) {
@@ -72,14 +75,79 @@ try {
 }
 
 // 2. Perfil: a query do ProfileScreen (índice clientId/createdAt) + ação pendente.
+let vehicles = [];
 try {
   const snap = await getDocs(query(collection(db, 'vehicles'), where('clientId', '==', user.uid), orderBy('createdAt', 'desc')));
-  const vehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  vehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const pending = vehicles.find((v) => v.checkupStatus === 'pending');
-  pass(`vehicles: ${vehicles.length} — ${vehicles.map((v) => `${v.name} [${v.checkupStatus}]`).join('; ')}`);
+  pass(`vehicles: ${vehicles.length} — ${vehicles.map((v) => `${v.name} [${v.checkupStatus}${v.checkupRequest ? ` · pedido ${v.checkupRequest.status}` : ''}]`).join('; ')}`);
   pass(pending ? `ação pendente: "${pending.name}"` : 'ação pendente: nenhuma (tudo em dia)');
 } catch (e) {
   fail(`vehicles: ${e.code ?? e.message}`);
+}
+
+// 2b. Agendamento de checkup (Secção 8): as três escritas do cliente em
+// vehicles/{id} passam; tudo o resto é recusado. O carro/chão é reposto no
+// fim com o Admin SDK, para o seed ficar igual.
+const vehicle = vehicles.find((v) => v.checkupStatus === 'pending' || v.checkupStatus === 'declined');
+if (vehicle) {
+  const adminDb = getAdminFirestore();
+  const ref = adminDb.collection('vehicles').doc(vehicle.id);
+  const original = (await ref.get()).data();
+  const vref = doc(db, 'vehicles', vehicle.id);
+  const day = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const request = (extra = {}) => ({
+    checkupRequest: { day, period: 'morning', note: 'Teste das regras', status: 'pending', requestedAt: serverTimestamp(), ...extra },
+    checkupRequestedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  const mustFail = async (label, patch) => {
+    try {
+      await updateDoc(vref, patch);
+      fail(`${label}: foi PERMITIDO — regras erradas`);
+    } catch (e) {
+      pass(`${label}: recusado (${e.code}) — correto`);
+    }
+  };
+  try {
+    await updateDoc(vref, request());
+    pass(`pedir checkup de "${vehicle.name}" para ${day} de manhã: permitido`);
+  } catch (e) {
+    fail(`pedir checkup: ${e.code ?? e.message}`);
+  }
+  await mustFail('pedir já com status aprovado', request({ status: 'approved' }));
+  await mustFail('pedir com período inválido', request({ period: 'night' }));
+  await mustFail('pedir com nota de 301 caracteres', request({ note: 'x'.repeat(301) }));
+  await mustFail('pedir com campo a mais no pedido', request({ time: '10:30' }));
+  await mustFail('mudar o nome do carro/chão', { name: 'hack' });
+  await mustFail('marcar em dia pelo cliente', { checkupStatus: 'ok' });
+  await mustFail('aprovar o próprio pedido', { 'checkupRequest.status': 'approved', 'checkupRequest.confirmedAt': serverTimestamp() });
+  // A equipa propõe outro dia (Admin SDK, como o backoffice) → o cliente confirma.
+  await ref.update({ 'checkupRequest.status': 'proposed', 'checkupRequest.day': day, 'checkupRequest.period': 'afternoon', 'checkupRequest.time': '15:00', 'checkupRequest.decidedAt': AdminTimestamp.now() });
+  await mustFail('confirmar a proposta mudando o dia', { 'checkupRequest.status': 'approved', 'checkupRequest.day': '2030-01-01', 'checkupRequest.confirmedAt': serverTimestamp() });
+  try {
+    await updateDoc(vref, { 'checkupRequest.status': 'approved', 'checkupRequest.confirmedAt': serverTimestamp(), updatedAt: serverTimestamp() });
+    pass('confirmar a proposta da equipa: permitido');
+  } catch (e) {
+    fail(`confirmar a proposta: ${e.code ?? e.message}`);
+  }
+  try {
+    await updateDoc(vref, { 'checkupRequest.status': 'cancelled', 'checkupRequest.cancelledAt': serverTimestamp(), updatedAt: serverTimestamp() });
+    pass('cancelar o checkup agendado: permitido');
+  } catch (e) {
+    fail(`cancelar: ${e.code ?? e.message}`);
+  }
+  await mustFail('cancelar outra vez (já cancelado)', { 'checkupRequest.status': 'cancelled', 'checkupRequest.cancelledAt': serverTimestamp() });
+  try {
+    await updateDoc(vref, request());
+    pass('voltar a pedir depois de cancelar: permitido');
+  } catch (e) {
+    fail(`voltar a pedir: ${e.code ?? e.message}`);
+  }
+  await ref.set(original);
+  pass(`"${vehicle.name}" reposto como estava (sem pedido)`);
+} else {
+  console.log('  --   sem carro/chão com checkup pendente para testar o agendamento (corre o seed)');
 }
 
 // 3. Marcar como lido (a única escrita permitida) e repor, para o seed ficar igual.
