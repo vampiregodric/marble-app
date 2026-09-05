@@ -7,25 +7,81 @@ import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
 import Avatar from '../components/Avatar';
 import ActionSheet, { SheetAction } from '../components/ActionSheet';
+import CheckupSheet from '../components/CheckupSheet';
 import { CameraIcon, ChevronRightIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
-import { pendingCheckup, useVehicles } from '../data/vehicles';
+import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
+import { checkupErrorMessage, checkupState, CheckupState, formatCheckupSlot } from '../data/checkups';
+import { useMyRequests } from '../data/requests';
+import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
 import { avatarUploadConfigured, uploadAvatar } from '../media/cloudinary';
-import { Client, Vehicle } from '../firebase/models';
+import { Client, REQUEST_STATUS_LABEL, ServiceRequest, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
 
-// Linha secundária de um carro/chão: a última visita (carro) ou a data de
-// instalação (chão). Sem data de serviço, mostra quando foi registado.
+// Linha secundária de um carro/chão: o checkup em curso quando há um
+// (Secção 8); senão a última visita (carro) ou a data de instalação (chão);
+// sem data de serviço, quando foi registado.
 function vehicleSubtitle(v: Vehicle): string {
+  const state = checkupState(v);
+  const req = v.checkupRequest;
+  if (req && state === 'requested') return `Checkup pedido: ${formatCheckupSlot({ day: req.day, period: req.period })}`;
+  if (req && state === 'proposed') return `Proposta da equipa: ${formatCheckupSlot(req)}`;
+  if (req && state === 'scheduled') return `Checkup: ${formatCheckupSlot(req)}`;
+  if (state === 'declined') return 'Checkup cancelado · toca para voltar a pedir';
   if (v.lastServiceAt) return `${v.type === 'floor' ? 'Instalado' : 'Última visita'}: ${formatDate(v.lastServiceAt)}`;
   return v.createdAt ? `Registado: ${formatDate(v.createdAt)}` : '';
 }
 
+// Etiqueta de estado na linha do carro/chão.
+const ROW_STATUS: Record<CheckupState, string> = {
+  ok: 'Em dia',
+  todo: 'Checkup',
+  requested: 'Pedido',
+  proposed: 'Proposta',
+  scheduled: 'Agendado',
+  declined: 'Sem checkup',
+};
+
+// Etiqueta do cartão "Ação pendente" por estado do pedido.
+const CARD_TAG: Record<CheckupState, string> = {
+  ok: '',
+  todo: 'Ação pendente',
+  requested: 'A aguardar aprovação',
+  proposed: 'Proposta da equipa',
+  scheduled: 'Agendado',
+  declined: '',
+};
+
 type PrefKey = keyof Client['notificationPrefs'];
+
+// Linha de um pedido: departamento e o que foi pedido, com o estado que a
+// equipa lhe deu (Recebido / Em contacto / Fechado).
+function RequestRow({ request }: { request: ServiceRequest }) {
+  const dept = DEPARTMENTS.find((d) => d.id === request.department)?.name ?? request.department;
+  const what = request.services.length ? request.services.join(', ') : request.fields[0]?.value || request.message;
+  const closed = request.status === 'closed';
+  return (
+    <View style={styles.assetRow}>
+      <View style={styles.assetText}>
+        <Text style={styles.assetName} numberOfLines={1}>
+          {request.workTitle ? `Semelhante a: ${request.workTitle}` : dept}
+        </Text>
+        <Text style={styles.assetSub} numberOfLines={1}>
+          {request.workTitle ? `${dept} · ` : ''}
+          {what}
+          {request.createdAt ? ` · ${timeAgo(request.createdAt).toLowerCase()}` : ''}
+        </Text>
+      </View>
+      <View style={[styles.assetStatus, closed ? styles.assetStatusOk : styles.assetStatusPending]}>
+        <Text style={[styles.assetStatusText, closed ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>{REQUEST_STATUS_LABEL[request.status]}</Text>
+      </View>
+    </View>
+  );
+}
 
 function Toggle({ on }: { on: boolean }) {
   return (
@@ -43,6 +99,9 @@ export default function ProfileScreen() {
   const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, signOut } = useAuth();
   const { data: vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(user?.uid);
   const pending = pendingCheckup(vehicles);
+  // Pedidos de orçamento (Secção 7), em tempo real — o estado muda quando a
+  // equipa o altera no backoffice.
+  const { data: requests } = useMyRequests(user?.uid);
 
   // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
   const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
@@ -56,6 +115,75 @@ export default function ProfileScreen() {
   // Fração 0..1 enquanto envia; null quando não há envio.
   const [uploading, setUploading] = useState<number | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  // Agendamento de checkup (Secção 8): a folha para pedir/alterar, o menu
+  // de ações de uma linha da lista, e a confirmação de cancelamento.
+  const [sheetVehicle, setSheetVehicle] = useState<Vehicle | null>(null);
+  const [rowVehicle, setRowVehicle] = useState<Vehicle | null>(null);
+  const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
+  const [checkupBusy, setCheckupBusy] = useState<string | null>(null);
+  const [checkupError, setCheckupError] = useState<string | null>(null);
+
+  const runCheckupAction = async (v: Vehicle, action: () => Promise<void>) => {
+    setCheckupBusy(v.id);
+    setCheckupError(null);
+    try {
+      await action();
+    } catch (err) {
+      setCheckupError(checkupErrorMessage(err));
+    } finally {
+      setCheckupBusy(null);
+    }
+  };
+  const openSheet = (v: Vehicle) => {
+    setRowVehicle(null);
+    setCheckupError(null);
+    setSheetVehicle(v);
+  };
+  const confirmProposal = (v: Vehicle) => {
+    setRowVehicle(null);
+    return runCheckupAction(v, () => confirmCheckupProposal(v.id));
+  };
+  const askCancel = (v: Vehicle) => {
+    setRowVehicle(null);
+    setCancelVehicle(v);
+  };
+  const doCancel = () => {
+    const v = cancelVehicle;
+    setCancelVehicle(null);
+    if (v) runCheckupAction(v, () => cancelCheckupRequest(v.id));
+  };
+  // Tocar numa linha: sem pedido (ou cancelado) abre logo a folha; com
+  // pedido em curso mostra as ações possíveis nesse estado.
+  const onRowPress = (v: Vehicle) => {
+    const state = checkupState(v);
+    if (state === 'todo' || state === 'declined') openSheet(v);
+    else if (state !== 'ok') setRowVehicle(v);
+  };
+  const rowActions: SheetAction[] = (() => {
+    const v = rowVehicle;
+    if (!v) return [];
+    switch (checkupState(v)) {
+      case 'requested':
+        return [
+          { label: 'Alterar o dia', onPress: () => openSheet(v) },
+          { label: 'Cancelar o pedido', onPress: () => askCancel(v), destructive: true },
+        ];
+      case 'proposed':
+        return [
+          { label: `Confirmar ${v.checkupRequest ? formatCheckupSlot(v.checkupRequest) : 'a proposta'}`, onPress: () => confirmProposal(v) },
+          { label: 'Escolher outro dia', onPress: () => openSheet(v) },
+          { label: 'Cancelar o checkup', onPress: () => askCancel(v), destructive: true },
+        ];
+      case 'scheduled':
+        return [
+          { label: 'Alterar o dia', onPress: () => openSheet(v) },
+          { label: 'Cancelar o checkup', onPress: () => askCancel(v), destructive: true },
+        ];
+      default:
+        return [];
+    }
+  })();
 
   const displayName = client?.name || user?.displayName || user?.email || '';
   const since = formatMonthYear(client?.clientSince);
@@ -195,26 +323,83 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Passo atual do fluxo de acompanhamento: o carro/chão com checkup por
-            confirmar. Desaparece quando está tudo em dia. O botão "Agendar
-            agora" ganha comportamento na Secção 8. */}
-        {pending && (
-          <View style={styles.pendingCard}>
-            <View style={styles.pendingTag}>
-              <View style={styles.pendingDot} />
-              <Text style={styles.pendingTagText}>Ação pendente</Text>
-            </View>
-            <Text style={styles.pendingTitle}>Checkup {pending.type === 'floor' ? 'do teu chão' : 'do teu carro'}</Text>
-            <Text style={styles.pendingDesc}>
-              {pending.name}
-              {pending.lastServiceAt ? ` · trabalho concluído ${timeAgo(pending.lastServiceAt).toLowerCase()}` : ''}. Confirma o
-              checkup gratuito antes que a equipa te ligue.
-            </Text>
-            <Pressable style={styles.cta}>
-              <Text style={styles.ctaText}>Agendar agora</Text>
-            </Pressable>
-          </View>
-        )}
+        {/* Passo atual do fluxo de acompanhamento (Secção 8): o carro/chão
+            com checkup por fazer, e o estado do pedido — por pedir, a
+            aguardar aprovação, proposta da equipa, agendado. Desaparece
+            quando está tudo em dia (ou o cliente cancelou). */}
+        {pending &&
+          (() => {
+            const state = checkupState(pending);
+            const req = pending.checkupRequest;
+            const busy = checkupBusy === pending.id;
+            const good = state === 'scheduled';
+            let title = `Checkup ${pending.type === 'floor' ? 'do teu chão' : 'do teu carro'}`;
+            let desc = `${pending.name}${pending.lastServiceAt ? ` · trabalho concluído ${timeAgo(pending.lastServiceAt).toLowerCase()}` : ''}. Escolhe o dia que te dá jeito para o checkup gratuito — a equipa confirma.`;
+            if (req && state === 'requested') {
+              title = `Checkup pedido: ${formatCheckupSlot({ day: req.day, period: req.period })}`;
+              desc = `${pending.name}. A equipa vai confirmar em breve — recebes um alerta quando estiver agendado.${req.note ? ` A tua nota: "${req.note}".` : ''}`;
+            } else if (req && state === 'proposed') {
+              title = `A equipa propõe ${formatCheckupSlot(req)}`;
+              desc = `${pending.name}. ${req.teamNote?.trim() || 'O dia que pediste não dá. Confirma esta proposta ou escolhe outro dia.'}`;
+            } else if (req && state === 'scheduled') {
+              // A nota da equipa só se mostra se veio com a aprovação; se o
+              // cliente confirmou uma proposta, a nota era a pergunta dela.
+              const teamNote = !req.confirmedAt ? req.teamNote?.trim() : '';
+              title = `Checkup agendado: ${formatCheckupSlot(req)}`;
+              desc = `${pending.name}. ${teamNote || 'Até lá! Se precisares de mudar o dia, altera aqui.'}`;
+            }
+            return (
+              <View style={[styles.pendingCard, good && styles.pendingCardOk]}>
+                <View style={styles.pendingTag}>
+                  <View style={[styles.pendingDot, good && styles.pendingDotOk]} />
+                  <Text style={[styles.pendingTagText, good && styles.pendingTagTextOk]}>{CARD_TAG[state]}</Text>
+                </View>
+                <Text style={styles.pendingTitle}>{title}</Text>
+                <Text style={styles.pendingDesc}>{desc}</Text>
+                {checkupError ? <Text style={styles.checkupError}>{checkupError}</Text> : null}
+                <View style={styles.pendingActions}>
+                  {state === 'todo' ? (
+                    <Pressable style={styles.cta} onPress={() => openSheet(pending)} accessibilityRole="button" accessibilityLabel="Agendar agora">
+                      <Text style={styles.ctaText}>Agendar agora</Text>
+                    </Pressable>
+                  ) : null}
+                  {state === 'proposed' ? (
+                    <Pressable
+                      style={[styles.cta, busy && { opacity: 0.6 }]}
+                      onPress={() => confirmProposal(pending)}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel="Confirmar a proposta"
+                    >
+                      {busy ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>Confirmar</Text>}
+                    </Pressable>
+                  ) : null}
+                  {state !== 'todo' ? (
+                    <Pressable
+                      style={styles.ctaGhost}
+                      onPress={() => openSheet(pending)}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={state === 'proposed' ? 'Escolher outro dia' : 'Alterar o dia'}
+                    >
+                      <Text style={styles.ctaGhostText}>{state === 'proposed' ? 'Escolher outro dia' : 'Alterar'}</Text>
+                    </Pressable>
+                  ) : null}
+                  {state !== 'todo' ? (
+                    <Pressable
+                      style={styles.ctaLink}
+                      onPress={() => askCancel(pending)}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancelar o checkup"
+                    >
+                      <Text style={styles.ctaLinkText}>{state === 'requested' ? 'Cancelar pedido' : 'Cancelar'}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })()}
 
         <Text style={styles.secTitle}>Os teus carros & chãos</Text>
         <View style={styles.assetList}>
@@ -236,9 +421,19 @@ export default function ProfileScreen() {
             </View>
           ) : (
             vehicles.map((v) => {
-              const ok = v.checkupStatus === 'ok';
+              const state = checkupState(v);
+              const good = state === 'ok' || state === 'scheduled';
+              const faint = state === 'declined';
+              const actionable = state !== 'ok';
               return (
-                <View key={v.id} style={styles.assetRow}>
+                <Pressable
+                  key={v.id}
+                  style={styles.assetRow}
+                  onPress={() => onRowPress(v)}
+                  disabled={!actionable || checkupBusy === v.id}
+                  accessibilityRole={actionable ? 'button' : undefined}
+                  accessibilityLabel={actionable ? `${v.name}: ${ROW_STATUS[state].toLowerCase()} — opções de checkup` : undefined}
+                >
                   <View style={styles.assetThumb}>
                     <Photo url={v.photoUrl} seed={v.id} />
                   </View>
@@ -248,15 +443,30 @@ export default function ProfileScreen() {
                     </Text>
                     <Text style={styles.assetSub}>{vehicleSubtitle(v)}</Text>
                   </View>
-                  <View style={[styles.assetStatus, ok ? styles.assetStatusOk : styles.assetStatusPending]}>
-                    <Text style={[styles.assetStatusText, ok ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>
-                      {ok ? 'Em dia' : 'Checkup'}
+                  <View style={[styles.assetStatus, good ? styles.assetStatusOk : faint ? styles.assetStatusFaint : styles.assetStatusPending]}>
+                    <Text style={[styles.assetStatusText, good ? styles.assetStatusTextOk : faint ? styles.assetStatusTextFaint : styles.assetStatusTextPending]}>
+                      {ROW_STATUS[state]}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })
           )}
+        </View>
+
+        <Text style={styles.secTitle}>Os teus pedidos</Text>
+        <View style={styles.assetList}>
+          {requests.length === 0 ? (
+            <View style={styles.assetEmpty}>
+              <Text style={styles.assetEmptyTitle}>Ainda não pediste nenhum orçamento.</Text>
+              <Text style={styles.assetEmptyDesc}>Pede a partir de um trabalho do Portfólio ("Pedir orçamento semelhante") ou aqui.</Text>
+            </View>
+          ) : (
+            requests.map((r) => <RequestRow key={r.id} request={r} />)
+          )}
+          <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('RequestQuote')} accessibilityRole="button">
+            <Text style={styles.ghostBtnText}>Pedir orçamento</Text>
+          </Pressable>
         </View>
 
         <Text style={styles.secTitle}>Notificações</Text>
@@ -329,6 +539,16 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <ActionSheet visible={avatarMenu} title="Foto de perfil" actions={avatarActions} onClose={() => setAvatarMenu(false)} />
+
+      {/* Agendamento de checkup (Secção 8). */}
+      <CheckupSheet vehicle={sheetVehicle} onClose={() => setSheetVehicle(null)} />
+      <ActionSheet visible={!!rowVehicle} title={rowVehicle?.name} actions={rowActions} onClose={() => setRowVehicle(null)} />
+      <ActionSheet
+        visible={!!cancelVehicle}
+        title={cancelVehicle ? `Cancelar o checkup do ${cancelVehicle.name}?` : undefined}
+        actions={[{ label: 'Sim, cancelar o checkup', onPress: doCancel, destructive: true }]}
+        onClose={() => setCancelVehicle(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -389,13 +609,22 @@ const styles = StyleSheet.create({
     borderColor: colors.hairlineStrong,
     backgroundColor: 'rgba(198,161,91,0.08)',
   },
+  pendingCardOk: { borderColor: 'rgba(183,209,168,0.35)', backgroundColor: 'rgba(183,209,168,0.06)' },
   pendingTag: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7 },
   pendingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.goldBright },
+  pendingDotOk: { backgroundColor: colors.ok },
   pendingTagText: { fontFamily: fonts.eyebrow, fontSize: 8.5, letterSpacing: 1.2, color: colors.goldBright, textTransform: 'uppercase' },
+  pendingTagTextOk: { color: colors.ok },
   pendingTitle: { fontFamily: fonts.bodyBold, fontSize: 13.5, color: colors.ink, marginBottom: 4 },
   pendingDesc: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkMuted, lineHeight: 15, marginBottom: 13 },
+  pendingActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  checkupError: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 14, color: colors.danger, marginBottom: 10 },
   cta: { alignSelf: 'flex-start', backgroundColor: colors.gold, borderRadius: 20, paddingHorizontal: 15, paddingVertical: 9 },
   ctaText: { fontFamily: fonts.eyebrow, fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: '#0b0a08', textTransform: 'uppercase' },
+  ctaGhost: { alignSelf: 'flex-start', borderRadius: 20, borderWidth: 1, borderColor: colors.hairlineStrong, paddingHorizontal: 14, paddingVertical: 8 },
+  ctaGhostText: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.6, color: colors.goldBright, textTransform: 'uppercase' },
+  ctaLink: { paddingHorizontal: 6, paddingVertical: 8 },
+  ctaLinkText: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.6, color: colors.inkMuted, textTransform: 'uppercase' },
   secTitle: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 1.6, color: colors.inkMuted, textTransform: 'uppercase', marginHorizontal: 18, marginTop: 22, marginBottom: 10 },
   assetList: { paddingHorizontal: 18, gap: 8 },
   assetRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, padding: 10 },
@@ -406,10 +635,14 @@ const styles = StyleSheet.create({
   assetStatus: { borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3 },
   assetStatusOk: { borderWidth: 1, borderColor: 'rgba(183,209,168,0.35)' },
   assetStatusPending: { borderWidth: 1, borderColor: colors.hairlineStrong },
+  assetStatusFaint: { borderWidth: 1, borderColor: colors.hairline },
   assetStatusText: { fontFamily: fonts.eyebrow, fontSize: 7, letterSpacing: 0.6, textTransform: 'uppercase' },
   assetStatusTextOk: { color: colors.ok },
   assetStatusTextPending: { color: colors.goldBright },
+  assetStatusTextFaint: { color: colors.inkFaint },
   assetEmpty: { borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, padding: 14, gap: 4, alignItems: 'center' },
+  ghostBtn: { borderWidth: 1, borderColor: colors.hairlineStrong, borderRadius: 24, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  ghostBtnText: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   assetEmptyTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.inkMuted, textAlign: 'center' },
   assetEmptyDesc: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 15, color: colors.inkFaint, textAlign: 'center' },
   prefList: { paddingHorizontal: 18 },

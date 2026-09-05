@@ -10,6 +10,9 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   // Definições escolhidas pela equipa (por agora só `settings/home`).
   settings: 'settings',
+  // Pedidos feitos pelo cliente na app (Secção 7: orçamentos; Secção 8:
+  // checkups). Ver ServiceRequest.
+  requests: 'requests',
 } as const;
 
 // Categorias tal como usadas no filtro do Portfólio (PortfolioScreen).
@@ -111,7 +114,95 @@ export interface Client {
 }
 
 export type VehicleType = 'car' | 'floor';
-export type CheckupStatus = 'pending' | 'ok';
+// 'pending' = há um checkup por fazer (o lembrete saiu); 'ok' = em dia;
+// 'declined' (Secção 8) = o cliente cancelou o pedido na app — decisão do
+// Fábio: "considera que não quis fazer", a equipa não insiste. Pode voltar
+// a pedir a partir do Perfil.
+export type CheckupStatus = 'pending' | 'ok' | 'declined';
+
+// ---------- Agendamento de checkup (Secção 8) ----------
+
+export type CheckupPeriod = 'morning' | 'afternoon';
+
+// Ciclo de um pedido de checkup, guardado no próprio carro/chão
+// (`Vehicle.checkupRequest`). Quem escreve cada transição:
+// - pending: o CLIENTE, na app ("Agendar agora" / "Alterar") — escreve o
+//   mapa inteiro, com o dia e o período escolhidos entre a disponibilidade
+//   da equipa (`settings/checkups`).
+// - proposed: a EQUIPA (backoffice, Secção 7b) — o dia pedido não dá e
+//   propõe outro (dia, período, hora opcional, nota). O cliente recebe um
+//   alerta `message` e confirma ou escolhe outro dia.
+// - approved: a EQUIPA aprova o pedido, ou o CLIENTE confirma a proposta.
+//   O cliente recebe "Checkup agendado" (alerta + push).
+// - cancelled: o CLIENTE cancela. A Cloud Function passa o carro/chão a
+//   `checkupStatus: 'declined'` e avisa a equipa.
+// Feito = a equipa "marca em dia" (`checkupStatus: 'ok'`, `checkupDoneAt`),
+// como até aqui; o pedido fica como histórico.
+export type CheckupRequestStatus = 'pending' | 'proposed' | 'approved' | 'cancelled';
+
+export interface CheckupRequest {
+  // Dia pedido/agendado, "AAAA-MM-DD" (calendário de Lisboa), e período.
+  // Quando a equipa propõe outro dia, são os da proposta.
+  day: string;
+  period: CheckupPeriod;
+  // Nota do cliente (opcional; CHECKUP_LIMITS.noteMax). Só o cliente escreve.
+  note?: string;
+  status: CheckupRequestStatus;
+  // Quando o cliente pediu (esta ronda). Copiado para
+  // `Vehicle.checkupRequestedAt`, que é o que o job de acompanhamento lê.
+  requestedAt: Timestamp;
+  // --- equipa (backoffice) ---
+  // Hora concreta ao aprovar/propor ("HH:MM"), opcional; sem hora, fica
+  // "de manhã"/"à tarde".
+  time?: string;
+  teamNote?: string;
+  // Quando a equipa aprovou ou propôs.
+  decidedAt?: Timestamp;
+  // Quando o cliente confirmou a proposta da equipa (status → approved).
+  confirmedAt?: Timestamp;
+  cancelledAt?: Timestamp;
+}
+
+export type CheckupWeekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+// Indexado por Date.getDay() (0 = domingo).
+export const CHECKUP_WEEKDAYS: CheckupWeekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+// Documento único `settings/checkups`: quando a equipa faz checkups,
+// definido no backoffice (Secção 7b). A app calcula daqui as opções que o
+// cliente pode escolher (src/data/checkups.ts). Leitura pública como o
+// resto de `settings`; escrita só da equipa. Ausente → CHECKUP_AVAILABILITY_DEFAULT.
+export interface CheckupAvailability {
+  id: 'checkups';
+  // Períodos abertos em cada dia da semana. Dia ausente ou vazio = fechado.
+  weekly: Partial<Record<CheckupWeekday, CheckupPeriod[]>>;
+  // Dias fechados além do horário semanal (feriados, férias), "AAAA-MM-DD".
+  closedDays: string[];
+  // Quantas semanas à frente o cliente pode escolher.
+  weeksAhead: number;
+  // Antecedência mínima em dias (1 = a partir de amanhã).
+  minDaysAhead: number;
+  updatedAt?: Timestamp;
+}
+
+export const CHECKUP_AVAILABILITY_DEFAULT: Omit<CheckupAvailability, 'id' | 'updatedAt'> = {
+  weekly: {
+    mon: ['morning', 'afternoon'],
+    tue: ['morning', 'afternoon'],
+    wed: ['morning', 'afternoon'],
+    thu: ['morning', 'afternoon'],
+    fri: ['morning', 'afternoon'],
+  },
+  closedDays: [],
+  weeksAhead: 3,
+  minDaysAhead: 1,
+};
+
+// Limites partilhados entre a app (validação) e firestore.rules (que os
+// impõe). Se mudares aqui, muda lá.
+export const CHECKUP_LIMITS = {
+  noteMax: 300,
+  weeksAheadMax: 12,
+} as const;
 
 // Um carro ou um chão (piso epóxi) associado a um cliente.
 export interface Vehicle {
@@ -130,9 +221,14 @@ export interface Vehicle {
   // Quando a equipa marcou o checkup como feito. O job de acompanhamento
   // usa-o para saber que o lembrete foi atendido (não alerta a equipa).
   checkupDoneAt?: Timestamp;
-  // Quando o cliente confirmou/pediu o checkup na app. Reservado à
-  // Secção 8 (o botão "Agendar agora"); o job já o respeita.
+  // Quando o cliente pediu o checkup na app (Secção 8: "Agendar agora").
+  // Igual a `checkupRequest.requestedAt`; o job de acompanhamento trata-o
+  // como "o lembrete foi atendido" (não alerta a equipa para ligar).
   checkupRequestedAt?: Timestamp;
+  // O pedido de agendamento em curso (Secção 8). Ausente = ainda não pediu.
+  // Só o dono escreve os campos do cliente e só a equipa os dela — ver
+  // `match /vehicles` em firestore.rules.
+  checkupRequest?: CheckupRequest;
   photoUrl?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
@@ -262,6 +358,9 @@ export interface AppNotification {
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
+  // Pedido de orçamento/checkup a que o alerta diz respeito (Secção 7): a
+  // confirmação ao cliente e o alerta interno à equipa apontam para ele.
+  relatedRequestId?: string;
   createdAt: Timestamp;
   // Resultado do push para o telemóvel, escrito pela Cloud Function que
   // reage à criação do doc (Secção 6). Ausente = ainda não processado, ou
@@ -286,3 +385,112 @@ export interface NotificationPush {
   // O Expo aceitou mas o telemóvel não recebeu (ex: DeviceNotRegistered).
   receiptError?: string;
 }
+
+// ---------- Pedidos (Secção 7) ----------
+
+// 'quote' = pedido de orçamento (Secção 7). 'checkup' fica reservado à
+// Secção 8 (agendar o checkup a partir do Perfil): o mesmo doc, a mesma
+// página "Pedidos" do backoffice, a mesma Cloud Function.
+export type RequestType = 'quote' | 'checkup';
+
+// Fluxo da equipa: recebido → em contacto → fechado. Só o backoffice muda
+// o estado (o cliente cria o pedido e lê os seus; nunca o altera).
+export type RequestStatus = 'new' | 'contacted' | 'closed';
+
+export type ContactPreference = 'call' | 'whatsapp' | 'email';
+
+// Foto do carro/espaço juntada pelo cliente ao pedido (opcional, até 5).
+// Sobe direto para o Cloudinary com o preset unsigned `marble-requests` e a
+// tag `request_<id>`, que é como as Functions as apagam quando o pedido é
+// anonimizado (src/media/cloudinary.ts → uploadRequestPhoto).
+export interface RequestPhoto {
+  url: string;
+  thumbnailUrl: string;
+  publicId: string;
+}
+
+// Um campo estruturado do formulário, guardado já com a etiqueta para o
+// backoffice o mostrar sem conhecer o formulário de cada departamento
+// (src/data/requestForms.ts). Ex: { key: 'car', label: 'Carro', value: 'BMW M4 2022' }.
+export interface RequestField {
+  key: string;
+  label: string;
+  value: string;
+}
+
+// Um pedido feito pelo cliente na app. Decisão do Fábio (2026-09-04): o
+// pedido cria conta — quem não tem, fica com uma na hora, com os dados do
+// formulário (AuthContext.createAccountFromRequest) — por isso `clientId` é
+// sempre o uid de quem pediu e as regras exigem-no. Os contactos ficam
+// copiados no pedido (o cliente pode mudar o perfil depois; a equipa
+// precisa do que foi enviado). Os campos "da equipa" e "das Functions" só
+// se escrevem pelo backoffice/Admin SDK; as regras recusam-nos na criação.
+export interface ServiceRequest {
+  id: string;
+  type: RequestType;
+  status: RequestStatus;
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  contactPreference: ContactPreference;
+  department: DepartmentId;
+  // "Orçamento semelhante" a partir do Detalhe: o trabalho e o título na
+  // altura (o trabalho pode ser despublicado depois).
+  workId?: string;
+  workTitle?: string;
+  // Secção 8: o carro/chão do checkup.
+  vehicleId?: string;
+  // Opções escolhidas (etiquetas, ex: "PPF", "Detailing").
+  services: string[];
+  fields: RequestField[];
+  message: string;
+  photos?: RequestPhoto[];
+  platform?: 'android' | 'ios' | 'web';
+  // --- equipa (backoffice) ---
+  notes?: string;
+  contactedAt?: Timestamp;
+  closedAt?: Timestamp;
+  // --- Cloud Function onRequestWritten ---
+  // Marcado quando o mesmo cliente já fez 3 pedidos nas últimas 24 h: fica
+  // na página Pedidos com aviso, sem alerta interno nem email.
+  flagged?: 'rate_limit';
+  processedAt?: Timestamp;
+  teamAlertId?: string;
+  confirmationId?: string;
+  emailSentAt?: Timestamp;
+  emailError?: string;
+  // Dados pessoais apagados (12 meses depois de fechado, ou conta apagada).
+  anonymizedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
+  new: 'Recebido',
+  contacted: 'Em contacto',
+  closed: 'Fechado',
+};
+
+export const CONTACT_PREFERENCE_LABEL: Record<ContactPreference, string> = {
+  call: 'Chamada',
+  whatsapp: 'WhatsApp',
+  email: 'Email',
+};
+
+// Limites partilhados entre a app (validação) e firestore.rules (que os
+// impõe). Se mudares aqui, muda lá.
+export const REQUEST_LIMITS = {
+  messageMax: 2000,
+  fieldMax: 200,
+  photosMax: 5,
+  servicesMax: 12,
+  fieldsMax: 8,
+  // Anti-spam mínimo: por dispositivo e dia (a app) e por cliente em 24 h
+  // (a Cloud Function marca como suspeito).
+  perDayMax: 3,
+} as const;
+
+// Prazo de resposta prometido ao cliente (ecrã de sucesso, alerta, email).
+// Decisão do Fábio (2026-09-04): 1 dia útil.
+export const REQUEST_RESPONSE_PROMISE = 'no prazo de 1 dia útil';

@@ -9,10 +9,10 @@ import Photo from '../components/Photo';
 import { EmptyState } from '../components/ListState';
 import { BackIcon } from '../components/Icons';
 import { DEPARTMENTS } from '../data/departments';
-import { departmentContent, DepartmentCta } from '../data/departmentContent';
+import { departmentContent, hasDepartmentContent, DepartmentCta, DepartmentLink } from '../data/departmentContent';
 import { useHomeSettings } from '../data/settings';
 import { usePublishedWorks } from '../data/works';
-import { WorkCategory } from '../firebase/models';
+import { DepartmentId, WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -89,7 +89,7 @@ export default function DepartmentScreen() {
 
         <Text style={styles.intro}>{content.intro}</Text>
 
-        <SectionLabel text="O que fazemos" />
+        <SectionLabel text={content.labels?.services ?? 'O que fazemos'} />
         <View style={styles.blocks}>
           {content.services.map((s) => (
             <View key={s.title} style={styles.block}>
@@ -99,7 +99,7 @@ export default function DepartmentScreen() {
           ))}
         </View>
 
-        <SectionLabel text="Como funciona" />
+        <SectionLabel text={content.labels?.steps ?? 'Como funciona'} />
         <View style={styles.steps}>
           {content.steps.map((s, i) => {
             const last = i === content.steps.length - 1;
@@ -127,6 +127,8 @@ export default function DepartmentScreen() {
             onSeeAll={() => openPortfolio(department.category!)}
           />
         ) : null}
+
+        <RelatedLinks links={content.related} onOpen={(id) => navigation.push('Department', { id })} />
 
         {content.pricing ? (
           <>
@@ -208,8 +210,45 @@ function RecentWorks({ category, onOpen, onSeeAll }: { category: WorkCategory; o
   );
 }
 
+// "Ver também" (Secção 10): cartões que abrem outra página de departamento
+// — da Xtreme para Epoxy Floors ("instalamos nós") e vice-versa ("compra os
+// materiais"). Só mostra destinos com conteúdo, para nunca abrir a página
+// vazia; o título em dourado é o que diz que o cartão se toca.
+function RelatedLinks({ links, onOpen }: { links?: DepartmentLink[]; onOpen: (id: DepartmentId) => void }) {
+  const visible = (links ?? []).filter((l) => hasDepartmentContent(l.department));
+  if (visible.length === 0) return null;
+
+  return (
+    <>
+      <SectionLabel text="Ver também" />
+      <View style={styles.blocks}>
+        {visible.map((l) => {
+          const target = DEPARTMENTS.find((d) => d.id === l.department);
+          return (
+            <Pressable
+              key={l.department}
+              style={({ pressed }) => [styles.block, styles.relatedCard, pressed && styles.relatedPressed]}
+              onPress={() => onOpen(l.department)}
+              accessibilityRole="button"
+              accessibilityLabel={l.title}
+            >
+              {target ? <Text style={styles.relatedEyebrow}>{target.name}</Text> : null}
+              <Text style={styles.relatedTitle}>{l.title}</Text>
+              <Text style={styles.blockText}>{l.text}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
+  relatedCard: { borderColor: colors.hairlineStrong },
+  relatedPressed: { opacity: 0.8 },
+  relatedEyebrow: { fontFamily: fonts.eyebrow, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.inkMuted, marginBottom: 6 },
+  relatedTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.goldBright, marginBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, minHeight: 42 },
   iconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingBottom: 28 },

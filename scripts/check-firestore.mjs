@@ -5,7 +5,8 @@
 //   - `works` publicados legíveis; a query da app (published + orderBy) tem
 //     índice; rascunhos e a coleção inteira sem filtro são recusados;
 //   - `events` legíveis;
-//   - `clients` bloqueado.
+//   - `clients` bloqueado;
+//   - `requests` (Secção 7): sem login não se cria nem lê nada.
 //
 // Uso:  npm run check:firestore
 
@@ -13,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { getFirestore, addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const env = Object.fromEntries(
@@ -102,6 +103,36 @@ try {
   pass(`settings/home: ${snap.exists() ? `existe, fotos para ${covers.length ? covers.join(', ') : 'nenhum departamento'}` : 'não existe (a app mostra gradientes)'}`);
 } catch (e) {
   fail(`settings/home: ${e.code ?? e.message} — regras sem a match /settings?`);
+}
+
+// 8. Pedidos de orçamento (Secção 7): o pedido cria conta, por isso sem
+//    login não há criação (nem leitura). Se isto passar, as regras estão
+//    a deixar entrar pedidos anónimos.
+try {
+  await addDoc(collection(db, 'requests'), {
+    type: 'quote',
+    status: 'new',
+    clientId: 'anon',
+    name: 'Teste',
+    email: 'teste@example.com',
+    phone: '912345678',
+    contactPreference: 'call',
+    department: 'automotive',
+    services: [],
+    fields: [],
+    message: 'teste sem login',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  fail('requests: criar SEM login foi PERMITIDO — regras erradas');
+} catch (e) {
+  pass(`requests: criar sem login recusado (${e.code}) — correto`);
+}
+try {
+  await getDocs(collection(db, 'requests'));
+  fail('requests LEGÍVEIS SEM LOGIN — regras erradas');
+} catch (e) {
+  pass(`requests: bloqueado sem login (${e.code}) — correto`);
 }
 
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');

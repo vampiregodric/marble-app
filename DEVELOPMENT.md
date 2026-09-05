@@ -49,7 +49,11 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/AlertsScreen.tsx` — Alertas: `notifications` do uid; no
   telemóvel, cartão "Ativar notificações" até o push estar ativo
 - `src/screens/ProfileScreen.tsx` — Perfil: `clients/{uid}` + `vehicles`;
-  tocar no avatar muda/remove a foto de perfil (Cloudinary)
+  tocar no avatar muda/remove a foto de perfil (Cloudinary); "Os teus
+  pedidos" (`requests` do uid, estado em tempo real)
+- `src/screens/RequestQuoteScreen.tsx` — Pedir orçamento (Secção 7): a
+  partir de um trabalho ("Pedir orçamento semelhante"), de um departamento
+  (Secções 9/10) ou do Perfil; sem sessão cria a conta na hora
 
 Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 
@@ -171,8 +175,10 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
   `overflow: 'hidden'`). URL vazio ou que falha → gradiente estável por ID.
 - **Datas** em `src/utils/dates.ts` (`timeAgo`, `formatDate`,
   `formatMonthYear`). Sempre a partir de `Timestamp`.
-- **Escritas do cliente:** só `clients/{uid}` (perfil) e `read` em
-  `notifications` (`markNotificationRead`). Tudo o resto é da equipa.
+- **Escritas do cliente:** `clients/{uid}` (perfil), `read` em
+  `notifications` (`markNotificationRead`), criar em `requests` (Secção 7)
+  e `checkupRequest` em `vehicles/{id}` (Secção 8: pedir, confirmar a
+  proposta, cancelar — `src/data/vehicles.ts`). Tudo o resto é da equipa.
 - **Ecrãs empilhados** (Detalhe, Dados pessoais, Legal, Apagar conta) usam
   `edges={['top', 'bottom']}` no `SafeAreaView` porque não têm barra de tabs
   a proteger a margem inferior — sem isto o botão fixo em baixo fica tapado
@@ -249,6 +255,7 @@ backoffice (`marble-backoffice/src/data/writes.ts` → `sendNotification`).
 | `onNotificationCreated` | doc novo em `notifications` (backoffice ou jobs) | push para `clients.pushTokens`; escreve `push` no doc (`sent`/`no_device`/`skipped`/`error`); tira tokens `DeviceNotRegistered`. `team_alert` nunca leva push. |
 | `onWorkWritten` | `works/{id}` criado/alterado | passou a publicado → `new_work` a quem tem "Ofertas e novidades" **e** a categoria ligada (uma vez: `newWorkNotifiedAt`); com carro/chão ligado, `vehicles.lastServiceAt` ← `completedAt` se for mais recente. |
 | `onClientUpdated` | `clients/{uid}` alterado | `avatarUrl` removido/trocado (ou conta apagada) → apaga no Cloudinary os ficheiros com a tag `uid_<uid>`, menos a foto atual. Cumpre os 30 dias da política de privacidade em segundos. |
+| `onVehicleUpdated` (Secção 8) | `vehicles/{id}` alterado | só reage a `checkupRequest`: pedido/alteração do cliente → `team_alert` com dia, nota e telemóvel + `followUp.checkupConfirmedAt` no trabalho; proposta da equipa → `message` ao cliente; aprovado/confirmado → `message` "Checkup agendado" (+ `team_alert` se foi o cliente a confirmar); cancelado → `team_alert` + `checkupStatus: 'declined'`; voltar a pedir → `'pending'`. Ver "Agendamento de checkup". |
 | `dailyJobs` | todos os dias às **10:00 de Lisboa** | recibos de push de ontem; acompanhamento pós-serviço; lembrete de eventos ("Amanhã: …", só com consentimento de marketing); retenção de contas (aviso aos 3 anos − 30 dias, anonimização + Auth + Cloudinary aos 3 anos; abrir a app cancela). |
 
 Consentimento (RGPD, Secção 3) aplicado em `functions/src/consent.ts`
@@ -328,11 +335,17 @@ npm run functions:jobs -- ../serviceAccountKey.dev.json --only followUps --now 2
 ```
 
 Opções: `--now AAAA-MM-DD` (esse dia às 10:00 de Lisboa), `--only`
-(`receipts|followUps|events|retention`), `--push <notificationId>` (push de
+(`receipts|followUps|events|retention|requests`), `--push <notificationId>` (push de
 um alerta já criado — com um token inválido o Expo responde
 `DeviceNotRegistered` e o token sai da conta), `--work <workId>` (simula o
 trigger de publicação), `--avatar <uid>` (limpeza no Cloudinary; precisa de
-`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` no ambiente). Foi assim que a
+`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` no ambiente), `--request <id>`
+(simula o trigger de um pedido de orçamento acabado de criar — Secção 7; o
+email só sai com `RESEND_API_KEY` no ambiente), `--vehicle <id>
+[--before none|pending|proposed|approved]` (simula o trigger do
+agendamento de checkup — Secção 8 — a partir do estado atual de
+`vehicles/{id}.checkupRequest`; `--before` diz qual era o estado anterior,
+senão adivinha-se o plausível). Foi assim que a
 Secção 6 verificou o fluxo inteiro (checkup → alerta interno → oferta
 recusada por falta de consentimento; aviso e anonimização por
 inatividade; `new_work` só a quem tem categoria e consentimento).
@@ -459,6 +472,158 @@ Alertas e Perfil sem escrever a password de ninguém — foi assim que a
 Secção 6 viu os alertas automáticos a chegar ao ecrã Alertas em tempo
 real.
 
+## Pedidos de orçamento (Secção 7)
+
+O botão "Pedir orçamento semelhante" do Detalhe abre
+`src/screens/RequestQuoteScreen.tsx` (rota `RequestQuote`, params
+`{ workId?, department? }`). As páginas de departamento das Secções 9 e 10
+navegam para lá com `{ department: 'ai' | 'ads' | 'xps' }`; o Perfil tem
+"Pedir orçamento" sem parâmetros (o cliente escolhe o departamento). O
+formulário em si — opções, campos, se há fotos — vive em
+`src/data/requestForms.ts`, por departamento; o ecrã é genérico. As opções
+escolhidas ficam guardadas como texto (`services`, `fields[].label`), por
+isso o backoffice e os emails não precisam de conhecer esse ficheiro.
+
+**Decisão do Fábio (2026-09-04): o pedido cria conta.** Sem sessão, o
+formulário pede nome, email e telemóvel e a aceitação dos termos (checkbox
+não pré-marcada, como no registo); ao enviar,
+`AuthContext.createAccountFromRequest` cria a conta com uma password
+aleatória, deixa o cliente com sessão iniciada nesse dispositivo e dispara o
+email do Firebase "repor password" — que é como o cliente define a sua
+(personaliza o texto em Firebase Console > Authentication > Templates; por
+defeito vai em inglês). Se o email já tiver conta, o formulário pede só a
+password e entra. Com sessão, os contactos vêm da conta e não se pedem.
+Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
+
+- **Dados:** coleção `requests` (`ServiceRequest` em `models.ts`), com
+  `type: 'quote'` — a Secção 8 acrescenta `type: 'checkup'` ao mesmo doc,
+  à mesma página do backoffice e à mesma Function. Estados `new` →
+  `contacted` → `closed`, só o backoffice os muda. Regras: o cliente cria
+  (validação campo a campo em `validNewRequest`, limites em
+  `REQUEST_LIMITS`) e lê os seus; `update`/`delete` só a equipa. Índice
+  `requests` (clientId, createdAt desc) em `firestore.indexes.json`.
+- **Cloud Function `onRequestWritten`** (`functions/src/requests.ts`): ao
+  criar → anti-spam (o mesmo cliente com 3+ pedidos em 24 h fica
+  `flagged`, sem alertas nem email), `team_alert` no Painel do backoffice
+  ("Ver pedido"), alerta `message` "Recebemos o teu pedido" ao cliente (com
+  push pela `onNotificationCreated`), e — com o Resend ligado — email à
+  equipa (`QUOTES_EMAIL_TO`, quotes@marble.pt, com "responder a" = o
+  cliente) e email de confirmação ao cliente, ambos de `EMAIL_FROM`
+  (app@marble.pt). Fotos removidas ou pedido apagado → ficheiros fora do
+  Cloudinary pela tag `request_<id>`. Tudo idempotente (`processedAt`).
+- **Email (Resend), pendente do Fábio:** conta em resend.com, verificar o
+  domínio marble.pt (registos DNS que o Resend indica) e guardar a chave:
+  `npx.cmd firebase-tools functions:secrets:set RESEND_API_KEY --project dev`.
+  Só depois mudar `QUOTE_EMAIL=off` → `on` em `functions/.env` e fazer
+  deploy (mesmo interruptor que o do Cloudinary: declarar o segredo sem
+  valor faz o deploy falhar). Desligado, tudo o resto funciona; o doc fica
+  sem `emailSentAt` e o log diz "email desligado".
+- **Fotos (opcionais, até 5):** `src/media/requestPhotos.ts` (galeria com
+  seleção múltipla ou câmara, redução a 1600 px) →
+  `uploadRequestPhoto` em `src/media/cloudinary.ts` (preset unsigned
+  `marble-requests`, variável `EXPO_PUBLIC_CLOUDINARY_PRESET_REQUESTS`;
+  sem ela a secção das fotos não aparece). **Pendente do Fábio:** criar o
+  preset na consola do Cloudinary (Unsigned, folder `requests`, só imagens,
+  incoming transformation `c_limit,w_2000,h_2000`) — até lá, juntar fotos
+  dá o erro "Upload preset not found" do Cloudinary e o pedido não sai.
+- **Anti-spam na app:** `REQUEST_LIMITS.perDayMax` (3) pedidos por
+  dispositivo em 24 h, em AsyncStorage (`src/data/requests.ts`). Não é
+  segurança — a Function marca do lado dela. App Check fica para a Secção 11.
+- **RGPD:** política de privacidade com os pedidos (dados, base legal =
+  diligências pré-contratuais, fotos, Resend como subcontratante, prazo) e
+  `LEGAL_VERSION` 2026-09-05 (todas as contas veem uma vez o cartão
+  "Termos atualizados"). Retenção: `RETENTION.requestMonths` (12) — o job
+  diário (`--only requests`) anonimiza pedidos fechados há mais de 365
+  dias (contactos, texto, campos, fotos e notas apagados; fica
+  departamento, opções, estado e datas); apagar a conta anonimiza logo os
+  pedidos do cliente (`handleClientUpdated`).
+- **Backoffice:** página **Pedidos** (lista com filtros, detalhe com
+  estados, notas internas, fotos, registo do automático), secção "Pedidos
+  de orçamento por responder" no Painel, contagem na barra lateral, secção
+  na ficha do cliente, "Ver pedido" nos alertas internos. Modelo
+  sincronizado (`src/firebase/models.ts`).
+- **Testar:** `npm run check:firestore` (sem login: nada em `requests`) e
+  `npm run check:firestore:auth -- ./serviceAccountKey.dev.json` (cria um
+  pedido válido, tenta cinco inválidos, tenta alterar; apaga tudo no fim).
+  No browser (8082): o Firebase guarda a sessão por origem — se o tab já
+  esteve com sessão, o formulário aparece na versão "com conta"; termina
+  sessão no Perfil para ver a criação de conta. `npm run functions:jobs --
+  <chave> --request <id>` simula o trigger sem deploy. Contas de teste
+  criadas nesta secção no dev: `teste.seccao7@example.com` (pedido AI
+  Business, criada pelo próprio formulário).
+
+## Agendamento de checkup (Secção 8)
+
+O botão "Agendar agora" do Perfil abre uma folha no estilo da app
+(`src/components/CheckupSheet.tsx`) onde o cliente escolhe um **dia e um
+período** entre os que a equipa abriu, deixa uma nota opcional e pede. O
+pedido fica **a aguardar aprovação**; a equipa aprova ou propõe outro dia;
+o cliente recebe alerta com push; pode alterar e cancelar. Decisões do
+Fábio em SPEC.md ("Decidido … Secção 8").
+
+- **Onde vive o pedido:** no próprio carro/chão, `vehicles/{id}.checkupRequest`
+  (`CheckupRequest` em `models.ts`: `day` "AAAA-MM-DD", `period`
+  `morning|afternoon`, `note`, `status`, `requestedAt`; da equipa: `time`
+  "HH:MM", `teamNote`, `decidedAt`; `confirmedAt`/`cancelledAt`). Estados:
+  `pending` (cliente pediu) → `proposed` (equipa propôs outro dia) ou
+  `approved` (equipa aprovou, ou cliente confirmou a proposta) →
+  `cancelled` (cliente). `checkupRequestedAt` no doc é o que o job de
+  acompanhamento já lia ("lembrete atendido"). `CheckupStatus` ganhou
+  `'declined'` = cancelou ("não quis"); sai do cartão "Ação pendente" e dos
+  checkups pendentes do backoffice, mas a linha do carro/chão no Perfil
+  deixa voltar a pedir (a Function repõe `'pending'`). Não se usou a
+  coleção `requests` da Secção 7 (fluxo de estados diferente).
+- **Disponibilidade:** `settings/checkups` (`CheckupAvailability`:
+  `weekly` seg–dom × períodos, `closedDays`, `weeksAhead`, `minDaysAhead`).
+  Sem doc, a app usa `CHECKUP_AVAILABILITY_DEFAULT` (seg–sex, manhã e
+  tarde, 3 semanas, a partir de amanhã). `src/data/checkups.ts` calcula as
+  opções (`checkupOptions`), lê o estado (`checkupState`) e formata
+  (`formatCheckupSlot` → "seg, 7 set, de manhã" / "às 10:30" — o mesmo
+  texto que as Functions escrevem). Leitura pública como `settings/home`.
+- **Regras** (`match /vehicles`, função `ownerCheckupWrite`): o dono só
+  pode (1) pedir/alterar — escreve o mapa `checkupRequest` inteiro com
+  `status: 'pending'`, dia no formato certo, período válido, nota até 300
+  caracteres, `requestedAt`/`checkupRequestedAt` iguais a `request.time`;
+  (2) confirmar uma proposta — `proposed` → `approved`, só `status` e
+  `confirmedAt`; (3) cancelar — só `status` e `cancelledAt`. Só enquanto
+  `checkupStatus` for `pending`/`declined`. Aprovar, propor e "marcar em
+  dia" são `isAdmin()`. `npm run check:firestore:auth` cobre os 12 casos.
+- **Perfil:** o cartão muda com o estado — Ação pendente ("Agendar
+  agora"), A aguardar aprovação ("Alterar" / "Cancelar pedido"), Proposta
+  da equipa ("Confirmar" / "Escolher outro dia" / "Cancelar"), Agendado
+  ("Alterar" / "Cancelar"). O cartão escolhe primeiro o carro/chão que
+  precisa de decisão do cliente (`pendingCheckup`). Cada linha da lista é
+  tocável: sem pedido abre a folha; com pedido abre um menu com as mesmas
+  ações. Escritas em `src/data/vehicles.ts` (`requestCheckup`,
+  `confirmCheckupProposal`, `cancelCheckupRequest`).
+- **Function `onVehicleUpdated`** (`handlers.ts` → `handleVehicleUpdated`,
+  textos em `texts.ts`): compara `checkupRequest` antes/depois e, por
+  transição, cria o alerta interno (pedido, alteração, cliente confirmou,
+  cancelou — sempre com o telemóvel) ou o `message` ao cliente (proposta,
+  agendado — com push pela `onNotificationCreated`). Ao pedir ou cancelar,
+  marca `followUp.checkupConfirmedAt` nos trabalhos ativos do carro/chão —
+  o job diário nunca chega a mandar ligar. Ao cancelar, `checkupStatus` →
+  `'declined'`; ao voltar a pedir, → `'pending'`.
+- **O papel da equipa até à Secção 7b** (página "Checkups" no backoffice):
+  `npm run checkup:admin -- ./serviceAccountKey.dev.json list|show <id>|approve <id> [--time 10:30] [--note "…"]|propose <id> --day AAAA-MM-DD --period morning|afternoon [--time] [--note]|done <id>|reset <id>|availability [--weekly "mon:morning,afternoon;sat:morning" --closed 2026-09-15 --weeks 3 --min 1]`.
+  Escreve exatamente o que o backoffice vai escrever; a Function publicada
+  no dev faz o resto (o cliente recebe o alerta e o push). `reset` limpa o
+  pedido e volta a pôr o checkup pendente, para testar outra vez.
+- **Testar de ponta a ponta:** app web na 8084 com `npm run dev-token`
+  (ou o telemóvel com a dev build, para ver o push) → Perfil → "Agendar
+  agora" → pedir; `npm run checkup:admin -- <chave> propose …` → alerta
+  "Proposta de checkup" nos Alertas + cartão "Proposta da equipa" →
+  Confirmar → "Checkup agendado"; Cancelar → linha "Sem checkup" → tocar →
+  voltar a pedir. Sem deploy: `npm run functions:jobs -- <chave> --vehicle <id>`
+  simula o trigger. Nos testes no browser, um clique programático em
+  vários chips e no botão no mesmo instante usa os valores anteriores (o
+  React ainda não re-renderizou) — clica, espera, e só depois submete.
+- **Backoffice (Secção 7b, por fazer):** página "Checkups" com pedidos a
+  aprovar (Aprovar / Propor outro dia), agendados ("Marcar em dia") e o
+  editor de disponibilidade; `models.ts` do backoffice sincronizado
+  (`CheckupRequest`, `CheckupAvailability`, `CheckupStatus` `'declined'`,
+  `CHECKUP.declined` em `utils/format.ts`). Ver ROADMAP.md.
+
 ## Páginas de departamento (Secção 9)
 
 Tocar num cartão do Início abre `src/screens/DepartmentScreen.tsx` (rota
@@ -468,28 +633,42 @@ dentro da página. Regras:
 
 - **O conteúdo é código, não Firestore.** Tudo em
   `src/data/departmentContent.ts` (`CONTENT.pt[id]`: `headline`, `intro`,
-  `services[]`, `steps[]`, `pricing`, `cta`). Para mudar um texto edita-se
-  aí e sai numa versão nova da app. Não há coleção, regras nem ecrã de
-  backoffice para isto. O nome e a tagline vêm de `DEPARTMENTS`
-  (`src/data/departments.ts`); a foto do topo é a do cartão
-  (`settings/home.departmentCovers`, escolhida no backoffice).
+  `services[]`, `steps[]`, `pricing`, `labels?`, `related?`, `cta`). Para
+  mudar um texto edita-se aí e sai numa versão nova da app. Não há
+  coleção, regras nem ecrã de backoffice para isto. O nome e a tagline
+  vêm de `DEPARTMENTS` (`src/data/departments.ts`); a foto do topo é a do
+  cartão (`settings/home.departmentCovers`, escolhida no backoffice).
 - **Um departamento novo = uma entrada nova.** `hasDepartmentContent(id)`
   decide se o cartão do Início abre a página; sem entrada o cartão fica
-  inerte (é o caso da Xtreme até à Secção 10). Para a Inozetek é preciso
-  ainda o `DepartmentId` em `models.ts` (app e backoffice, iguais) e a
-  linha em `DEPARTMENTS`.
+  inerte. Todos os seis têm entrada desde a Secção 10. Para a Inozetek
+  (sem cartão até a parceria ser oficial) é preciso ainda o
+  `DepartmentId` em `models.ts` (app e backoffice, iguais) e a linha em
+  `DEPARTMENTS`; o conteúdo já está escrito em `INOZETEK_CONTENT_PT` —
+  passos exatos no ROADMAP, Secção 10.
 - **`cta`** é `{ kind: 'quote', label }` (abre `RequestQuote` com
   `{ department }`) ou `{ kind: 'link', label, url }` (abre um URL externo
-  — loja da Xtreme).
+  — a loja online da Xtreme, quando existir; até lá a Xtreme usa `quote`,
+  "Pedir cotação"). Nunca inventar URLs: o link tem de ser a loja da
+  Marble, não o site do fabricante.
+- **`labels`** (Secção 10) troca os rótulos "O que fazemos" / "Como
+  funciona" por outros ("O que vendemos" / "Como comprar" na distribuição).
+- **`related`** (Secção 10) é a secção "Ver também": cartões
+  `{ department, title, text }` que abrem outra página de departamento
+  (`navigation.push('Department')`, para o "voltar" regressar à página
+  de origem). Xtreme ↔ Epoxy Floors. `RelatedLinks` só mostra destinos
+  com conteúdo, para nunca abrir uma página vazia.
 - **Idiomas:** `CONTENT.en` existe e está vazio; `departmentContent(id,
   locale)` cai para PT. Quando a app inteira ganhar inglês, preenche-se.
 - **Trabalhos recentes:** os departamentos com `category` mostram os 6
   trabalhos publicados mais recentes dessa categoria, com a mesma escuta
   do Portfólio (`usePublishedWorks`, filtro em memória) — sem índice novo.
-- **`RequestQuote`** é o ecrã da Secção 7. Enquanto ela não entrar,
-  `src/screens/RequestQuoteScreen.tsx` é um ecrã de reserva ("em breve" +
-  email) que a Secção 7 substitui por completo; a rota e os params
-  (`{ workId?, department? }`) mantêm-se.
+  A Xtreme tem `category: 'Epoxy Floors'` só para isto (os pavimentos
+  feitos com os produtos dela); a cópia da lista no backoffice
+  (`src/utils/departments.ts`) não precisa do campo, que só a app usa.
+- **`RequestQuote`** é o formulário da Secção 7 (ver "Pedidos de
+  orçamento" acima): `cta.kind === 'quote'` abre-o com `{ department }` e
+  o formulário desse departamento vem de `src/data/requestForms.ts` —
+  a Xtreme ("Pedir cotação") usa o mesmo caminho, com `department: 'xps'`.
 
 ## Firebase: os dois projetos
 

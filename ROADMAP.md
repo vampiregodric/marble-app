@@ -495,14 +495,106 @@ Functions no prod, `google-services.json`
 do prod, credencial FCM do prod no EAS.
 
 ### Secção 7 — Ecrã de pedido de orçamento
-**Estado:** Por fazer
+**Estado:** Feito e verificado no dev (2026-09-04). Ecrã `RequestQuote`
+(a partir do Detalhe com `workId`, de um departamento com `department`,
+ou do Perfil), formulário por departamento (`src/data/requestForms.ts`:
+opções, carro/espaço/empresa, mensagem, fotos opcionais, contacto
+preferido), **conta criada na hora para quem não tem** (decisão do Fábio;
+email "definir password" do Firebase), coleção `requests` com regras
+validadas campo a campo e índice, Cloud Function `onRequestWritten`
+(anti-spam, alerta interno no Painel, "Recebemos o teu pedido" ao cliente
+com push, emails pelo Resend quando ligado, limpeza de fotos no
+Cloudinary), retenção de 12 meses no job diário e anonimização ao apagar
+conta, "Os teus pedidos" no Perfil, página **Pedidos** no backoffice
+(estados recebido → em contacto → fechado, notas, fotos, Painel e barra
+lateral), política de privacidade e termos atualizados
+(`LEGAL_VERSION` 2026-09-05). Functions publicadas no dev. Verificado no
+browser (fluxo com sessão, fluxo sem conta a criar conta, estado a mudar
+em tempo real no Perfil, alerta nos Alertas, backoffice) e com os scripts
+`check:firestore*` e `functions:jobs --request`. **Pendente do Fábio
+(não bloqueia):** preset `marble-requests` no Cloudinary (fotos), conta
+Resend + DNS do marble.pt + segredo `RESEND_API_KEY` + `QUOTE_EMAIL=on`
+(emails para quotes@marble.pt e ao cliente), traduzir o template "repor
+password" do Firebase Auth. Ver DEVELOPMENT.md, "Pedidos de orçamento".
 **Depende de:** Secção 1 (para guardar o pedido)
 **Objetivo:** O botão "Pedir orçamento semelhante" no Detalhe do Trabalho
 (`src/screens/WorkDetailScreen.tsx`) ainda não faz nada. Construir o
 formulário/fluxo de pedido de orçamento.
+**Nota (2026-09-04):** decisões do Fábio — (1) o pedido **cria conta**
+(os dados são os mesmos do registo; password definida por email); (2)
+campos por departamento: carro/chão + o que pretende, com opções, fotos
+opcionais; (3) a equipa recebe alerta interno + o cliente alerta de
+confirmação, **e email para quotes@marble.pt** (Resend, remetente
+app@marble.pt); (4) página Pedidos completa no backoffice; (5) prazo
+prometido: **1 dia útil**; (6) retenção: **12 meses depois de fechado**.
+**Para a Secção 8 (nota original):** usar a mesma coleção com `type: 'checkup'` e
+`vehicleId` — `validNewRequest` já aceita os dois; `handleRequestCreated`
+e os textos (`requestKind`) já distinguem o tipo; a página Pedidos mostra
+"Pedido de checkup". **Não foi por aí (2026-09-04):** a Secção 8 correu
+em paralelo e o fluxo decidido pelo Fábio (disponibilidade da equipa,
+aprovação, proposta de outro dia, confirmação do cliente) não cabe em
+recebido → em contacto → fechado. O pedido de checkup vive em
+`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` ficou sem
+uso e pode sair na Secção 7b.
+**Para as Secções 9 e 10:** `navigation.navigate('RequestQuote', { department: 'ai' | 'ads' | 'xps' })`
+— os três formulários já existem em `requestForms.ts`.
+**Para a Secção 11:** `RESEND_API_KEY` no prod, `BACKOFFICE_URL` do prod em
+`functions/.env.prod` (ou o equivalente), preset `marble-requests`,
+App Check.
+
+### Secção 7b — Backoffice: checkups (aprovar, propor outro dia, disponibilidade)
+**Estado:** Por fazer
+**Depende de:** Secção 7 e Secção 8 no master (é no checkout do
+backoffice, que era da 7). **Pode correr em paralelo com a Secção 12 —
+Inglês**: não toca na app, só no backoffice (e na cópia de `models.ts`).
+**Objetivo:** A equipa gere os pedidos de checkup da Secção 8 no
+backoffice, em vez do script `npm run checkup:admin` que faz o mesmo até
+lá. Decisão do Fábio (2026-09-04): "temos de ter um lugar onde nos avisa
+que o cliente quer o checkup — no backoffice".
+- **Página nova "Checkups"** (rota `/checkups`, item na barra lateral com
+  a contagem de pedidos a aguardar aprovação), três blocos:
+  1. **A aprovar** — `vehicles` com `checkupRequest.status == 'pending'`
+     (já vêm todos no `DataContext`, é filtrar): cliente (link à ficha +
+     telemóvel), carro/chão, dia e período pedidos, nota do cliente;
+     botões **Aprovar** (hora opcional "HH:MM" + nota) e **Propor outro
+     dia** (dia, período, hora opcional, nota). Escrevem
+     `checkupRequest.status/time/teamNote/decidedAt` — exatamente o que
+     `scripts/checkup-admin.mjs` (`approve`, `propose`) da app escreve;
+     copiar dali. Propostas à espera do cliente (`proposed`) aparecem
+     aqui também, com "Aprovar na mesma" e "Propor outro dia".
+  2. **Agendados** — `approved`, por ordem de dia/hora: "Marcar em dia"
+     (o que já existe: `checkupStatus: 'ok'` + `checkupDoneAt`) e "Propor
+     outro dia".
+  3. **Disponibilidade** — editor de `settings/checkups`
+     (`CheckupAvailability`): grelha seg–dom × manhã/tarde, dias fechados
+     (input date + "Fechar dia" / "Reabrir"), semanas à frente (1–12),
+     antecedência mínima; `setDoc` com merge, como `saveDepartmentCover`.
+- **Painel:** os alertas internos já lá chegam (`team_alert` da Function);
+  acrescentar um link "Ver em Checkups" e, na tabela "Checkups pendentes",
+  a coluna com o estado do pedido (Pedido / Proposta / Agendado). **Ficha
+  do cliente:** o mesmo estado na linha do carro/chão; `VehicleModal` com
+  o estado `'declined'` ("Cancelou o checkup").
+- **`models.ts` do backoffice** sincronizado com o da app
+  (`CheckupRequest`, `CheckupAvailability`, `CHECKUP_*`, `CheckupStatus`
+  com `'declined'`), `CHECKUP.declined` em `utils/format.ts`. Tirar
+  `'checkup'` de `RequestType` (Secção 7) se ninguém o usar.
+- **Deploy** do backoffice no dev (`npm run deploy:dev`) no fim.
+**Contrato já pronto (Secção 8):** as regras deixam a equipa escrever
+tudo (`isAdmin()`); a Cloud Function `onVehicleUpdated` reage às
+escritas da equipa — `proposed` → alerta "Proposta de checkup" ao cliente
+(com push), `approved` → "Checkup agendado"; o cliente confirma/cancela
+na app e a equipa recebe alerta interno. Ver DEVELOPMENT.md,
+"Agendamento de checkup", e `functions/src/handlers.ts` →
+`handleVehicleUpdated`. Para testar: app web (`npm run dev-token`) na
+conta de teste + a página nova; ou `npm run checkup:admin -- <chave> list`.
 
 ### Secção 8 — Fluxo de agendamento de checkup
-**Estado:** Por fazer
+**Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
+verificado no dev (app web na 8084, runner local, trigger publicado,
+`check:firestore:auth` com 12 casos). O lado da equipa no backoffice
+(aprovar / propor outro dia / disponibilidade) é a **Secção 7b**, acima —
+até lá o script `npm run checkup:admin` faz exatamente o mesmo. Ver
+"Decisões" e "Nota" no fim desta secção.
 **Depende de:** Secção 1, Secção 6
 **Objetivo:** O botão "Agendar agora" no cartão de "Ação pendente" do
 Perfil (`src/screens/ProfileScreen.tsx`) ainda não faz nada. Decidir e
@@ -516,6 +608,61 @@ uma Cloud Function (`functions/`) cria um `team_alert` "Ligar a X: pediu
 checkup do Y para dia Z" no Painel que já existe. O job diário já trata
 `checkupRequestedAt` como "confirmado". A cópia de `models.ts` do
 backoffice sincroniza-se depois de a 7 entrar.
+**Decisões (2026-09-04, Fábio, nesta sessão):** (1) o cliente escolhe
+entre **opções que a equipa define no backoffice** — horário semanal
+(seg–dom × manhã/tarde), dias fechados, semanas à frente, antecedência
+mínima — com nota opcional; sem calendário completo ("nós escolhemos
+quando dá, porque há de ser sempre fácil e não atrapalha nada"); (2) o
+pedido fica **a aguardar aprovação**; a equipa **aprova** (hora opcional)
+**ou propõe outro dia**, e o cliente recebe alerta com push para confirmar
+na app ou escolher outro dia; (3) o cliente pode **alterar e cancelar**;
+cancelar = "considera que não quis fazer" (sai dos checkups pendentes, a
+equipa não insiste; pode voltar a pedir); (4) o lugar da equipa é o
+backoffice, que a Secção 7 estava a ocupar → passou para a **Secção 7b**.
+**Nota (2026-09-04):** construído nesta sessão. **Modelo** (`models.ts`
+da app e `functions/src/types.ts`): `Vehicle.checkupRequest`
+(`CheckupRequest`: `day` "AAAA-MM-DD", `period` `morning|afternoon`,
+`note`, `status` `pending → proposed | approved → cancelled`,
+`requestedAt`; da equipa `time` "HH:MM", `teamNote`, `decidedAt`;
+`confirmedAt`, `cancelledAt`), `checkupRequestedAt` (o job já o lia),
+`CheckupStatus` com `'declined'`, `settings/checkups`
+(`CheckupAvailability`, `CHECKUP_AVAILABILITY_DEFAULT` seg–sex,
+`CHECKUP_LIMITS`). **Regras** (`match /vehicles`, `ownerCheckupWrite`): o
+dono só pode pedir/alterar (mapa inteiro validado, `requestedAt ==
+request.time`), confirmar a proposta (`proposed → approved`) e cancelar;
+o resto é `isAdmin()`. **App:** `src/data/checkups.ts` (disponibilidade
+em tempo real, opções, estado por carro/chão, textos "seg, 7 set, de
+manhã"), `src/data/vehicles.ts` (`requestCheckup`,
+`confirmCheckupProposal`, `cancelCheckupRequest`),
+`src/components/CheckupSheet.tsx` (folha no estilo da app: chips de dias
+e de período, nota até 300 caracteres; sem calendário nem ícones),
+Perfil com o cartão por estado — Ação pendente ("Agendar agora"), A
+aguardar aprovação ("Alterar" / "Cancelar pedido"), Proposta da equipa
+("Confirmar" / "Escolher outro dia" / "Cancelar"), Agendado ("Alterar" /
+"Cancelar") — e as linhas dos carros/chãos tocáveis (Pedido / Proposta /
+Agendado / Sem checkup "toca para voltar a pedir"). **Functions:**
+`onVehicleUpdated` → `handleVehicleUpdated` (`handlers.ts`) + textos em
+`texts.ts`: pedido/alteração → alerta interno com dia, nota e telemóvel e
+`followUp.checkupConfirmedAt` no trabalho (nunca há alerta "não
+confirmou" falso); proposta → `message` ao cliente; aprovado/confirmado →
+"Checkup agendado" (+ alerta interno se foi o cliente a confirmar);
+cancelado → alerta interno + `checkupStatus: 'declined'`; voltar a pedir
+→ `'pending'`. **Scripts:** `npm run functions:jobs -- <chave> --vehicle
+<id> [--before estado]` (simula o trigger), `npm run checkup:admin --
+<chave> list|show|approve|propose|done|reset|availability` (o papel da
+equipa até à Secção 7b), seed com `settings/checkups`,
+`check:firestore:auth` com os casos do pedido. **Verificado** no web
+(8084, conta de teste, com o master das Secções 7 e 10 já junto): pedir →
+"A aguardar aprovação" + alerta interno; proposta (script) → "Proposta de
+checkup" nos Alertas + cartão "Proposta da equipa" → Confirmar →
+"Agendado" + "Checkup agendado" nos Alertas + alerta interno; Cancelar →
+"Sem checkup" + alerta interno + `declined`; voltar a pedir a partir da
+linha → `pending` outra vez; aprovação pelo script com o trigger
+publicado. Regras, índices e Functions publicados no dev. Não se usou a
+coleção `requests` da Secção 7 (ver nota lá). **Fica para a Secção 7b:**
+tudo o que é backoffice (acima). **Para a Secção 12:** os textos do
+cartão, da folha e dos alertas desta secção estão em `ProfileScreen.tsx`,
+`CheckupSheet.tsx`, `src/data/checkups.ts` e `functions/src/texts.ts`.
 
 ### Secção 9 — Conteúdo estático: AI Business & Marble Ads
 **Estado:** Feito (2026-09-04). Página de serviços genérica para os cinco
@@ -561,7 +708,9 @@ acrescentar `xps` (e depois `inozetek`, com o `DepartmentId` novo) a
 cartão do Início e a rota já funcionam.
 
 ### Secção 10 — Distribuição: Xtreme Polishing Systems & Inozetek
-**Estado:** Por fazer
+**Estado:** Feito (2026-09-04). O cartão da Xtreme abre a sua página de
+distribuição; a Inozetek fica preparada sem cartão. Dois passos ficam à
+espera de factos do Fábio (ver "Fica pendente").
 **Depende de:** nada
 **Objetivo:** O cartão "Xtreme Polishing Systems" na Home precisa de
 ligar a algo real (link externo? página própria?). Preparar o mesmo
@@ -577,6 +726,75 @@ a ser escolhível no backoffice sem mais código.
 app. A Inozetek fica com o conteúdo preparado mas **sem cartão** até a
 parceria ser oficial (SPEC) — o `DepartmentId` novo exige o backoffice,
 que é da Secção 7.
+**Decisões (2026-09-04, Fábio):** (1) **o site da Marble vem primeiro** e
+a página da app passa depois a espelhá-lo; até lá a página mostra
+categorias de produto com texto (resinas, pigmentos metálicos, flakes e
+quartzo, acabamentos e selantes, ferramentas e kits) e o botão é "Pedir
+cotação" (pedido de orçamento com `department: 'xps'`), porque **não há
+loja online** — sem URL inventado. (2) A Inozetek é só **uma das marcas**
+de PPF/vinil que a Marble aplica (há outras); a distribuição em Portugal
+está em cima da mesa mas não é oficial → sem cartão, e na página
+Automotive uma menção factual ("películas de marcas de referência, como a
+Inozetek"), não "distribuidores oficiais". (3) A página da Xtreme mostra
+os **trabalhos recentes em epóxi** (fotos reais dos pavimentos feitos com
+os produtos): `category: 'Epoxy Floors'` no `xps` de `DEPARTMENTS`, só na
+app — são os trabalhos publicados pela equipa no backoffice, os 6 mais
+recentes; uma seleção curada por departamento precisaria do backoffice
+(Destaques) e fica como ideia.
+**Nota (2026-09-04):** construído nesta sessão, só na app (backoffice,
+regras/índices do Firestore e `functions/` intocados).
+`src/data/departmentContent.ts`: entrada `xps` (headline, intro, 5
+categorias, 4 passos "Como comprar", investimento, cta `quote` "Pedir
+cotação"); dois campos novos opcionais em `DepartmentContent` — `labels`
+(rótulos "O que vendemos" / "Como comprar" em vez de "O que fazemos" /
+"Como funciona") e `related` (cartões "Ver também" que abrem outra página
+de departamento, `navigation.push`, só para destinos com conteúdo: Xtreme
+→ "Preferes que sejamos nós a instalar?" → Epoxy Floors, e Epoxy → "Queres
+fazer o teu próprio chão?" → Xtreme); `INOZETEK_CONTENT_PT` exportado
+(rascunho da futura página, não usado por ninguém). `DepartmentScreen`:
+rótulos por conteúdo e o bloco "Ver também" (`RelatedLinks`). Página
+Epoxy: bloco "Quartzo, comercial e industrial" (o Fábio listou quartzo
+entre os sistemas). Verificado no web (8083, dados do dev): cartão do
+Início → página da Xtreme com selo "Oficial", 5 categorias, passos, 2
+trabalhos de epóxi recentes com foto, "Ver também" → Epoxy Floors e de
+volta, "Pedir cotação" → ecrã de reserva com "Xtreme Polishing Systems",
+Automotive com a menção à Inozetek; sem erros na consola; `npm run
+typecheck` limpo.
+**Fica pendente (factos do Fábio, sem código novo além de texto):**
+(a) quando o site da Marble existir, alinhar os textos da entrada `xps`
+com ele e, se houver loja online, trocar o cta para `{ kind: 'link',
+label: 'Comprar na loja', url }` com o URL real da loja da Marble (não o
+do fabricante nos EUA, que tiraria a venda à Marble) e reescrever o passo
+2 "Pede uma cotação"; (b) confirmar envios/entregas, venda a
+particulares e condições para profissionais — comentário `FACTOS A
+CONFIRMAR` por cima da entrada `xps`.
+**Ligar a Inozetek quando a parceria for oficial (3 passos, precisa do
+backoffice):**
+1. `DepartmentId` ganha `'inozetek'` nos dois `src/firebase/models.ts`
+   (app e backoffice, iguais) e a linha `{ id: 'inozetek', name:
+   'Inozetek', tagline: 'PPF & vinil', category: 'Automotive', badge:
+   'Oficial' }` entra nos dois `DEPARTMENTS` (app
+   `src/data/departments.ts`, backoffice `src/utils/departments.ts`, sem
+   `category`/`badge` lá), a seguir à Xtreme (ordem do SPEC).
+2. Em `departmentContent.ts`, `INOZETEK_CONTENT_PT` passa a ser a entrada
+   `inozetek` de `PT` (confirmar os factos do rascunho: stock em Portugal,
+   venda a aplicadores), a intro da Automotive passa a "distribuidores
+   oficiais Inozetek" e a Automotive ganha um `related` para `inozetek`.
+3. No backoffice, Destaques > Fotos dos serviços, a equipa escolhe a foto
+   do cartão novo (sem código); `npm run typecheck` nos dois projetos e
+   publicar o backoffice (`deploy:dev`). O pedido de orçamento (Secção 7)
+   aceita o departamento novo sem alterações, porque usa `DepartmentId`.
+**Trabalho seguinte identificado (Fábio, 2026-09-04) — tags nos
+trabalhos:** nos trabalhos de epóxi deve dar para pôr **2 tags**: a marca
+(Xtreme Polishing Systems) e o sistema (Metallic Epoxy, Solid Colour
+Epoxy, Quartz Epoxy, Flake Epoxy); nos carros, primeiro o **serviço**
+(PPF, vinil, detailing…) e depois a marca ou marcas. Hoje
+`works.products[]` (`{ brand, item }`, texto livre no formulário do
+backoffice, chips "marca · item" no Detalhe) aguenta isto por convenção,
+mas o pedido é um campo próprio com lista fixa — toca no formulário de
+trabalhos do backoffice e no Detalhe/Portfólio da app. Ficou como
+**Secção 13 — Tags nos trabalhos: marca e sistema/serviço** (a 7 já
+entrou no master, o backoffice está livre).
 
 ### Secção 11 — Preparação para lançamento nas lojas
 **Estado:** Parte 1 feita (2026-09-05) — ícones/splash finais, variantes
@@ -687,8 +905,10 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
 
 ### Secção 12 — Inglês
 **Estado:** Por fazer
-**Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
-**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11
+**Depende de:** Secções 7, 8, 10 e 13 no master (toca em todos os ecrãs —
+**nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11.
+Pode correr em paralelo com a **Secção 7b** (só backoffice) e com a
+parte 1 da Secção 11 (não toca em `src/`).
 **Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
 Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
 próprio, a não ser que o Fábio queira): textos dos ecrãs, estados vazios,
@@ -698,6 +918,40 @@ erros, `src/data/departmentContent.ts` (`CONTENT.en`, estrutura já pronta),
 é de um texto). Pesar `expo-localization` + um módulo `t()` simples em vez
 de uma biblioteca de i18n completa. Os alertas criados pelo backoffice e
 pelas Functions são escritos pela equipa em PT — decidir se ficam assim.
+
+### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
+**Estado:** Por fazer
+**Depende de:** Secções 7 e 8 no master (feito — o backoffice está livre).
+**Nunca em paralelo com a Secção 12 — Inglês** (as duas tocam no
+Detalhe e no Portfólio): esta entra no master antes de a 12 arrancar.
+**Nem com a Secção 7b** (as duas mexem no checkout do backoffice, que só
+tem um dono de cada vez). Corre ao lado da parte 1 da Secção 11; quando
+entrar, arrancam a 12 (app) e a 7b (backoffice) em paralelo.
+**Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
+de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
+sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);
+cada trabalho de carro leva primeiro o **serviço** (PPF, vinil, detailing,
+proteção cerâmica, teto estrelado…) e depois a marca ou marcas usadas
+(Inozetek e outras). Gráfico segue a mesma lógica (serviço: identidade,
+decoração de viaturas, montras e sinalética, impressão, redes sociais).
+**Ponto de partida:** hoje `works.products[]` (`{ brand, item }`, texto
+livre no formulário de trabalhos do backoffice, `WorkFormPage.tsx`) já sai
+no Detalhe como chips "marca · item" (`WorkDetailScreen.tsx`). O pedido é
+um campo próprio com **lista fixa por categoria** para o sistema/serviço,
+e as marcas à parte. Proposta a validar com o Fábio (escolha múltipla):
+`works.services: string[]` (lista fixa por `category`, no código dos dois
+projetos, iguais) + `works.brands: string[]` (texto livre com sugestões:
+Xtreme Polishing Systems, Inozetek…), mantendo `products[]` só para
+compatibilidade com os trabalhos já criados (ou migrando-os no seed);
+chips no Detalhe pela ordem "serviço → marcas"; no Portfólio, decidir se o
+sistema/serviço entra como filtro secundário dentro da categoria. Toca em:
+backoffice (`WorkFormPage.tsx`, `src/firebase/models.ts`, lista fixa),
+app (`models.ts`, `WorkDetailScreen.tsx`, `PortfolioScreen.tsx`,
+`scripts/seed-firestore.mjs`), e `firestore.rules` **só no bloco `works`**
+se as regras validarem campos (a Secção 8 mexe no bloco `vehicles`). Não
+toca em ProfileScreen, vehicles, `functions/`, `app.json`, `eas.json`,
+`assets/`, `docs/`. Pré-visualização web: `marble-app-web-8082` (a 8082
+ficou livre com a 7); backoffice: `marble-backoffice-web` (5180).
 
 ---
 

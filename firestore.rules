@@ -17,9 +17,17 @@ rules_version = '2';
 //   query toda (ver src/data/works.ts). A equipa vê também os rascunhos.
 // - `events`: públicos.
 // - `clients/{uid}`: só o próprio (uid do Auth == id do doc) ou a equipa.
-// - `vehicles`: só o dono lê; quem escreve é a equipa.
+// - `vehicles`: só o dono lê; quem escreve é a equipa — exceto o pedido de
+//   checkup (Secção 8): o dono pode escrever `checkupRequest` (pedir,
+//   alterar, confirmar a proposta da equipa, cancelar) e nada mais.
 // - `notifications`: só o dono lê; a única alteração permitida ao cliente é
 //   marcar como lida (`read`) — nada mais muda pelo SDK de cliente.
+// - `requests` (Secção 7, 2026-09-04): pedidos de orçamento (e, na Secção 8,
+//   de checkup). O cliente cria os seus — sempre com conta: quem não tem
+//   fica com uma na hora — e lê-os; nunca os altera. A criação é validada
+//   campo a campo (validNewRequest): tipos, tamanhos (REQUEST_LIMITS em
+//   src/firebase/models.ts) e só os campos do formulário — `status` nasce
+//   'new', e `notes`, `flagged`, etc. são da equipa e das Functions.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
 // (update, já permitido) e apaga o utilizador do Auth. `delete: false`
@@ -42,6 +50,38 @@ service cloud.firestore {
 
     function ownsResource() {
       return signedIn() && request.auth.uid == resource.data.clientId;
+    }
+
+    function isStr(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    // Um pedido acabado de criar pela app (Secção 7). As regras não iteram
+    // listas, por isso `services`, `fields` e `photos` só têm o tamanho
+    // limitado; o conteúdo é texto que a equipa lê no backoffice.
+    function validNewRequest(d) {
+      return d.keys().hasOnly(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
+          'workId', 'workTitle', 'vehicleId', 'services', 'fields', 'message', 'photos', 'platform', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
+          'services', 'fields', 'message', 'createdAt', 'updatedAt'])
+        && d.clientId == request.auth.uid
+        && d.type in ['quote', 'checkup']
+        && d.status == 'new'
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && isStr(d.email, 120)
+        && d.phone is string && d.phone.size() >= 9 && d.phone.size() <= 30
+        && d.contactPreference in ['call', 'whatsapp', 'email']
+        && d.department in ['automotive', 'epoxy', 'graphic', 'ai', 'ads', 'xps']
+        && d.services is list && d.services.size() <= 12
+        && d.fields is list && d.fields.size() <= 8
+        && isStr(d.message, 2000)
+        && (!('photos' in d) || (d.photos is list && d.photos.size() <= 5))
+        && (!('workId' in d) || isStr(d.workId, 100))
+        && (!('workTitle' in d) || isStr(d.workTitle, 200))
+        && (!('vehicleId' in d) || isStr(d.vehicleId, 100))
+        && (!('platform' in d) || d.platform in ['android', 'ios', 'web'])
+        && d.createdAt == request.time
+        && d.updatedAt == request.time;
     }
 
     // Portfólio: conteúdo público de marketing, mas só depois de publicado.
@@ -70,9 +110,62 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Agendamento de checkup (Secção 8). O cliente só toca em
+    // `checkupRequest` (+ `checkupRequestedAt`, que o job de acompanhamento
+    // lê, e `updatedAt`), e só enquanto houver checkup por fazer. Três
+    // escritas possíveis, nada mais:
+    // 1. pedir/alterar: escreve o mapa inteiro com status 'pending' — dia
+    //    "AAAA-MM-DD", período, nota até 300 caracteres, requestedAt = agora;
+    // 2. confirmar a proposta da equipa: 'proposed' → 'approved', só o
+    //    estado e `confirmedAt`;
+    // 3. cancelar: → 'cancelled', só o estado e `cancelledAt`.
+    // Aprovar/propor é da equipa (isAdmin). Os limites são os de
+    // CHECKUP_LIMITS em src/firebase/models.ts.
+    function checkupRequestOf(data) {
+      return data.checkupRequest;
+    }
+    function validNewCheckupRequest(req) {
+      return req.keys().hasOnly(['day', 'period', 'note', 'status', 'requestedAt'])
+        && req.keys().hasAll(['day', 'period', 'status', 'requestedAt'])
+        && req.status == 'pending'
+        && req.day is string && req.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && req.period in ['morning', 'afternoon']
+        && (!('note' in req) || (req.note is string && req.note.size() <= 300))
+        && req.requestedAt == request.time;
+    }
+    function ownerCheckupWrite() {
+      let after = request.resource.data;
+      let before = resource.data;
+      let keys = after.diff(before).affectedKeys();
+      return ownsResource()
+        && before.checkupStatus in ['pending', 'declined']
+        && 'checkupRequest' in after
+        && (
+          // 1. Pedir ou alterar (mapa novo).
+          (keys.hasOnly(['checkupRequest', 'checkupRequestedAt', 'updatedAt'])
+            && validNewCheckupRequest(checkupRequestOf(after))
+            && after.checkupRequestedAt == request.time)
+          // 2. Confirmar a proposta da equipa.
+          || (keys.hasOnly(['checkupRequest', 'updatedAt'])
+            && 'checkupRequest' in before
+            && checkupRequestOf(before).status == 'proposed'
+            && checkupRequestOf(after).status == 'approved'
+            && checkupRequestOf(after).diff(checkupRequestOf(before)).affectedKeys().hasOnly(['status', 'confirmedAt'])
+            && checkupRequestOf(after).confirmedAt == request.time)
+          // 3. Cancelar.
+          || (keys.hasOnly(['checkupRequest', 'updatedAt'])
+            && 'checkupRequest' in before
+            && checkupRequestOf(before).status in ['pending', 'proposed', 'approved']
+            && checkupRequestOf(after).status == 'cancelled'
+            && checkupRequestOf(after).diff(checkupRequestOf(before)).affectedKeys().hasOnly(['status', 'cancelledAt'])
+            && checkupRequestOf(after).cancelledAt == request.time)
+        );
+    }
+
     match /vehicles/{vehicleId} {
       allow read: if ownsResource() || isAdmin();
-      allow write: if isAdmin();
+      allow update: if isAdmin() || ownerCheckupWrite();
+      allow create, delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
@@ -84,6 +177,13 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
           && request.resource.data.read is bool);
       allow create, delete: if isAdmin();
+    }
+
+    // Pedidos de orçamento / checkup (Secção 7). Ver nota no topo.
+    match /requests/{requestId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if isAdmin() || (signedIn() && validNewRequest(request.resource.data));
+      allow update, delete: if isAdmin();
     }
   }
 }

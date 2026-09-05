@@ -1,5 +1,6 @@
-// Admin API do Cloudinary, só para APAGAR ficheiros da foto de perfil
-// (Secção 5b guardou-os com a tag `uid_<uid>`). A app e o backoffice fazem
+// Admin API do Cloudinary, só para APAGAR ficheiros que a app carregou: a
+// foto de perfil (tag `uid_<uid>`, Secção 5b) e as fotos de um pedido de
+// orçamento (tag `request_<id>`, Secção 7). A app e o backoffice fazem
 // uploads "unsigned" e nunca conseguem apagar; apagar exige a API key +
 // secret, que só existem aqui, em segredos das Functions. A política de
 // privacidade promete que o ficheiro sai do alojamento em 30 dias — isto
@@ -70,11 +71,16 @@ async function deleteByPublicIds(cfg: CloudinaryConfig, publicIds: string[]): Pr
   }
 }
 
-// Apaga todos os ficheiros com a tag do cliente, exceto `keepPublicId` (a
-// foto atual, quando o cliente trocou em vez de remover). Devolve quantos
-// apagou.
-export async function deleteAvatarFiles(cfg: CloudinaryConfig, uid: string, keepPublicId?: string | null): Promise<number> {
-  const ids = (await listByTag(cfg, avatarTag(uid))).filter((id) => id !== keepPublicId);
+// Apaga todos os ficheiros com uma tag, exceto `keepPublicId`. Devolve
+// quantos apagou.
+export async function deleteFilesByTag(cfg: CloudinaryConfig, tag: string, keepPublicId?: string | null): Promise<number> {
+  const ids = (await listByTag(cfg, tag)).filter((id) => id !== keepPublicId);
   if (ids.length) await deleteByPublicIds(cfg, ids);
   return ids.length;
+}
+
+// Foto de perfil: todos os ficheiros do cliente, exceto a foto atual
+// (quando trocou em vez de remover).
+export async function deleteAvatarFiles(cfg: CloudinaryConfig, uid: string, keepPublicId?: string | null): Promise<number> {
+  return deleteFilesByTag(cfg, avatarTag(uid), keepPublicId);
 }

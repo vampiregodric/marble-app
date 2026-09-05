@@ -45,6 +45,7 @@
     "seed": "node scripts/seed-firestore.mjs",
     "check:firestore": "node scripts/check-firestore.mjs",
     "check:firestore:auth": "node scripts/check-firestore-auth.mjs",
+    "checkup:admin": "node scripts/checkup-admin.mjs",
     "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "dev-token": "node scripts/dev-token.mjs",

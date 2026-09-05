@@ -7,7 +7,26 @@ import type { Timestamp } from 'firebase-admin/firestore';
 
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
 export type VehicleType = 'car' | 'floor';
-export type CheckupStatus = 'pending' | 'ok';
+// 'declined' (Secção 8): o cliente cancelou o pedido de checkup na app.
+export type CheckupStatus = 'pending' | 'ok' | 'declined';
+
+// Agendamento de checkup (Secção 8) — ver Vehicle.checkupRequest em
+// src/firebase/models.ts para quem escreve cada estado.
+export type CheckupPeriod = 'morning' | 'afternoon';
+export type CheckupRequestStatus = 'pending' | 'proposed' | 'approved' | 'cancelled';
+
+export interface CheckupRequest {
+  day: string; // "AAAA-MM-DD"
+  period: CheckupPeriod;
+  note?: string;
+  status: CheckupRequestStatus;
+  requestedAt: Timestamp;
+  time?: string; // "HH:MM", opcional (equipa)
+  teamNote?: string;
+  decidedAt?: Timestamp;
+  confirmedAt?: Timestamp;
+  cancelledAt?: Timestamp;
+}
 
 export type NotificationType = 'checkup_reminder' | 'offer' | 'new_work' | 'event_reminder' | 'message' | 'team_alert';
 
@@ -68,6 +87,7 @@ export interface Vehicle {
   checkupStatus: CheckupStatus;
   checkupDoneAt?: Timestamp;
   checkupRequestedAt?: Timestamp;
+  checkupRequest?: CheckupRequest;
   photoUrl?: string;
   updatedAt?: Timestamp;
 }
@@ -129,6 +149,74 @@ export interface AppNotification {
   relatedWorkId?: string;
   relatedEventId?: string;
   relatedVehicleId?: string;
+  relatedRequestId?: string;
   createdAt: Timestamp;
   push?: NotificationPush;
+}
+
+// ---------- Pedidos (Secção 7) ----------
+
+export type DepartmentId = 'automotive' | 'epoxy' | 'graphic' | 'ai' | 'ads' | 'xps';
+
+export const DEPARTMENT_NAME: Record<DepartmentId, string> = {
+  automotive: 'Automotive Aesthetics',
+  epoxy: 'Epoxy Floors',
+  graphic: 'Graphic Solutions',
+  ai: 'AI Business',
+  ads: 'Marble Ads',
+  xps: 'Xtreme Polishing Systems',
+};
+
+export type RequestType = 'quote' | 'checkup';
+export type RequestStatus = 'new' | 'contacted' | 'closed';
+export type ContactPreference = 'call' | 'whatsapp' | 'email';
+
+export const CONTACT_PREFERENCE_LABEL: Record<ContactPreference, string> = {
+  call: 'chamada',
+  whatsapp: 'WhatsApp',
+  email: 'email',
+};
+
+export interface RequestPhoto {
+  url: string;
+  thumbnailUrl: string;
+  publicId: string;
+}
+
+export interface RequestField {
+  key: string;
+  label: string;
+  value: string;
+}
+
+export interface ServiceRequest {
+  id: string;
+  type: RequestType;
+  status: RequestStatus;
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  contactPreference: ContactPreference;
+  department: DepartmentId;
+  workId?: string;
+  workTitle?: string;
+  vehicleId?: string;
+  services: string[];
+  fields: RequestField[];
+  message: string;
+  photos?: RequestPhoto[];
+  platform?: string;
+  notes?: string;
+  contactedAt?: Timestamp;
+  closedAt?: Timestamp;
+  flagged?: 'rate_limit';
+  processedAt?: Timestamp;
+  teamAlertId?: string;
+  confirmationId?: string;
+  emailSentAt?: Timestamp;
+  emailError?: string;
+  anonymizedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }

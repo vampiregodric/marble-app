@@ -1,8 +1,11 @@
 import { Platform } from 'react-native';
+import { RequestPhoto } from '../firebase/models';
 
-// Foto de perfil do cliente — a ÚNICA escrita de ficheiros feita pela app
-// (as fotos dos trabalhos são carregadas pela equipa no backoffice). Vai
-// direta para o Cloudinary com um upload preset "unsigned" (marble-avatars):
+// Ficheiros que a app escreve: a foto de perfil do cliente (Secção 5b) e,
+// desde a Secção 7, as fotos que o cliente junta a um pedido de orçamento
+// (as fotos dos trabalhos são carregadas pela equipa no backoffice). Vão
+// diretas para o Cloudinary com um upload preset "unsigned" (marble-avatars,
+// marble-requests):
 // não há API secret na app nem servidor nosso; o preset define a pasta, o
 // tamanho máximo e os formatos aceites, e é isso que trava abusos (qualquer
 // pessoa com o cloud name consegue usar o preset).
@@ -17,8 +20,11 @@ import { Platform } from 'react-native';
 
 const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
 const preset = process.env.EXPO_PUBLIC_CLOUDINARY_PRESET_AVATARS ?? '';
+const requestPreset = process.env.EXPO_PUBLIC_CLOUDINARY_PRESET_REQUESTS ?? '';
 
 export const avatarUploadConfigured = Boolean(cloudName && preset);
+// Sem preset, o formulário de orçamento esconde a secção das fotos.
+export const requestUploadConfigured = Boolean(cloudName && requestPreset);
 
 // Lado do quadrado entregue à app. O ficheiro guardado tem até 1024 px
 // (reduzido no telemóvel antes de subir, ver avatarPicker.ts).
@@ -59,6 +65,43 @@ export async function uploadAvatar(localUri: string, uid: string, onProgress?: (
 
   const res = await xhrUpload(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, form, onProgress);
   return avatarDeliveryUrl(res.public_id, res.version);
+}
+
+// Foto de um pedido de orçamento (Secção 7). Tag `request_<id>` (e não
+// `uid_<uid>`, senão a limpeza da foto de perfil apagava-as): é por ela que
+// a Function apaga os ficheiros quando o pedido é anonimizado. Devolve os
+// URLs de entrega no mesmo formato das fotos dos trabalhos no backoffice.
+export async function uploadRequestPhoto(localUri: string, requestId: string, onProgress?: (fraction: number) => void): Promise<RequestPhoto> {
+  if (!requestUploadConfigured) {
+    throw new Error('O envio de fotos ainda não está configurado nesta versão da app.');
+  }
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(localUri)).blob();
+    form.append('file', blob, 'foto.jpg');
+  } else {
+    form.append('file', { uri: localUri, name: 'foto.jpg', type: 'image/jpeg' } as unknown as Blob);
+  }
+  form.append('upload_preset', requestPreset);
+  form.append('tags', `request,request_${requestId}`);
+
+  let res: UploadResponse;
+  try {
+    res = await xhrUpload(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, form, onProgress);
+  } catch (err) {
+    // Preset ainda não criado na consola do Cloudinary (configuração, não
+    // é culpa do cliente): diz-lhe o que fazer em vez do erro em inglês.
+    if (err instanceof Error && /preset/i.test(err.message)) {
+      throw new Error('O envio de fotos ainda não está ativo nesta versão da app. Remove as fotos e envia o pedido sem elas — a equipa pede-tas depois.');
+    }
+    throw err;
+  }
+  const v = res.version ? `v${res.version}/` : '';
+  return {
+    url: `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_1600,q_auto,f_auto/${v}${res.public_id}`,
+    thumbnailUrl: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_480,h_360,q_auto,f_auto/${v}${res.public_id}`,
+    publicId: res.public_id,
+  };
 }
 
 // XMLHttpRequest em vez de fetch por causa do progresso do envio (o fetch
