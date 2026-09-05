@@ -134,7 +134,9 @@ async function seed() {
 
   // --- works: 7 publicados nas 3 categorias (3 em destaque no carrossel, com
   // `featuredOrder` — a app ordena o carrossel por ele) + 1 rascunho que NÃO
-  // pode aparecer na app (testa as regras).
+  // pode aparecer na app (testa as regras). Tags (Secção 13): `services` são
+  // ids de WORK_SERVICES (src/firebase/models.ts) da mesma categoria;
+  // `brands` é texto. O campo antigo `products` já não se semeia.
   const works = {
     'work-example': {
       title: 'Jaguar F-Type — Vinil Roxo Metálico',
@@ -142,10 +144,8 @@ async function seed() {
       model: 'Jaguar F-Type R',
       description:
         'Wrap completo em vinil roxo metálico com acabamento gloss, jantes forjadas em dourado e interior em couro teal personalizado. Um dos trabalhos mais marcantes do nosso portfólio Automotive Aesthetics.',
-      products: [
-        { brand: 'Inozetek', item: 'Vinil Roxo Metálico Gloss' },
-        { brand: 'Xtreme Polishing Systems', item: 'Detailing final' },
-      ],
+      services: ['vinyl', 'detailing'],
+      brands: ['Inozetek', 'Xtreme Polishing Systems'],
       photoUrl: JAGUAR_PHOTO,
       media: JAGUAR_MEDIA,
       featured: true,
@@ -161,10 +161,8 @@ async function seed() {
       model: 'Showroom · Porto',
       description:
         'Aplicação de sistema epóxi metálico em piso de showroom automóvel, com acabamento brilhante e efeito tridimensional. Resistente a químicos e abrasão, pensado para uso comercial intensivo.',
-      products: [
-        { brand: 'Xtreme Polishing Systems', item: 'Metallic Pigment Gold' },
-        { brand: 'Xtreme Polishing Systems', item: 'Topcoat UV' },
-      ],
+      services: ['metallic-epoxy'],
+      brands: ['Xtreme Polishing Systems'],
       featured: true,
       featuredOrder: 1,
       published: true,
@@ -178,7 +176,8 @@ async function seed() {
       model: 'BMW M4 Competition',
       description:
         'Película de proteção colorida em toda a carroçaria, com corte por molde para não haver emendas visíveis. Protege contra riscos e gravilha mantendo o brilho original.',
-      products: [{ brand: 'Inozetek', item: 'PPF Colorido Gloss' }],
+      services: ['ppf-colour'],
+      brands: ['Inozetek'],
       featured: false,
       published: true,
       completedAt: on('2026-08-25'),
@@ -189,7 +188,8 @@ async function seed() {
       model: 'Frota de 12 viaturas comerciais',
       description:
         'Nova identidade visual aplicada em 12 viaturas: design, impressão e aplicação de vinil. Cores e tipografia alinhadas com o novo logótipo da empresa cliente.',
-      products: [{ brand: 'Avery Dennison', item: 'Vinil de impressão MPI 1105' }],
+      services: ['brand-identity', 'vehicle-graphics', 'print'],
+      brands: ['Avery Dennison'],
       featured: true,
       featuredOrder: 2,
       published: true,
@@ -200,7 +200,8 @@ async function seed() {
       category: 'Automotive',
       model: 'Audi RS3 Sportback',
       description: 'Wrap completo em vinil cinza fosco com detalhes em preto brilhante nas jantes e nas grelhas.',
-      products: [{ brand: 'Inozetek', item: 'Vinil Cinza Fosco' }],
+      services: ['vinyl'],
+      brands: ['Inozetek'],
       featured: false,
       published: true,
       completedAt: on('2026-08-22'),
@@ -211,7 +212,8 @@ async function seed() {
       model: 'Armazém logístico · 600 m²',
       description:
         'Piso epóxi com sistema de flocos decorativos e camada de desgaste em poliaspártico, pensado para tráfego de empilhadores.',
-      products: [{ brand: 'Xtreme Polishing Systems', item: 'Flake System Granite' }],
+      services: ['flake-epoxy'],
+      brands: ['Xtreme Polishing Systems'],
       featured: false,
       published: true,
       completedAt: on('2026-08-15'),
@@ -221,7 +223,8 @@ async function seed() {
       category: 'Automotive',
       model: 'Porsche 911 Carrera S',
       description: 'Correção de pintura em duas fases, proteção cerâmica e tratamento completo do interior em pele.',
-      products: [{ brand: 'Xtreme Polishing Systems', item: 'Ceramic Coating 9H' }],
+      services: ['detailing', 'ceramic'],
+      brands: ['Xtreme Polishing Systems'],
       featured: false,
       published: true,
       completedAt: on('2026-08-10'),
@@ -231,7 +234,8 @@ async function seed() {
       category: 'Automotive',
       model: 'Tesla Model 3',
       description: 'Ainda não publicado — não pode aparecer na app.',
-      products: [],
+      services: ['ppf'],
+      brands: [],
       featured: true,
       featuredOrder: 3,
       published: false,

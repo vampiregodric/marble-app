@@ -6,9 +6,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
 import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
-import { usePublishedWorks } from '../data/works';
+import { hasService, usePublishedWorks } from '../data/works';
 import { CATEGORIES } from '../data/categories';
-import { WorkCategory } from '../firebase/models';
+import { WorkCategory, WorkServiceId, workServicesOf } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -18,20 +18,37 @@ type Filter = typeof ALL | WorkCategory;
 
 // Portfólio público: todos os trabalhos publicados no Firestore, filtrados por
 // categoria em memória. Pode chegar aqui já filtrado (cartão de departamento
-// no Início → params.category).
+// no Início → params.category). Dentro de uma categoria há um segundo
+// filtro, pelo sistema/serviço (Secção 13: `works.services`) — só aparecem
+// os que têm trabalhos publicados; em "Todos" não há segunda fila.
 export default function PortfolioScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, 'Portfolio'>>();
   const [active, setActive] = useState<Filter>(ALL);
+  const [service, setService] = useState<WorkServiceId | null>(null);
   const screenW = useAppWidth();
   const cardW = (screenW - 36 - 10) / 2;
   const { data: works, loading, error } = usePublishedWorks();
 
+  // Mudar de categoria limpa o serviço (as listas são por categoria).
+  const choose = (c: Filter) => {
+    setActive(c);
+    setService(null);
+  };
+
   useEffect(() => {
-    if (route.params?.category) setActive(route.params.category);
+    if (route.params?.category) {
+      setActive(route.params.category);
+      setService(null);
+    }
   }, [route.params]);
 
-  const filtered = useMemo(() => (active === ALL ? works : works.filter((w) => w.category === active)), [works, active]);
+  const inCategory = useMemo(() => (active === ALL ? works : works.filter((w) => w.category === active)), [works, active]);
+  const serviceOptions = useMemo(
+    () => (active === ALL ? [] : workServicesOf(active).filter((s) => inCategory.some((w) => hasService(w, s.id)))),
+    [active, inCategory]
+  );
+  const filtered = useMemo(() => (service ? inCategory.filter((w) => hasService(w, service)) : inCategory), [inCategory, service]);
 
   const subtitle = loading
     ? 'A carregar…'
@@ -52,14 +69,42 @@ export default function PortfolioScreen() {
         style={styles.chipsRow}
         contentContainerStyle={styles.chipsRowContent}
       >
-        {[ALL, ...CATEGORIES.map((c) => c.key)].map((c) => (
-          <Pressable key={c} onPress={() => setActive(c as Filter)} style={[styles.chip, active === c && styles.chipActive]}>
-            <Text style={[styles.chipText, active === c && styles.chipTextActive]}>
-              {CATEGORIES.find((m) => m.key === c)?.label ?? c}
-            </Text>
-          </Pressable>
-        ))}
+        {[ALL, ...CATEGORIES.map((c) => c.key)].map((c) => {
+          const label = CATEGORIES.find((m) => m.key === c)?.label ?? c;
+          return (
+            <Pressable
+              key={c}
+              onPress={() => choose(c as Filter)}
+              style={[styles.chip, active === c && styles.chipActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active === c }}
+              accessibilityLabel={label}
+            >
+              <Text style={[styles.chipText, active === c && styles.chipTextActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
+
+      {serviceOptions.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subRow} contentContainerStyle={styles.chipsRowContent}>
+          {serviceOptions.map((s) => {
+            const on = service === s.id;
+            return (
+              <Pressable
+                key={s.id}
+                onPress={() => setService(on ? null : s.id)}
+                style={[styles.subChip, on && styles.subChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={s.label}
+              >
+                <Text style={[styles.subChipText, on && styles.subChipTextActive]}>{s.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
 
       {loading ? (
         <LoadingState />
@@ -67,10 +112,16 @@ export default function PortfolioScreen() {
         <ErrorState error={error} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={active === ALL ? 'Ainda não há trabalhos publicados.' : 'Ainda não há trabalhos nesta categoria.'}
+          title={
+            active === ALL
+              ? 'Ainda não há trabalhos publicados.'
+              : service
+                ? 'Ainda não há trabalhos com este serviço.'
+                : 'Ainda não há trabalhos nesta categoria.'
+          }
           description="Assim que a equipa publicar um trabalho novo, aparece aqui."
-          actionLabel={active === ALL ? undefined : 'Ver todos'}
-          onAction={active === ALL ? undefined : () => setActive(ALL)}
+          actionLabel={active === ALL ? undefined : service ? 'Ver toda a categoria' : 'Ver todos'}
+          onAction={active === ALL ? undefined : service ? () => setService(null) : () => choose(ALL)}
         />
       ) : (
         <ScrollView style={styles.gridScroll} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
@@ -112,6 +163,13 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.gold, borderColor: colors.gold },
   chipText: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.8, color: colors.inkMuted, textTransform: 'uppercase' },
   chipTextActive: { color: '#0b0a08', fontFamily: fonts.bodyBold },
+  // Segunda fila (Secção 13): sistema/serviço dentro da categoria. Mais
+  // discreta do que a primeira — contorno dourado em vez de fundo cheio.
+  subRow: { flexGrow: 0, flexShrink: 0, height: 32, marginTop: 8, paddingLeft: 20 },
+  subChip: { alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.hairline, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 5 },
+  subChipActive: { borderColor: colors.gold, backgroundColor: 'rgba(198,161,91,0.14)' },
+  subChipText: { fontFamily: fonts.body, fontSize: 11, color: colors.inkMuted },
+  subChipTextActive: { fontFamily: fonts.bodyBold, color: colors.goldBright },
   gridScroll: { flex: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 18, paddingBottom: 32 },
   card: { height: 148, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },

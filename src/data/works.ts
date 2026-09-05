@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { collection, doc, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { COLLECTIONS, Work } from '../firebase/models';
+import { COLLECTIONS, Work, WorkServiceId, workServiceLabel } from '../firebase/models';
 import { useFirestoreDoc, useFirestoreList, DocState, ListState } from './firestoreHooks';
 
 // Leitura do portfólio. As queries em `works` TÊM de incluir
@@ -42,6 +42,44 @@ export function useFeaturedWorks(max = 5): ListState<Work> {
 export function useWork(workId: string | undefined): DocState<Work> {
   const ref = useMemo(() => (workId ? doc(worksCol, workId) : null), [workId]);
   return useFirestoreDoc<Work>(ref);
+}
+
+// Uma tag do Detalhe (Secção 13). `service` = sistema/serviço da lista fixa
+// (WORK_SERVICES), `brand` = marca em texto, `product` = "marca · item" dos
+// trabalhos anteriores à Secção 13 ainda por migrar.
+export type WorkTag = {
+  key: string;
+  kind: 'service' | 'brand' | 'product';
+  text: string;
+  detail?: string;
+};
+
+// Tags de um trabalho pela ordem pedida pelo Fábio: sistema/serviço
+// primeiro, marcas depois. Sem tags, cai em `products` (legado) — assim um
+// trabalho antigo nunca fica sem chips até ser migrado
+// (scripts/migrate-work-tags.mjs, ou o formulário do backoffice ao guardar).
+export function workTags(work: Work): WorkTag[] {
+  const services = (work.services ?? []).filter((id): id is WorkServiceId => typeof id === 'string' && id.length > 0);
+  const brands = (work.brands ?? []).map((b) => (typeof b === 'string' ? b.trim() : '')).filter(Boolean);
+  if (services.length > 0 || brands.length > 0) {
+    return [
+      ...services.map((id): WorkTag => ({ key: `s-${id}`, kind: 'service', text: workServiceLabel(id) })),
+      ...brands.map((b, i): WorkTag => ({ key: `b-${i}-${b}`, kind: 'brand', text: b })),
+    ];
+  }
+  return (work.products ?? [])
+    .filter((p) => p && (p.brand?.trim() || p.item?.trim()))
+    .map((p, i): WorkTag => ({
+      key: `p-${i}-${p.brand}`,
+      kind: 'product',
+      text: p.brand?.trim() || p.item.trim(),
+      detail: p.brand?.trim() && p.item?.trim() ? p.item.trim() : undefined,
+    }));
+}
+
+// Trabalhos que têm um dado sistema/serviço (filtro secundário do Portfólio).
+export function hasService(work: Work, id: WorkServiceId): boolean {
+  return Array.isArray(work.services) && work.services.includes(id);
 }
 
 // Um item da galeria do Detalhe, já normalizado para os componentes

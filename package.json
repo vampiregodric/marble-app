@@ -45,6 +45,7 @@
     "check:firestore": "node scripts/check-firestore.mjs",
     "check:firestore:auth": "node scripts/check-firestore-auth.mjs",
     "checkup:admin": "node scripts/checkup-admin.mjs",
+    "works:migrate-tags": "node scripts/migrate-work-tags.mjs",
     "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
     "dev-token": "node scripts/dev-token.mjs",
     "functions:build": "npm --prefix functions run build",

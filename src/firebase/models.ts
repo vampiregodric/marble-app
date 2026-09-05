@@ -234,10 +234,90 @@ export interface Vehicle {
   updatedAt?: Timestamp;
 }
 
+// "Produto usado" em texto livre — o modelo ANTERIOR à Secção 13. Só existe
+// em trabalhos antigos ainda não migrados (scripts/migrate-work-tags.mjs);
+// os novos levam `services` + `brands`. A app mostra-o quando não há tags.
 export interface WorkProduct {
   brand: string;
   item: string;
 }
+
+// ---------- Tags nos trabalhos (Secção 13) ----------
+
+// O sistema (chãos) ou serviço (carros, gráfico) de um trabalho, escolhido
+// de uma lista fixa por categoria — pedido do Fábio (2026-09-04): "nos
+// trabalhos de epoxy deve dar para meter 2 tags, a marca e o sistema; nos
+// carros o serviço e depois a marca/marcas". Guarda-se o `id` (estável, é
+// por ele que a Secção 12 traduz); o rótulo vem de WORK_SERVICES. A lista
+// vive no código dos DOIS projetos, igual — acrescentar um sistema é uma
+// linha aqui (e a cópia no backoffice) e uma versão nova da app.
+export type WorkServiceId =
+  // Automotive
+  | 'ppf'
+  | 'ppf-colour'
+  | 'vinyl'
+  | 'detailing'
+  | 'ceramic'
+  | 'starlight'
+  // Epoxy Floors (os sistemas da Xtreme Polishing Systems)
+  | 'metallic-epoxy'
+  | 'solid-colour-epoxy'
+  | 'quartz-epoxy'
+  | 'flake-epoxy'
+  // Graphic
+  | 'brand-identity'
+  | 'vehicle-graphics'
+  | 'signage'
+  | 'print'
+  | 'social-media';
+
+export interface WorkService {
+  id: WorkServiceId;
+  category: WorkCategory;
+  label: string;
+}
+
+export const WORK_SERVICES: WorkService[] = [
+  { id: 'ppf', category: 'Automotive', label: 'PPF' },
+  { id: 'ppf-colour', category: 'Automotive', label: 'PPF colorido' },
+  { id: 'vinyl', category: 'Automotive', label: 'Vinil' },
+  { id: 'detailing', category: 'Automotive', label: 'Detailing' },
+  { id: 'ceramic', category: 'Automotive', label: 'Proteção cerâmica' },
+  { id: 'starlight', category: 'Automotive', label: 'Teto estrelado' },
+  { id: 'metallic-epoxy', category: 'Epoxy Floors', label: 'Metallic Epoxy' },
+  { id: 'solid-colour-epoxy', category: 'Epoxy Floors', label: 'Solid Colour Epoxy' },
+  { id: 'quartz-epoxy', category: 'Epoxy Floors', label: 'Quartz Epoxy' },
+  { id: 'flake-epoxy', category: 'Epoxy Floors', label: 'Flake Epoxy' },
+  { id: 'brand-identity', category: 'Graphic', label: 'Identidade visual' },
+  { id: 'vehicle-graphics', category: 'Graphic', label: 'Decoração de viaturas' },
+  { id: 'signage', category: 'Graphic', label: 'Montras e sinalética' },
+  { id: 'print', category: 'Graphic', label: 'Impressão' },
+  { id: 'social-media', category: 'Graphic', label: 'Redes sociais' },
+];
+
+// Como a tag se chama em cada categoria (formulário do backoffice, Portfólio).
+export const WORK_SERVICE_KIND: Record<WorkCategory, string> = {
+  Automotive: 'Serviço',
+  'Epoxy Floors': 'Sistema',
+  Graphic: 'Serviço',
+};
+
+export function workServicesOf(category: WorkCategory | undefined): WorkService[] {
+  return WORK_SERVICES.filter((s) => s.category === category);
+}
+
+export function workServiceLabel(id: string): string {
+  return WORK_SERVICES.find((s) => s.id === id)?.label ?? id;
+}
+
+// Marcas sugeridas no formulário do backoffice (junta-se às já usadas
+// noutros trabalhos). Texto livre, nomes próprios — não se traduzem.
+export const WORK_BRAND_SUGGESTIONS = ['Xtreme Polishing Systems', 'Inozetek', 'Avery Dennison'];
+
+export const WORK_TAG_LIMITS = {
+  brandsMax: 8,
+  brandMax: 60,
+} as const;
 
 // Um item da galeria de um trabalho (pedido do Fábio, 2026-09-03: um
 // trabalho pode ter várias fotos e vídeo). A equipa carrega-os no backoffice
@@ -298,7 +378,15 @@ export interface Work {
   // Galeria completa, mostrada no Detalhe (Secção 5b: deslizável no topo e
   // visualizador em ecrã inteiro com vídeo). Ausente ou vazio = só a capa.
   media?: WorkMedia[];
-  products: WorkProduct[];
+  // Tags (Secção 13): o sistema/serviço (ids de WORK_SERVICES da mesma
+  // `category`) e as marcas usadas (texto). Chips no Detalhe pela ordem
+  // serviço → marcas (pedido do Fábio); filtro secundário no Portfólio.
+  // O backoffice exige pelo menos um serviço para publicar.
+  services?: WorkServiceId[];
+  brands?: string[];
+  // Legado: "produtos usados" de antes da Secção 13. O backoffice apaga-o
+  // ao guardar um trabalho com tags; a app só o mostra sem `services`/`brands`.
+  products?: WorkProduct[];
   // Curadoria manual da equipa para o carrossel do Início (ver SPEC.md).
   featured: boolean;
   // Posição no carrossel do Início (0 = primeiro). Definida no ecrã

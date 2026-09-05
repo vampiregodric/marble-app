@@ -8,7 +8,7 @@ import WorkGallery from '../components/WorkGallery';
 import MediaViewer from '../components/MediaViewer';
 import { EmptyState, ErrorState } from '../components/ListState';
 import { BackIcon, ShareIcon, CalendarIcon, CarIcon } from '../components/Icons';
-import { galleryItems, useWork } from '../data/works';
+import { galleryItems, useWork, workTags } from '../data/works';
 import { categoryFullName } from '../data/categories';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate } from '../utils/dates';
@@ -30,6 +30,8 @@ export default function WorkDetailScreen() {
   // Proporção 4:3 para as fotos respirarem (decisão do Fábio, Secção 5b).
   const heroH = Math.round((heroW * 3) / 4);
   const items = useMemo(() => (work ? galleryItems(work) : []), [work]);
+  // Secção 13: sistema/serviço primeiro, marcas depois (pedido do Fábio).
+  const tags = useMemo(() => (work ? workTags(work) : []), [work]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   return (
@@ -97,12 +99,16 @@ export default function WorkDetailScreen() {
 
             {work.description ? <Text style={styles.desc}>{work.description}</Text> : null}
 
-            {work.products?.length > 0 && (
-              <View style={styles.products}>
-                {work.products.map((p, i) => (
-                  <View key={`${p.brand}-${i}`} style={styles.chip}>
-                    <Text style={styles.chipBrand}>{p.brand}</Text>
-                    {p.item ? <Text style={styles.chipItem}> · {p.item}</Text> : null}
+            {tags.length > 0 && (
+              <View style={styles.tags} accessibilityRole="list">
+                {tags.map((t) => (
+                  <View
+                    key={t.key}
+                    style={[styles.chip, t.kind === 'service' && styles.chipService]}
+                    accessibilityLabel={t.kind === 'service' ? `Serviço: ${t.text}` : t.kind === 'brand' ? `Marca: ${t.text}` : `${t.text}${t.detail ? ` · ${t.detail}` : ''}`}
+                  >
+                    <Text style={t.kind === 'service' ? styles.chipServiceText : styles.chipBrand}>{t.text}</Text>
+                    {t.detail ? <Text style={styles.chipItem}> · {t.detail}</Text> : null}
                   </View>
                 ))}
               </View>
@@ -139,9 +145,13 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkFaint },
   desc: { paddingHorizontal: 18, marginTop: 14, fontFamily: fonts.body, fontSize: 12, lineHeight: 19, color: colors.inkMuted },
-  products: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 18, marginTop: 16, gap: 8, paddingBottom: 18 },
-  chip: { flexDirection: 'row', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.hairline, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  chipBrand: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.goldBright },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 18, marginTop: 16, gap: 8, paddingBottom: 18 },
+  chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.hairline, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  // O sistema/serviço distingue-se da marca: contorno dourado e maiúsculas
+  // (como o selo da categoria), a marca fica em texto normal.
+  chipService: { borderColor: colors.hairlineStrong, backgroundColor: 'rgba(198,161,91,0.10)' },
+  chipServiceText: { fontFamily: fonts.eyebrow, fontSize: 9.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
+  chipBrand: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.ink },
   chipItem: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
   ctaBar: { padding: 18, borderTopWidth: 1, borderTopColor: colors.hairline },
   ctaBtn: { backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
