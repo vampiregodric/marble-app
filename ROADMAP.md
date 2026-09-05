@@ -885,8 +885,14 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
   criada ainda; Blaze, segredos e FCM por fazer.
 - *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
-  índices no prod se tiverem mudado; deploy das Functions no prod (`CLOUDINARY_CLEANUP=on`
-  quando os segredos existirem); nova dev build ("Marble Dev"); build de
+  índices no prod se tiverem mudado; deploy das Functions no prod
+  (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
+  `RESEND_API_KEY` no Secret Manager do prod, depois `QUOTE_EMAIL=on` e
+  `BACKOFFICE_URL` do backoffice de produção em `functions/.env` — declarar
+  o segredo sem valor faz o deploy falhar, daí os interruptores); App Check
+  nos pedidos de orçamento (anotado pela Secção 7); traduzir os templates
+  de email do Firebase Auth nos dois projetos (o "Password reset" é também
+  o "define a tua password" das contas criadas por um pedido); nova dev build ("Marble Dev"); build de
   produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
   `eas submit`; conta de demonstração no prod para os revisores; rever as
   linhas **[Secção 7/8]** de `data-safety.md`/`app-privacy.md` (o que os

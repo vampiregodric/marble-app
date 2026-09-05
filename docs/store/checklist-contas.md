@@ -86,6 +86,25 @@ espera um minuto e repete — é a API a ligar-se. Depois disto o Claude pode
 fazer o deploy das Functions no prod (pede-te confirmação) e ligar
 `CLOUDINARY_CLEANUP=on`.
 
+O preset unsigned `marble-requests` (fotos dos pedidos de orçamento, Secção
+7) vive na mesma conta Cloudinary que o dev, por isso já serve o prod — só
+confirma na consola do Cloudinary que existe.
+
+### 6b. Chave do Resend no prod (emails dos pedidos de orçamento) — 5 min, depois do passo 5
+
+A Secção 7 envia por email cada pedido de orçamento (à equipa e a
+confirmação ao cliente) através do Resend, com o domínio marble.pt
+verificado lá. No prod é preciso o mesmo segredo:
+
+```
+npx.cmd firebase-tools functions:secrets:set RESEND_API_KEY --project prod
+```
+
+(a chave está em https://resend.com → API Keys; a mesma do dev serve). Só
+depois disto o Claude muda `QUOTE_EMAIL=off` → `on` e `BACKOFFICE_URL` para
+o site do backoffice de produção em `functions/.env` (parte 2). Sem a chave
+o pedido chega na mesma ao Painel e à app; só o email fica por enviar.
+
 ### 7. Chave de push (FCM V1) do prod no EAS — 10 min
 
 1. https://console.firebase.google.com/project/marble-studios-prod/settings/serviceaccounts/adminsdk
@@ -135,6 +154,14 @@ Falha 2 a 3 vezes na primeira vez por propagação de APIs — repetir resolve
   confirmar com o dono; e **revisão por advogado** dos dois textos. Se
   mudarem: subir `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
 - **iPhone** para testar a build iOS no TestFlight antes de submeter.
+- **Emails do Firebase Auth em português** (10 min, nos dois projetos):
+  consola Firebase → Authentication → Templates. O template "Password
+  reset" é também o email "define a tua password" das contas criadas a
+  partir de um pedido de orçamento (Secção 7), por isso vale mesmo a pena
+  traduzi-lo antes do lançamento.
+- **App Check** (anti-spam a sério nos pedidos de orçamento): o Claude
+  configura na parte 2 (Play Integrity no Android, App Attest/DeviceCheck no
+  iOS, reCAPTCHA na web); precisa das apps registadas nas lojas.
 
 ## O que o Claude já fez / faz sozinho (sem contas)
 

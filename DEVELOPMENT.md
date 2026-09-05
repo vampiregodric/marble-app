@@ -884,10 +884,11 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
 | App Android `pt.marble.app` | registada; `google-services.prod.json` no EAS |
 | Hosting `marble-studios-app` | publicado (4 páginas) |
 | Blaze | **por fazer (Fábio)** — ligar o projeto à "My Billing Account" |
-| Segredos do Cloudinary | **por fazer (Fábio)** |
-| Cloud Functions | **por publicar** (depois do Blaze): `deploy --only functions --project prod`, com `CLOUDINARY_CLEANUP=on` depois dos segredos |
+| Segredos do Cloudinary e do Resend | **por fazer (Fábio)** — `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY` |
+| Cloud Functions | **por publicar** (depois do Blaze): `deploy --only functions --project prod`; depois dos segredos, `CLOUDINARY_CLEANUP=on`, `QUOTE_EMAIL=on` e `BACKOFFICE_URL` do prod em `functions/.env` |
 | Chave FCM V1 do prod no EAS | **por fazer (Fábio)** |
-| Auth | Email/Password ativo; templates de email por defeito em inglês — traduzir em Authentication → Templates |
+| App Check (pedidos de orçamento) | **por fazer** (parte 2, precisa das apps nas lojas) |
+| Auth | Email/Password ativo; templates de email por defeito em inglês — traduzir em Authentication → Templates (o "Password reset" é também o "define a tua password" das contas criadas por um pedido de orçamento) |
 | Dados | vazio (o seed recusa chaves do prod, de propósito) |
 
 ## Onde vive o projeto (e porquê)
