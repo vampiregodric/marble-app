@@ -604,7 +604,8 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   marca `followUp.checkupConfirmedAt` nos trabalhos ativos do carro/chão —
   o job diário nunca chega a mandar ligar. Ao cancelar, `checkupStatus` →
   `'declined'`; ao voltar a pedir, → `'pending'`.
-- **O papel da equipa até à Secção 7b** (página "Checkups" no backoffice):
+- **O papel da equipa na linha de comandos** (a página Checkups do
+  backoffice faz o mesmo desde a Secção 7b; o script fica para testes):
   `npm run checkup:admin -- ./serviceAccountKey.dev.json list|show <id>|approve <id> [--time 10:30] [--note "…"]|propose <id> --day AAAA-MM-DD --period morning|afternoon [--time] [--note]|done <id>|reset <id>|availability [--weekly "mon:morning,afternoon;sat:morning" --closed 2026-09-15 --weeks 3 --min 1]`.
   Escreve exatamente o que o backoffice vai escrever; a Function publicada
   no dev faz o resto (o cliente recebe o alerta e o push). `reset` limpa o
@@ -618,11 +619,23 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   simula o trigger. Nos testes no browser, um clique programático em
   vários chips e no botão no mesmo instante usa os valores anteriores (o
   React ainda não re-renderizou) — clica, espera, e só depois submete.
-- **Backoffice (Secção 7b, por fazer):** página "Checkups" com pedidos a
-  aprovar (Aprovar / Propor outro dia), agendados ("Marcar em dia") e o
-  editor de disponibilidade; `models.ts` do backoffice sincronizado
-  (`CheckupRequest`, `CheckupAvailability`, `CheckupStatus` `'declined'`,
-  `CHECKUP.declined` em `utils/format.ts`). Ver ROADMAP.md.
+- **Backoffice (Secção 7b, feito 2026-09-05):** página **Checkups**
+  (`/checkups`) com três blocos — A aprovar (Aprovar com hora opcional e
+  nota / Propor outro dia, só dias abertos na disponibilidade a partir de
+  amanhã, com saída avisada), Agendados (Marcar em dia / Propor outro dia;
+  dias já passados com selo "Por fechar") e Disponibilidade (editor de
+  `settings/checkups`, grava com "Guardar") — mais "Cancelados pelo
+  cliente", a coluna "Pedido na app" no Painel, "Ver em Checkups" nos
+  alertas internos e na ficha do cliente, e `'declined'` = "Cancelou o
+  checkup". As escritas (`marble-backoffice/src/data/writes.ts`:
+  `decideCheckupRequest`, `proposeCheckupDay`, `markCheckupDone`,
+  `saveCheckupAvailability`) são as do `checkup-admin.mjs`; `models.ts`
+  copiado. Detalhe no README do backoffice, "Checkups (Secção 7b)".
+  **Por corrigir aqui (Function, pequeno):** quando a equipa aprova uma
+  proposta ("Aprovar na mesma"), `handleVehicleUpdated` vê
+  `proposed → approved` e cria o alerta interno "confirmou o checkup" como
+  se fosse o cliente — distinguir por `decidedAt` (mudou = equipa) vs
+  `confirmedAt` (cliente).
 
 ## Páginas de departamento (Secção 9)
 

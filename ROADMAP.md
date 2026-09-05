@@ -543,7 +543,8 @@ uso e pode sair na Secção 7b.
 App Check.
 
 ### Secção 7b — Backoffice: checkups (aprovar, propor outro dia, disponibilidade)
-**Estado:** Por fazer
+**Estado:** Feito no backoffice (2026-09-05), verificado e publicado no
+dev. Ver "Nota" no fim desta secção.
 **Depende de:** Secção 7 e Secção 8 no master (é no checkout do
 backoffice, que era da 7). **Pode correr em paralelo com a Secção 12 —
 Inglês**: não toca na app, só no backoffice (e na cópia de `models.ts`).
@@ -587,6 +588,42 @@ na app e a equipa recebe alerta interno. Ver DEVELOPMENT.md,
 "Agendamento de checkup", e `functions/src/handlers.ts` →
 `handleVehicleUpdated`. Para testar: app web (`npm run dev-token`) na
 conta de teste + a página nova; ou `npm run checkup:admin -- <chave> list`.
+**Nota (2026-09-05):** construído no backoffice (commit "Secção 7b").
+Página **Checkups** (`src/pages/CheckupsPage.tsx`, rota `/checkups`, item
+na barra lateral com "N a aprovar"): **A aprovar** — pedidos `pending` e
+propostas `proposed`, cartão com cliente + telemóvel, carro/chão,
+dia/período, nota; **Aprovar** (hora opcional + nota) →
+`decideCheckupRequest`; **Propor outro dia** → `proposeCheckupDay`, chips
+só com os dias abertos na disponibilidade a partir de amanhã, com saída
+"fora da disponibilidade" avisada; "Aprovar na mesma" numa proposta = o
+cliente confirmou por telefone. **Agendados** — por dia/hora, com notas,
+**Marcar em dia** → `markCheckupDone`, **Propor outro dia**; dias já
+passados no topo com selo "Por fechar". **Disponibilidade** — editor de
+`settings/checkups` (grelha seg–dom × manhã/tarde, dias fechados, semanas
+1–12, antecedência 0–30), tudo local até "Guardar" →
+`saveCheckupAvailability` (setDoc merge com os 7 dias explícitos).
+**Cancelados pelo cliente** (`declined`), só para se saber. Painel: coluna
+"Pedido na app" nos checkups pendentes e "Ver em Checkups" nos alertas
+internos (`/checkups#v-<id>`, com destaque); ficha do cliente e
+VehicleModal com o estado do pedido e `'declined'` = "Cancelou o
+checkup". Escritas em `src/data/writes.ts`, iguais às do
+`checkup-admin.mjs`; `src/utils/checkups.ts` espelha
+`src/data/checkups.ts` da app (opções e textos). `models.ts` copiado; o
+`'checkup'` de `RequestType` ficou porque vive no modelo da app e em
+`functions/src/texts.ts` — o backoffice já não o usa; tirar numa secção
+da app. **Decisões do Fábio (2026-09-05):** dias propostos só entre os
+abertos; hora opcional ao aprovar; agendados de dias passados destacados;
+disponibilidade inicial seg–sex manhã e tarde (seed) mantida.
+**Verificado** no dev (worktree, porta 5181, conta de teste,
+`vehicle-example`): propor → "Proposta de checkup" no cliente; aprovar →
+"Checkup agendado"; marcar em dia; cancelar (Admin SDK) → `declined` em
+todo o lado; "Por fechar"; guardar/repor disponibilidade (confirmado com
+`checkup:admin availability`); estados repostos no fim. **Para a
+Function (app, pequeno):** quando a equipa aprova uma proposta,
+`handleVehicleUpdated` vê `proposed → approved` e cria também o alerta
+interno "confirmou o checkup" como se fosse o cliente — distinguir por
+`decidedAt` (mudou = equipa) vs `confirmedAt` (cliente). Detalhe no
+README do backoffice, "Checkups (Secção 7b)".
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
