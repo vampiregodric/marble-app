@@ -682,8 +682,9 @@ Epoxy, Quartz Epoxy, Flake Epoxy); nos carros, primeiro o **serviço**
 `works.products[]` (`{ brand, item }`, texto livre no formulário do
 backoffice, chips "marca · item" no Detalhe) aguenta isto por convenção,
 mas o pedido é um campo próprio com lista fixa — toca no formulário de
-trabalhos do backoffice (Secção 7) e no Detalhe/Portfólio da app. Fica
-como secção pequena, **depois de a Secção 7 entrar no master**.
+trabalhos do backoffice e no Detalhe/Portfólio da app. Ficou como
+**Secção 13 — Tags nos trabalhos: marca e sistema/serviço** (a 7 já
+entrou no master, o backoffice está livre).
 
 ### Secção 11 — Preparação para lançamento nas lojas
 **Estado:** Por fazer
@@ -724,7 +725,7 @@ e 12 estarem no master.
 
 ### Secção 12 — Inglês
 **Estado:** Por fazer
-**Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
+**Depende de:** Secções 7, 8, 10 e 13 no master (toca em todos os ecrãs —
 **nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11
 **Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
 Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
@@ -735,6 +736,38 @@ erros, `src/data/departmentContent.ts` (`CONTENT.en`, estrutura já pronta),
 é de um texto). Pesar `expo-localization` + um módulo `t()` simples em vez
 de uma biblioteca de i18n completa. Os alertas criados pelo backoffice e
 pelas Functions são escritos pela equipa em PT — decidir se ficam assim.
+
+### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
+**Estado:** Por fazer
+**Depende de:** Secção 7 no master (feito — o backoffice está livre).
+**Nunca em paralelo com a Secção 12 — Inglês** (as duas tocam no
+Detalhe e no Portfólio): esta entra no master antes de a 12 arrancar.
+Pode correr ao lado da 8 e da 11 (parte 1).
+**Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
+de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
+sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);
+cada trabalho de carro leva primeiro o **serviço** (PPF, vinil, detailing,
+proteção cerâmica, teto estrelado…) e depois a marca ou marcas usadas
+(Inozetek e outras). Gráfico segue a mesma lógica (serviço: identidade,
+decoração de viaturas, montras e sinalética, impressão, redes sociais).
+**Ponto de partida:** hoje `works.products[]` (`{ brand, item }`, texto
+livre no formulário de trabalhos do backoffice, `WorkFormPage.tsx`) já sai
+no Detalhe como chips "marca · item" (`WorkDetailScreen.tsx`). O pedido é
+um campo próprio com **lista fixa por categoria** para o sistema/serviço,
+e as marcas à parte. Proposta a validar com o Fábio (escolha múltipla):
+`works.services: string[]` (lista fixa por `category`, no código dos dois
+projetos, iguais) + `works.brands: string[]` (texto livre com sugestões:
+Xtreme Polishing Systems, Inozetek…), mantendo `products[]` só para
+compatibilidade com os trabalhos já criados (ou migrando-os no seed);
+chips no Detalhe pela ordem "serviço → marcas"; no Portfólio, decidir se o
+sistema/serviço entra como filtro secundário dentro da categoria. Toca em:
+backoffice (`WorkFormPage.tsx`, `src/firebase/models.ts`, lista fixa),
+app (`models.ts`, `WorkDetailScreen.tsx`, `PortfolioScreen.tsx`,
+`scripts/seed-firestore.mjs`), e `firestore.rules` **só no bloco `works`**
+se as regras validarem campos (a Secção 8 mexe no bloco `vehicles`). Não
+toca em ProfileScreen, vehicles, `functions/`, `app.json`, `eas.json`,
+`assets/`, `docs/`. Pré-visualização web: `marble-app-web-8082` (a 8082
+ficou livre com a 7); backoffice: `marble-backoffice-web` (5180).
 
 ---
 
