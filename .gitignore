@@ -33,17 +33,22 @@ yarn-error.*
 # local env files
 .env*.local
 
-# env files with real Firebase config — live only on each machine.
-# Template with the variable names: .env.example
+# .env (config Firebase de DEV) vive só em cada máquina. O .env.production
+# VAI para o git desde a Secção 11: os valores são públicos (o Firebase
+# inclui-os no bundle do cliente) e o EAS Build só vê ficheiros que o git
+# conhece. Modelo com os nomes das variáveis: .env.example
 .env
-.env.production
 
 # Firebase Admin service-account keys (real secrets — never commit)
 *-firebase-adminsdk-*.json
 serviceAccount*.json
 
-# Firebase service account keys (usadas pelo script de seed) — NUNCA commitar
+# Firebase service account keys (seed, jobs locais, FCM V1, eas submit) — NUNCA commitar
 serviceAccountKey*.json
+
+# google-services.json do PROD (o da raiz é o do dev). Vai para o EAS como
+# variável de ficheiro GOOGLE_SERVICES_JSON — ver DEVELOPMENT.md, Secção 11.
+google-services.prod.json
 
 # typescript
 *.tsbuildinfo
@@ -62,6 +67,7 @@ credentials.json
 # functions/.env NÃO tem segredos (cloud name público + interruptores) — vai para o git
 !functions/.env
 
-# Logs da Firebase CLI
+# Logs e cache da Firebase CLI (o deploy do Hosting cria .firebase/)
 firebase-debug.log
 firebase-debug.*.log
+.firebase/

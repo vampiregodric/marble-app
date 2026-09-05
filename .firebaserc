@@ -3,5 +3,14 @@
     "dev": "marble-studios-dev",
     "prod": "marble-studios-prod",
     "default": "marble-studios-dev"
+  },
+  "targets": {
+    "marble-studios-prod": {
+      "hosting": {
+        "legal": [
+          "marble-studios-app"
+        ]
+      }
+    }
   }
 }
