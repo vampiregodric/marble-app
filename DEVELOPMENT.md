@@ -692,8 +692,8 @@ Ambos foram criados em **production mode** (tudo negado por defeito) — não
 há janela de 30 dias de base de dados aberta. As regras reais estão em
 `firestore.rules` e os índices em `firestore.indexes.json`; publicados no
 **dev** (Secção 4, 2026-09-03) e no **prod** (Secção 11, 2026-09-05, com a
-versão do master desse dia). Sempre que as regras ou os índices mudarem
-(Secções 7 e 8 mudam-nos), o prod tem de ser republicado antes do
+versão do master desse dia, que já inclui as Secções 7 e 8). Sempre que as
+regras ou os índices mudarem, o prod tem de ser republicado antes do
 lançamento — é um dos passos da parte 2 da Secção 11.
 
 O Firebase CLI já está autenticado nesta máquina (`v.godric@gmail.com`).
@@ -880,7 +880,7 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
 
 | | Estado |
 |---|---|
-| Regras e índices do Firestore | publicados (versão do master de 2026-09-04; republicar na parte 2, depois das Secções 7 e 8) |
+| Regras e índices do Firestore | publicados (versão do master de 2026-09-05, já com as Secções 7 e 8; republicar na parte 2 se mudarem entretanto) |
 | App Android `pt.marble.app` | registada; `google-services.prod.json` no EAS |
 | Hosting `marble-studios-app` | publicado (4 páginas) |
 | Blaze | **por fazer (Fábio)** — ligar o projeto à "My Billing Account" |

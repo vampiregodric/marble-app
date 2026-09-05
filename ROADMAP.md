@@ -863,7 +863,9 @@ plugin `expo-splash-screen` instalado e configurado), `app.config.js`
 (valores públicos; o EAS Build só vê ficheiros do git), `.gitignore`
 (`google-services.prod.json`). **Firebase:** app `pt.marble.app.dev` no dev
 (o `google-services.json` da raiz tem os dois clientes); no prod, regras e
-índices publicados (versão do master de 2026-09-04), app Android
+índices publicados (republicados depois de juntar o master de 2026-09-05,
+já com as Secções 7 e 8; a `LEGAL_VERSION` 2026-09-05 da Secção 7 também
+já está no site), app Android
 `pt.marble.app` registada e o seu ficheiro carregado no EAS como variável
 secreta `GOOGLE_SERVICES_JSON` (ambiente `production`); site de Hosting
 `marble-studios-app` criado e `docs/` publicado (target `legal`;
@@ -882,8 +884,8 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   Account") → segredos do Cloudinary no prod → chave FCM V1 do prod no EAS
   (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
   criada ainda; Blaze, segredos e FCM por fazer.
-- *Do Claude, depois de 7, 8, 10 e 12 no master:* republicar regras e
-  índices no prod; deploy das Functions no prod (`CLOUDINARY_CLEANUP=on`
+- *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
+  índices no prod se tiverem mudado; deploy das Functions no prod (`CLOUDINARY_CLEANUP=on`
   quando os segredos existirem); nova dev build ("Marble Dev"); build de
   produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
   `eas submit`; conta de demonstração no prod para os revisores; rever as
