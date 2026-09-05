@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { RequestPhoto } from '../firebase/models';
+import { S } from '../i18n';
 
 // Ficheiros que a app escreve: a foto de perfil do cliente (Secção 5b) e,
 // desde a Secção 7, as fotos que o cliente junta a um pedido de orçamento
@@ -49,7 +50,7 @@ type UploadResponse = {
 // de entrega a guardar em clients/{uid}.avatarUrl.
 export async function uploadAvatar(localUri: string, uid: string, onProgress?: (fraction: number) => void): Promise<string> {
   if (!avatarUploadConfigured) {
-    throw new Error('O alojamento de fotos ainda não está configurado nesta versão da app.');
+    throw new Error(S.errors.avatarNotConfigured);
   }
   const form = new FormData();
   if (Platform.OS === 'web') {
@@ -73,7 +74,7 @@ export async function uploadAvatar(localUri: string, uid: string, onProgress?: (
 // URLs de entrega no mesmo formato das fotos dos trabalhos no backoffice.
 export async function uploadRequestPhoto(localUri: string, requestId: string, onProgress?: (fraction: number) => void): Promise<RequestPhoto> {
   if (!requestUploadConfigured) {
-    throw new Error('O envio de fotos ainda não está configurado nesta versão da app.');
+    throw new Error(S.errors.requestUploadNotConfigured);
   }
   const form = new FormData();
   if (Platform.OS === 'web') {
@@ -92,7 +93,7 @@ export async function uploadRequestPhoto(localUri: string, requestId: string, on
     // Preset ainda não criado na consola do Cloudinary (configuração, não
     // é culpa do cliente): diz-lhe o que fazer em vez do erro em inglês.
     if (err instanceof Error && /preset/i.test(err.message)) {
-      throw new Error('O envio de fotos ainda não está ativo nesta versão da app. Remove as fotos e envia o pedido sem elas — a equipa pede-tas depois.');
+      throw new Error(S.errors.requestPresetMissing);
     }
     throw err;
   }
@@ -113,15 +114,15 @@ function xhrUpload(url: string, form: FormData, onProgress?: (fraction: number) 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };
-    xhr.onerror = () => reject(new Error('Falha de rede ao enviar a foto. Verifica a internet e tenta outra vez.'));
-    xhr.ontimeout = () => reject(new Error('O envio demorou demasiado. Tenta outra vez com melhor ligação.'));
+    xhr.onerror = () => reject(new Error(S.errors.uploadNetwork));
+    xhr.ontimeout = () => reject(new Error(S.errors.uploadTimeout));
     xhr.timeout = 60_000;
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(JSON.parse(xhr.responseText) as UploadResponse);
         return;
       }
-      let msg = `O alojamento de fotos respondeu ${xhr.status}.`;
+      let msg = S.errors.uploadStatus(xhr.status);
       try {
         const body = JSON.parse(xhr.responseText) as { error?: { message?: string } };
         if (body.error?.message) msg = body.error.message;

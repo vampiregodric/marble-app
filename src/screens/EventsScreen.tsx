@@ -7,36 +7,38 @@ import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
 import { LocationIcon } from '../components/Icons';
 import { useEvents } from '../data/events';
 import { MarbleEvent } from '../firebase/models';
-import { MONTHS_SHORT, isSameDay } from '../utils/dates';
+import { monthShort, isSameDay } from '../utils/dates';
+import { S, useT } from '../i18n';
 
-const FILTERS = ['Próximos', 'Passados'] as const;
+const FILTERS = ['upcoming', 'past'] as const;
 type Filter = (typeof FILTERS)[number];
 
 function statusOf(e: MarbleEvent, past: boolean): string {
-  if (past) return 'Concluído';
-  if (e.date && isSameDay(e.date.toDate(), new Date())) return 'Hoje';
-  return 'Em breve';
+  if (past) return S.events.statusDone;
+  if (e.date && isSameDay(e.date.toDate(), new Date())) return S.events.statusToday;
+  return S.events.statusSoon;
 }
 
 // Eventos onde a Marble Studios vai estar (feiras, car meets, open days).
 // Público, sem login. Só a equipa cria eventos (backoffice, Secção 5).
 export default function EventsScreen() {
-  const [active, setActive] = useState<Filter>('Próximos');
+  const [active, setActive] = useState<Filter>('upcoming');
   const { upcoming, past, loading, error } = useEvents();
-  const showingPast = active === 'Passados';
+  const showingPast = active === 'past';
   const list = showingPast ? past : upcoming;
+  const T = useT();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Eventos</Text>
-        <Text style={styles.subtitle}>Onde nos vais encontrar</Text>
+        <Text style={styles.title}>{T.events.title}</Text>
+        <Text style={styles.subtitle}>{T.events.subtitle}</Text>
       </View>
 
       <View style={styles.chipsRow}>
         {FILTERS.map((f) => (
           <Pressable key={f} onPress={() => setActive(f)} style={[styles.chip, active === f && styles.chipActive]}>
-            <Text style={[styles.chipText, active === f && styles.chipTextActive]}>{f}</Text>
+            <Text style={[styles.chipText, active === f && styles.chipTextActive]}>{f === 'past' ? T.events.past : T.events.upcoming}</Text>
           </Pressable>
         ))}
       </View>
@@ -47,12 +49,8 @@ export default function EventsScreen() {
         <ErrorState error={error} />
       ) : list.length === 0 ? (
         <EmptyState
-          title={showingPast ? 'Ainda não há eventos passados.' : 'Não há eventos marcados por agora.'}
-          description={
-            showingPast
-              ? 'Os eventos em que já estivemos ficam aqui como memória.'
-              : 'Anunciamos aqui feiras, car meets e open days assim que estiverem confirmados.'
-          }
+          title={showingPast ? T.events.emptyPast : T.events.emptyUpcoming}
+          description={showingPast ? T.events.emptyPastDesc : T.events.emptyUpcomingDesc}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
@@ -66,7 +64,7 @@ export default function EventsScreen() {
                   {d ? (
                     <View style={styles.dateBadge}>
                       <Text style={styles.dateDay}>{String(d.getDate()).padStart(2, '0')}</Text>
-                      <Text style={styles.dateMon}>{MONTHS_SHORT[d.getMonth()]}</Text>
+                      <Text style={styles.dateMon}>{monthShort(d.getMonth())}</Text>
                     </View>
                   ) : null}
                   <View style={styles.statusBadge}>

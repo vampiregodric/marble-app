@@ -9,13 +9,7 @@ import FormField from '../components/FormField';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { RootStackParamList } from '../navigation/types';
-
-const CONSEQUENCES = [
-  'Deixas de conseguir entrar. Não há como recuperar a conta depois.',
-  'O teu nome, email e telemóvel são removidos do nosso registo de imediato.',
-  'O histórico de trabalhos nos teus carros e chãos fica guardado sem ligação a ti, para efeitos de garantia e portfólio.',
-  'Deixas de receber notificações e a equipa deixa de ter o teu contacto.',
-];
+import { useT } from '../i18n';
 
 // "Apagar a minha conta e dados" (RGPD, Secção 3). Pede a password outra
 // vez porque o Firebase exige login recente para apagar o utilizador — e
@@ -28,10 +22,11 @@ export default function DeleteAccountScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const T = useT();
 
   const confirm = async () => {
     if (!password) {
-      setError('Escreve a tua password para confirmar.');
+      setError(T.deleteAccount.passwordRequired);
       return;
     }
     setBusy(true);
@@ -50,13 +45,11 @@ export default function DeleteAccountScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.doneWrap}>
-          <Text style={styles.eyebrow}>Conta apagada</Text>
-          <Text style={styles.title}>Até à próxima</Text>
-          <Text style={styles.lead}>
-            Os teus dados pessoais foram removidos. Obrigado por teres sido cliente da Marble Studios — as portas ficam abertas.
-          </Text>
+          <Text style={styles.eyebrow}>{T.deleteAccount.doneEyebrow}</Text>
+          <Text style={styles.title}>{T.deleteAccount.doneTitle}</Text>
+          <Text style={styles.lead}>{T.deleteAccount.doneLead}</Text>
           <Pressable style={styles.cta} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Tabs', params: { screen: 'Home' } }] })}>
-            <Text style={styles.ctaText}>Voltar ao início</Text>
+            <Text style={styles.ctaText}>{T.deleteAccount.backHome}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -66,21 +59,21 @@ export default function DeleteAccountScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel={T.common.back}>
           <BackIcon />
         </Pressable>
-        <Text style={styles.topTitle}>Apagar conta</Text>
+        <Text style={styles.topTitle}>{T.deleteAccount.title}</Text>
         <View style={styles.backBtn} />
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>Isto é definitivo</Text>
-          <Text style={styles.title}>Apagar a minha conta e dados</Text>
-          <Text style={styles.lead}>Antes de confirmares, o que vai acontecer:</Text>
+          <Text style={styles.eyebrow}>{T.deleteAccount.eyebrow}</Text>
+          <Text style={styles.title}>{T.deleteAccount.heading}</Text>
+          <Text style={styles.lead}>{T.deleteAccount.lead}</Text>
 
           <View style={styles.list}>
-            {CONSEQUENCES.map((c) => (
+            {T.deleteAccount.consequences.map((c) => (
               <View key={c} style={styles.bulletRow}>
                 <View style={styles.bulletDot} />
                 <Text style={styles.bulletText}>{c}</Text>
@@ -89,7 +82,7 @@ export default function DeleteAccountScreen() {
           </View>
 
           <FormField
-            label="Confirma com a tua password"
+            label={T.deleteAccount.passwordLabel}
             value={password}
             onChangeText={setPassword}
             error={error ?? undefined}
@@ -97,16 +90,16 @@ export default function DeleteAccountScreen() {
             autoCapitalize="none"
             autoComplete="current-password"
             textContentType="password"
-            placeholder="A tua password"
+            placeholder={T.deleteAccount.passwordPlaceholder}
             onSubmitEditing={confirm}
             returnKeyType="done"
           />
 
           <Pressable style={[styles.danger, busy && styles.dangerBusy]} onPress={confirm} disabled={busy}>
-            {busy ? <ActivityIndicator color={colors.danger} /> : <Text style={styles.dangerText}>Apagar definitivamente</Text>}
+            {busy ? <ActivityIndicator color={colors.danger} /> : <Text style={styles.dangerText}>{T.deleteAccount.confirm}</Text>}
           </Pressable>
           <Pressable style={styles.cancel} onPress={() => navigation.goBack()} disabled={busy}>
-            <Text style={styles.cancelText}>Afinal não, manter a conta</Text>
+            <Text style={styles.cancelText}>{T.deleteAccount.keep}</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

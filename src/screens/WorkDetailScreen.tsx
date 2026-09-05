@@ -13,6 +13,7 @@ import { categoryFullName } from '../data/categories';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
+import { useT } from '../i18n';
 
 type Route = RouteProp<RootStackParamList, 'WorkDetail'>;
 
@@ -31,15 +32,16 @@ export default function WorkDetailScreen() {
   const heroH = Math.round((heroW * 3) / 4);
   const items = useMemo(() => (work ? galleryItems(work) : []), [work]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const T = useT();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={T.common.back}>
           <BackIcon />
         </Pressable>
         {work ? (
-          <Pressable style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Partilhar">
+          <Pressable style={styles.iconBtn} accessibilityRole="button" accessibilityLabel={T.common.share}>
             <ShareIcon />
           </Pressable>
         ) : null}
@@ -53,9 +55,9 @@ export default function WorkDetailScreen() {
         <ErrorState error={error} />
       ) : missing || !work ? (
         <EmptyState
-          title="Este trabalho já não está disponível."
-          description="Pode ter sido retirado do portfólio. Vê os outros trabalhos publicados."
-          actionLabel="Voltar"
+          title={T.work.unavailableTitle}
+          description={T.work.unavailableDesc}
+          actionLabel={T.common.back}
           onAction={() => navigation.goBack()}
         />
       ) : (
@@ -84,7 +86,7 @@ export default function WorkDetailScreen() {
               {work.completedAt ? (
                 <View style={styles.metaItem}>
                   <CalendarIcon size={12} color={colors.gold} />
-                  <Text style={styles.metaText}>Concluído: {formatDate(work.completedAt)}</Text>
+                  <Text style={styles.metaText}>{T.work.completedOn(formatDate(work.completedAt))}</Text>
                 </View>
               ) : null}
               {work.model ? (
@@ -113,7 +115,7 @@ export default function WorkDetailScreen() {
               (foto de capa + título) e o departamento pela categoria. */}
           <View style={styles.ctaBar}>
             <Pressable style={styles.ctaBtn} onPress={() => navigation.navigate('RequestQuote', { workId: work.id })} accessibilityRole="button">
-              <Text style={styles.ctaText}>Pedir orçamento semelhante</Text>
+              <Text style={styles.ctaText}>{T.work.requestSimilar}</Text>
             </Pressable>
           </View>
 

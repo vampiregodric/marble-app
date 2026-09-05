@@ -21,6 +21,7 @@ import { markNotificationRead } from '../data/notifications';
 import { PushOpenData, usePushOpens } from '../push/push';
 import { navigationRef } from './navigationRef';
 import { RootStackParamList, TabParamList } from './types';
+import { useT } from '../i18n';
 
 // Perfil e Alertas precisam de conta — sem sessão mostram o ecrã de login no
 // lugar do tab. Início, Portfólio e Eventos ficam abertos a toda a gente.
@@ -60,6 +61,7 @@ function Tabs() {
   // do sistema (barra de navegação Android / home indicator iOS) quando não
   // definimos altura, por isso somamos nós. No web o inset é 0.
   const insets = useSafeAreaInsets();
+  const T = useT();
 
   return (
     <Tab.Navigator
@@ -92,11 +94,11 @@ function Tabs() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Início' }} />
-      <Tab.Screen name="Portfolio" component={PortfolioScreen} options={{ tabBarLabel: 'Portfólio' }} />
-      <Tab.Screen name="Events" component={EventsScreen} options={{ tabBarLabel: 'Eventos' }} />
-      <Tab.Screen name="Alerts" component={AlertsTab} options={{ tabBarLabel: 'Alertas' }} />
-      <Tab.Screen name="Profile" component={ProfileTab} options={{ tabBarLabel: 'Perfil' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: T.tabs.home }} />
+      <Tab.Screen name="Portfolio" component={PortfolioScreen} options={{ tabBarLabel: T.tabs.portfolio }} />
+      <Tab.Screen name="Events" component={EventsScreen} options={{ tabBarLabel: T.tabs.events }} />
+      <Tab.Screen name="Alerts" component={AlertsTab} options={{ tabBarLabel: T.tabs.alerts }} />
+      <Tab.Screen name="Profile" component={ProfileTab} options={{ tabBarLabel: T.tabs.profile }} />
     </Tab.Navigator>
   );
 }

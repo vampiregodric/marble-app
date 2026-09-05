@@ -12,8 +12,10 @@ import { WorkCategory } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
+import { useT } from '../i18n';
 
-const ALL = 'Todos';
+// Chave interna do filtro "Todos" (o rótulo vem de i18n).
+const ALL = 'all';
 type Filter = typeof ALL | WorkCategory;
 
 // Portfólio público: todos os trabalhos publicados no Firestore, filtrados por
@@ -26,6 +28,7 @@ export default function PortfolioScreen() {
   const screenW = useAppWidth();
   const cardW = (screenW - 36 - 10) / 2;
   const { data: works, loading, error } = usePublishedWorks();
+  const T = useT();
 
   useEffect(() => {
     if (route.params?.category) setActive(route.params.category);
@@ -33,16 +36,12 @@ export default function PortfolioScreen() {
 
   const filtered = useMemo(() => (active === ALL ? works : works.filter((w) => w.category === active)), [works, active]);
 
-  const subtitle = loading
-    ? 'A carregar…'
-    : works.length === 1
-      ? '1 trabalho publicado'
-      : `${works.length} trabalhos publicados`;
+  const subtitle = loading ? T.common.loading : T.portfolio.count(works.length);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Portfólio</Text>
+        <Text style={styles.title}>{T.portfolio.title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
@@ -55,7 +54,7 @@ export default function PortfolioScreen() {
         {[ALL, ...CATEGORIES.map((c) => c.key)].map((c) => (
           <Pressable key={c} onPress={() => setActive(c as Filter)} style={[styles.chip, active === c && styles.chipActive]}>
             <Text style={[styles.chipText, active === c && styles.chipTextActive]}>
-              {CATEGORIES.find((m) => m.key === c)?.label ?? c}
+              {c === ALL ? T.portfolio.all : (CATEGORIES.find((m) => m.key === c)?.label ?? c)}
             </Text>
           </Pressable>
         ))}
@@ -67,9 +66,9 @@ export default function PortfolioScreen() {
         <ErrorState error={error} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={active === ALL ? 'Ainda não há trabalhos publicados.' : 'Ainda não há trabalhos nesta categoria.'}
-          description="Assim que a equipa publicar um trabalho novo, aparece aqui."
-          actionLabel={active === ALL ? undefined : 'Ver todos'}
+          title={active === ALL ? T.portfolio.emptyAll : T.portfolio.emptyCategory}
+          description={T.portfolio.emptyDesc}
+          actionLabel={active === ALL ? undefined : T.portfolio.seeAll}
           onAction={active === ALL ? undefined : () => setActive(ALL)}
         />
       ) : (

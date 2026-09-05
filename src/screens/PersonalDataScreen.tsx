@@ -8,6 +8,7 @@ import FormField from '../components/FormField';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { validateName, validatePhone } from '../auth/validation';
+import { useT } from '../i18n';
 
 // "Dados pessoais" a partir do Perfil: editar nome e telemóvel, ver o email,
 // pedir email de alteração de password. Apagar conta está no Perfil, em
@@ -21,6 +22,7 @@ export default function PersonalDataScreen() {
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const T = useT();
 
   // Se o doc do cliente chegar depois de abrir o ecrã, preenche os campos.
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function PersonalDataScreen() {
     setMessage(null);
     try {
       await updateClient({ name: name.trim(), phone: phone.trim() });
-      setMessage({ kind: 'ok', text: 'Dados guardados.' });
+      setMessage({ kind: 'ok', text: T.personalData.saved });
     } catch (err) {
       setMessage({ kind: 'error', text: authErrorMessage(err) });
     } finally {
@@ -54,7 +56,7 @@ export default function PersonalDataScreen() {
     setMessage(null);
     try {
       await resetPassword(user.email);
-      setMessage({ kind: 'ok', text: `Enviámos um link para ${user.email} para definires uma password nova.` });
+      setMessage({ kind: 'ok', text: T.personalData.resetSent(user.email) });
     } catch (err) {
       setMessage({ kind: 'error', text: authErrorMessage(err) });
     } finally {
@@ -65,44 +67,39 @@ export default function PersonalDataScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel={T.common.back}>
           <BackIcon />
         </Pressable>
-        <Text style={styles.topTitle}>Dados pessoais</Text>
+        <Text style={styles.topTitle}>{T.personalData.title}</Text>
         <View style={styles.backBtn} />
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <FormField label="Nome" value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" autoComplete="name" />
+          <FormField label={T.personalData.name} value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" autoComplete="name" />
           <FormField
-            label="Telemóvel"
+            label={T.personalData.phone}
             value={phone}
             onChangeText={setPhone}
             error={errors.phone}
             keyboardType="phone-pad"
             autoComplete="tel"
-            hint="Para a equipa te ligar sobre checkups e marcações."
+            hint={T.personalData.phoneHint}
           />
-          <FormField
-            label="Email"
-            value={user?.email ?? ''}
-            editable={false}
-            hint="Para mudar o email de acesso, fala com a Marble Studios."
-          />
+          <FormField label={T.personalData.email} value={user?.email ?? ''} editable={false} hint={T.personalData.emailHint} />
 
           {message && (
             <Text style={[styles.message, message.kind === 'error' ? styles.messageError : styles.messageOk]}>{message.text}</Text>
           )}
 
           <Pressable style={[styles.cta, (!dirty || saving) && styles.ctaDisabled]} onPress={save} disabled={!dirty || saving}>
-            {saving ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>Guardar</Text>}
+            {saving ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{T.personalData.save}</Text>}
           </Pressable>
 
-          <Text style={styles.secTitle}>Password</Text>
-          <Text style={styles.secDesc}>Por segurança a password muda-se por email: recebes um link para definir uma nova.</Text>
+          <Text style={styles.secTitle}>{T.personalData.passwordTitle}</Text>
+          <Text style={styles.secDesc}>{T.personalData.passwordDesc}</Text>
           <Pressable style={[styles.ghost, sendingReset && styles.ctaDisabled]} onPress={sendReset} disabled={sendingReset}>
-            {sendingReset ? <ActivityIndicator color={colors.gold} /> : <Text style={styles.ghostText}>Enviar link para alterar password</Text>}
+            {sendingReset ? <ActivityIndicator color={colors.gold} /> : <Text style={styles.ghostText}>{T.personalData.sendResetLink}</Text>}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

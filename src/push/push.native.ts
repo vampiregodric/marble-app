@@ -8,6 +8,7 @@ import { arrayRemove, arrayUnion, doc, serverTimestamp, updateDoc } from 'fireba
 import { db } from '../firebase/config';
 import { COLLECTIONS } from '../firebase/models';
 import { colors } from '../theme/theme';
+import { S } from '../i18n';
 
 // Notificações push no telemóvel (Secção 6): expo-notifications + Expo
 // Push Service. O token deste telemóvel fica em clients/{uid}.pushTokens;
@@ -61,7 +62,7 @@ const CHANNEL_ID = 'default';
 async function ensureChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'Alertas da Marble Studios',
+    name: S.alerts.channelName,
     importance: Notifications.AndroidImportance.MAX,
     lightColor: colors.gold,
   });

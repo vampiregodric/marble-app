@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { shrinkImage } from './images';
+import { S } from '../i18n';
 
 // Fotos do carro/espaço num pedido de orçamento (Secção 7): até 5, da
 // galeria (seleção múltipla) ou da câmara, reduzidas a 1600 px no telemóvel
@@ -32,7 +33,7 @@ export async function pickRequestPhotos(max: number): Promise<string[]> {
 // Tira uma foto com a câmara. Lança Error legível quando falta permissão.
 export async function takeRequestPhoto(): Promise<string | null> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) throw new Error('Sem acesso à câmara. Dá permissão à app nas definições do telemóvel.');
+  if (!perm.granted) throw new Error(S.errors.cameraDenied);
   const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, exif: false });
   if (result.canceled || !result.assets?.length) return null;
   const a = result.assets[0];

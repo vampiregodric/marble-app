@@ -16,6 +16,7 @@ import { DepartmentId, WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
+import { useT } from '../i18n';
 
 type Route = RouteProp<RootStackParamList, 'Department'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -39,6 +40,7 @@ export default function DepartmentScreen() {
   const heroW = screenW - 36;
   // 4:3 como o Detalhe, para a foto respirar.
   const heroH = Math.round((heroW * 3) / 4);
+  const T = useT();
 
   // O id pode vir de um URL (web) — se não existir, não rebenta.
   if (!department || !content) {
@@ -46,9 +48,9 @@ export default function DepartmentScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <Header onBack={() => navigation.goBack()} />
         <EmptyState
-          title="Esta página não está disponível."
-          description="Volta ao Início para ver os nossos serviços."
-          actionLabel="Voltar"
+          title={T.department.unavailableTitle}
+          description={T.department.unavailableDesc}
+          actionLabel={T.common.back}
           onAction={() => navigation.goBack()}
         />
       </SafeAreaView>
@@ -89,7 +91,7 @@ export default function DepartmentScreen() {
 
         <Text style={styles.intro}>{content.intro}</Text>
 
-        <SectionLabel text={content.labels?.services ?? 'O que fazemos'} />
+        <SectionLabel text={content.labels?.services ?? T.department.whatWeDo} />
         <View style={styles.blocks}>
           {content.services.map((s) => (
             <View key={s.title} style={styles.block}>
@@ -99,7 +101,7 @@ export default function DepartmentScreen() {
           ))}
         </View>
 
-        <SectionLabel text={content.labels?.steps ?? 'Como funciona'} />
+        <SectionLabel text={content.labels?.steps ?? T.department.howItWorks} />
         <View style={styles.steps}>
           {content.steps.map((s, i) => {
             const last = i === content.steps.length - 1;
@@ -132,7 +134,7 @@ export default function DepartmentScreen() {
 
         {content.pricing ? (
           <>
-            <SectionLabel text="Investimento" />
+            <SectionLabel text={T.department.pricing} />
             <Text style={styles.pricing}>{content.pricing}</Text>
           </>
         ) : null}
@@ -148,9 +150,10 @@ export default function DepartmentScreen() {
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  const T = useT();
   return (
     <View style={styles.header}>
-      <Pressable style={styles.iconBtn} onPress={onBack} accessibilityRole="button" accessibilityLabel="Voltar">
+      <Pressable style={styles.iconBtn} onPress={onBack} accessibilityRole="button" accessibilityLabel={T.common.back}>
         <BackIcon />
       </Pressable>
     </View>
@@ -178,13 +181,14 @@ function SectionLabel({ text, action, onAction }: { text: string; action?: strin
 function RecentWorks({ category, onOpen, onSeeAll }: { category: WorkCategory; onOpen: (workId: string) => void; onSeeAll: () => void }) {
   const { data: works, loading } = usePublishedWorks();
   const recent = useMemo(() => works.filter((w) => w.category === category).slice(0, 6), [works, category]);
+  const T = useT();
   if (loading) return null;
 
   return (
     <>
-      <SectionLabel text="Trabalhos recentes" action="Ver portfólio" onAction={onSeeAll} />
+      <SectionLabel text={T.department.recentWorks} action={T.department.seePortfolio} onAction={onSeeAll} />
       {recent.length === 0 ? (
-        <Text style={styles.recentEmpty}>Ainda não há trabalhos publicados nesta categoria.</Text>
+        <Text style={styles.recentEmpty}>{T.department.recentEmpty}</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
           {recent.map((w) => (
@@ -216,11 +220,12 @@ function RecentWorks({ category, onOpen, onSeeAll }: { category: WorkCategory; o
 // vazia; o título em dourado é o que diz que o cartão se toca.
 function RelatedLinks({ links, onOpen }: { links?: DepartmentLink[]; onOpen: (id: DepartmentId) => void }) {
   const visible = (links ?? []).filter((l) => hasDepartmentContent(l.department));
+  const T = useT();
   if (visible.length === 0) return null;
 
   return (
     <>
-      <SectionLabel text="Ver também" />
+      <SectionLabel text={T.department.seeAlso} />
       <View style={styles.blocks}>
         {visible.map((l) => {
           const target = DEPARTMENTS.find((d) => d.id === l.department);

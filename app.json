@@ -8,7 +8,14 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pt.marble.app"
+      "bundleIdentifier": "pt.marble.app",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true
+      }
+    },
+    "locales": {
+      "pt": "./locales/pt.json",
+      "en": "./locales/en.json"
     },
     "android": {
       "package": "pt.marble.app",
@@ -30,8 +37,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "A Marble Studios usa as tuas fotografias só para escolheres a tua foto de perfil.",
-          "cameraPermission": "A Marble Studios usa a câmara só para tirares a tua foto de perfil.",
+          "photosPermission": "A Marble Studios usa as tuas fotografias só para escolheres a tua foto de perfil e para juntares fotos a um pedido de orçamento.",
+          "cameraPermission": "A Marble Studios usa a câmara só para tirares a tua foto de perfil ou uma foto para um pedido de orçamento.",
           "microphonePermission": false
         }
       ],
@@ -41,6 +48,12 @@
           "icon": "./assets/notification-icon.png",
           "color": "#C6A15B",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["pt", "en"]
         }
       ]
     ],

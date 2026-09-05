@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, NativeSyntheticEvent, Na
 import { colors, fonts } from '../theme/theme';
 import Photo from './Photo';
 import { GalleryItem } from '../data/works';
+import { useT } from '../i18n';
 
 // Galeria do topo do Detalhe: fotos e vídeos do trabalho (works.media[]),
 // deslizável, com contador "3 / 7" e pontos de posição. Um vídeo mostra a
@@ -22,6 +23,7 @@ type Props = {
 export default function WorkGallery({ items, seed, width, height, overlay, onOpen }: Props) {
   const [active, setActive] = useState(0);
   const many = items.length > 1;
+  const T = useT();
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.max(0, Math.min(items.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)));
@@ -48,13 +50,13 @@ export default function WorkGallery({ items, seed, width, height, overlay, onOpe
                 style={{ width, height }}
                 onPress={onOpen ? () => onOpen(i) : undefined}
                 accessibilityRole="imagebutton"
-                accessibilityLabel={`${item.type === 'video' ? 'Vídeo' : 'Foto'} ${i + 1} de ${items.length}. Abrir em ecrã inteiro`}
+                accessibilityLabel={T.gallery.itemA11y(item.type, i + 1, items.length)}
               >
                 <Photo url={item.type === 'video' ? item.thumbnailUrl : item.url} seed={`${seed}-${i}`} />
                 {item.type === 'video' ? (
                   <View style={styles.videoPillWrap} pointerEvents="none">
                     <View style={styles.videoPill}>
-                      <Text style={styles.videoPillText}>Ver vídeo</Text>
+                      <Text style={styles.videoPillText}>{T.gallery.seeVideo}</Text>
                     </View>
                   </View>
                 ) : null}

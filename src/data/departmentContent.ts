@@ -1,4 +1,5 @@
 import { DepartmentId } from '../firebase/models';
+import { locale as appLocale } from '../i18n';
 
 // Conteúdo estático das páginas de departamento (Secção 9). É texto de
 // marketing que muda raramente, por isso vive no código e não no Firestore:
@@ -16,9 +17,11 @@ import { DepartmentId } from '../firebase/models';
 // conteúdo preparado em INOZETEK_CONTENT_PT, no fim deste ficheiro, à
 // espera de a parceria ser oficial.
 //
-// Idiomas: a app está só em português. A estrutura já é por idioma para a
-// tradução ser "preencher CONTENT.en" quando a app inteira ganhar inglês;
-// até lá, departmentContent() cai sempre para o português.
+// Idiomas (Secção 12): PT e EN, uma entrada por departamento em cada
+// (`PT` e `EN` abaixo). departmentContent() devolve a do idioma da app e
+// cai para o português se a tradução de um departamento faltar. Ao mudar um
+// texto em PT, muda o equivalente em EN — não há verificação automática de
+// que os dois dizem o mesmo, só de que a estrutura é igual.
 
 export type DepartmentLocale = 'pt' | 'en';
 export const DEFAULT_LOCALE: DepartmentLocale = 'pt';
@@ -360,13 +363,246 @@ export const INOZETEK_CONTENT_PT: DepartmentContent = {
   cta: { kind: 'quote', label: 'Pedir cotação' },
 };
 
-// Inglês: por preencher quando a app inteira for traduzida. Enquanto uma
-// entrada faltar aqui, departmentContent() devolve o português.
-const EN: Partial<Record<DepartmentId, DepartmentContent>> = {};
+// Inglês (Secção 12): tradução de PT, departamento a departamento. Os
+// nomes de sistemas e produtos (metallic epoxy, flake, PPF) ficam como
+// estão — são os termos que o mercado usa nos dois idiomas.
+const EN: Partial<Record<DepartmentId, DepartmentContent>> = {
+  automotive: {
+    headline: 'Premium-grade protection and aesthetics',
+    intro:
+      'We protect and transform your car with PPF, vinyl and studio-grade detailing, using films from reference brands such as Inozetek, with a finish you notice in every detail.',
+    services: [
+      {
+        title: 'PPF — Paint Protection Film',
+        text: 'Clear or coloured film that shields the paint from scratches, stone chips and UV. Self-healing and practically invisible.',
+      },
+      {
+        title: 'Vinyl and colour change',
+        text: 'Change the colour of your car without painting: high-quality vinyl in gloss, matte or satin finish. Fully reversible.',
+      },
+      {
+        title: 'Detailing and paint correction',
+        text: 'Multi-stage polishing, scratch removal and deep cleaning inside and out. The car looks new again.',
+      },
+      {
+        title: 'Ceramic coating',
+        text: 'A ceramic layer that keeps the shine, repels water and dirt and makes every wash easier.',
+      },
+      {
+        title: 'Starlight headliners and customisation',
+        text: 'Fibre-optic lighting in the headliner and other bespoke finishes, for a one-of-a-kind interior.',
+      },
+    ],
+    steps: [
+      { title: 'Assessment', text: 'We look at the car with you, at the studio or from photos, and work out what you want.' },
+      { title: 'Proposal', text: 'You get a proposal with materials, timing and a fixed price.' },
+      { title: 'Application at the studio', text: 'Work done in a controlled, dust-free environment, taking the time each stage needs.' },
+      { title: 'Handover and follow-up', text: 'We explain the care it needs and remind you of the checkup through the app.' },
+    ],
+    pricing: 'On request. It depends on the model, the material and the area to cover.',
+    cta: { kind: 'quote', label: 'Request a quote' },
+  },
+
+  epoxy: {
+    headline: 'Floors that impress and last',
+    intro:
+      'We install epoxy resin floors for garages, showrooms, shops, industry and homes, with Xtreme Polishing Systems materials, of which we are official distributors.',
+    services: [
+      {
+        title: 'Metallic epoxy',
+        text: 'A three-dimensional marbled effect, unique in every installation. Ideal for showrooms, shops and statement spaces.',
+      },
+      {
+        title: 'Flake systems',
+        text: 'Decorative flakes over an epoxy base, with an anti-slip finish. The right choice for garages and workshops.',
+      },
+      {
+        title: 'Solid colours',
+        text: 'A seamless floor in the colour of your choice. Clean, tough and easy to maintain.',
+      },
+      {
+        title: 'Quartz, commercial and industrial',
+        text: 'Quartz systems and high chemical and mechanical resistance for warehouses, factories, professional kitchens and wet areas.',
+      },
+      {
+        title: 'Substrate preparation and repair',
+        text: 'Diamond grinding, crack repair and levelling before any application. It is what guarantees durability.',
+      },
+    ],
+    steps: [
+      { title: 'Visit and measurement', text: 'We come to the site, measure the area and assess the state of the floor.' },
+      { title: 'Proposal', text: 'You choose the system and the colour; you get timing and a fixed price.' },
+      { title: 'Floor preparation', text: 'Grinding, repairs and primer, so the resin bonds as it should.' },
+      { title: 'Application, curing and handover', text: 'We apply in layers and the floor cures with no traffic. We hand it over with the care instructions.' },
+    ],
+    pricing: 'On request. Priced per square metre, depending on the system and the state of the substrate.',
+    related: [
+      {
+        department: 'xps',
+        title: 'Want to do your own floor?',
+        text: 'Buy the same materials we use: Xtreme Polishing Systems resins, pigments, flakes and tools.',
+      },
+    ],
+    cta: { kind: 'quote', label: 'Request a quote' },
+  },
+
+  xps: {
+    headline: 'The same materials we use on our own floors',
+    intro:
+      'We are official distributors of Xtreme Polishing Systems: we sell the resins, pigments and tools we apply on our floors, to professionals and to anyone who wants to do their own floor. We advise on the right system for each case and, if you prefer, we install it.',
+    labels: { services: 'What we sell', steps: 'How to buy' },
+    services: [
+      {
+        title: 'Epoxy resins',
+        text: 'Base coats, primers and topcoats for metallic, flake, quartz and solid-colour systems. Professional formulations, with data sheets.',
+      },
+      {
+        title: 'Metallic pigments',
+        text: 'Pigments for the marbled effect of our floors, in dozens of colours that combine with each other.',
+      },
+      {
+        title: 'Flakes and quartz',
+        text: 'Decorative flakes in several blends and sizes, and coloured quartz for anti-slip, heavy-duty floors.',
+      },
+      {
+        title: 'Topcoats and sealers',
+        text: 'Clear final coats, gloss or matte, with UV protection and an anti-slip option.',
+      },
+      {
+        title: 'Tools and kits',
+        text: 'Rollers, squeegees, spiked shoes, mixers and complete kits per square metre, so you start with everything you need.',
+      },
+    ],
+    steps: [
+      { title: 'Choose the system', text: 'Tell us the area and the effect you want; we advise on the right system and quantities.' },
+      { title: 'Request a quote', text: 'Send the request through the app with the quantities; we confirm availability, price and timing.' },
+      { title: 'Pick-up or delivery', text: 'Collect at the studio or we arrange delivery with you.' },
+      { title: 'Support during application', text: 'We are available for questions while you apply. And if you prefer, we install it ourselves.' },
+    ],
+    pricing: 'On request. Ask for a quote with the quantities; trade terms for professionals and volume orders.',
+    related: [
+      {
+        department: 'epoxy',
+        title: 'Would you rather we installed it?',
+        text: 'See the systems we apply, how it works and request a quote in Epoxy Floors.',
+      },
+    ],
+    cta: { kind: 'quote', label: 'Request a quote' },
+  },
+
+  graphic: {
+    headline: 'Your brand, from screen to wall',
+    intro:
+      'We create the image of your business and take it everywhere: logo, print, vinyl for shopfronts and vehicles, signage and content for social media.',
+    services: [
+      {
+        title: 'Visual identity',
+        text: 'Logo, colours, typography and brand guidelines. The foundation for everything else.',
+      },
+      {
+        title: 'Vehicle graphics',
+        text: 'Vinyl and lettering for cars and commercial vans, designed and applied by us.',
+      },
+      {
+        title: 'Shopfronts and signage',
+        text: 'Shopfront vinyl, plaques, cut letters and indoor and outdoor signage.',
+      },
+      {
+        title: 'Print',
+        text: 'Business cards, flyers, catalogues, roll-ups and banners, with a professional finish.',
+      },
+      {
+        title: 'Content for social media',
+        text: 'Posts, stories and ads aligned with your brand, ready to publish.',
+      },
+    ],
+    steps: [
+      { title: 'Briefing', text: 'We get to know the business, the audience and what you need to communicate.' },
+      { title: 'Proposal', text: 'You get what we are going to do, timing and a fixed price.' },
+      { title: 'Design and approval', text: 'We present options and refine them with you until it is right.' },
+      { title: 'Production and application', text: 'We print, cut and apply. You get the final files ready to use.' },
+    ],
+    pricing: 'On request. A fixed quote per job, no surprises.',
+    cta: { kind: 'quote', label: 'Request a quote' },
+  },
+
+  ai: {
+    headline: 'Artificial intelligence working for your business',
+    intro:
+      'We help companies put AI to work day to day: fewer repetitive tasks, faster replies to customers and decisions based on data.',
+    services: [
+      {
+        title: 'Assessment and consulting',
+        text: 'We look at your company’s processes and identify where AI saves time and money. You leave with a concrete plan, by priority.',
+      },
+      {
+        title: 'Process automation',
+        text: 'We connect the tools you already use (email, CRM, invoicing, WhatsApp) and automate what is done by hand today.',
+      },
+      {
+        title: 'Assistants and chatbots',
+        text: '24/7 support on your website, WhatsApp or Instagram, trained on your business’s own information.',
+      },
+      {
+        title: 'Bespoke tools',
+        text: 'When there is no ready-made solution, we build one: data analysis, automatic reports, content generation.',
+      },
+      {
+        title: 'Team training',
+        text: 'Hands-on sessions so your team uses AI with confidence and safely.',
+      },
+    ],
+    steps: [
+      { title: 'First conversation', text: 'We get to know your business and the problems you want to solve.' },
+      { title: 'Proposal', text: 'You get a plan with what we are going to do, timing and investment.' },
+      { title: 'Implementation', text: 'We build, test with you and train the team.' },
+      { title: 'Follow-up', text: 'We stay close to fine-tune and evolve the solution.' },
+    ],
+    pricing: 'On request. Every project is different: ask for a proposal with no commitment.',
+    cta: { kind: 'quote', label: 'Request a proposal' },
+  },
+
+  ads: {
+    headline: 'Google Ads and Meta Ads that bring in customers',
+    intro:
+      'We manage your company’s paid advertising on Google, Facebook and Instagram, so you reach the people looking for what you sell, without wasting budget.',
+    services: [
+      {
+        title: 'Google Ads',
+        text: 'Search, display and YouTube campaigns so you show up when someone looks for your service.',
+      },
+      {
+        title: 'Meta Ads',
+        text: 'Ads on Facebook and Instagram, targeted by location, interests and lookalike audiences.',
+      },
+      {
+        title: 'Creatives and copy',
+        text: 'Images, videos and ad copy made by us, aligned with your brand.',
+      },
+      {
+        title: 'Measurement and conversion',
+        text: 'Pixels, conversions and landing pages, so you know what every euro brings.',
+      },
+      {
+        title: 'Monthly report',
+        text: 'Investment, results and next steps, in plain language.',
+      },
+    ],
+    steps: [
+      { title: 'Analysis', text: 'We study your market, the competition and your goals.' },
+      { title: 'Strategy and proposal', text: 'We define platforms, budget and targets.' },
+      { title: 'Launch', text: 'We create the campaigns and the ads. They go live in days.' },
+      { title: 'Ongoing optimisation', text: 'We adjust every week to lower the cost per customer.' },
+    ],
+    pricing: 'On request. You set the ad budget; management is a monthly fee.',
+    cta: { kind: 'quote', label: 'Request a proposal' },
+  },
+};
 
 const CONTENT: Record<DepartmentLocale, Partial<Record<DepartmentId, DepartmentContent>>> = { pt: PT, en: EN };
 
-export function departmentContent(id: DepartmentId, locale: DepartmentLocale = DEFAULT_LOCALE): DepartmentContent | undefined {
+// O conteúdo no idioma da app (src/i18n); cai para PT se faltar a tradução.
+export function departmentContent(id: DepartmentId, locale: DepartmentLocale = appLocale): DepartmentContent | undefined {
   return CONTENT[locale][id] ?? CONTENT[DEFAULT_LOCALE][id];
 }
 

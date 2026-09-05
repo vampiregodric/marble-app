@@ -17,26 +17,19 @@ import { authErrorMessage } from '../auth/errors';
 import { validateEmail, validateName, validatePassword, validatePhone } from '../auth/validation';
 import { DEPARTMENTS } from '../data/departments';
 import { categoryFullName } from '../data/categories';
-import { REQUEST_FORMS, RequestFormField } from '../data/requestForms';
+import { requestForm, RequestFormField } from '../data/requestForms';
 import { createRequest, deviceLimitReached, newRequestId, recordDeviceSend } from '../data/requests';
 import { useWork } from '../data/works';
 import { canUseCamera, pickRequestPhotos, takeRequestPhoto } from '../media/requestPhotos';
 import { requestUploadConfigured, uploadRequestPhoto } from '../media/cloudinary';
-import {
-  CONTACT_PREFERENCE_LABEL,
-  ContactPreference,
-  DepartmentId,
-  REQUEST_LIMITS,
-  REQUEST_RESPONSE_PROMISE,
-  RequestField,
-  RequestPhoto,
-} from '../firebase/models';
+import { ContactPreference, DepartmentId, REQUEST_LIMITS, RequestField, RequestPhoto } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
+import { useT } from '../i18n';
 
 type Route = RouteProp<RootStackParamList, 'RequestQuote'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const CONTACT_OPTIONS = (Object.keys(CONTACT_PREFERENCE_LABEL) as ContactPreference[]).map((k) => ({ key: k, label: CONTACT_PREFERENCE_LABEL[k] }));
+const CONTACT_KEYS: ContactPreference[] = ['call', 'whatsapp', 'email'];
 
 type Errors = Partial<Record<string, string>>;
 
@@ -51,10 +44,15 @@ type Errors = Partial<Record<string, string>>;
 // enviar, a conta nasce com esses dados (password aleatória + email do
 // Firebase para a definir), fica com sessão neste dispositivo e o pedido
 // grava-se já ligado ao cliente. Email com conta → pede só a password.
+//
+// Idiomas (Secção 12): as opções aparecem no idioma da app, mas o que se
+// guarda (`services`, `fields[].label`) é sempre o texto em português —
+// os chips guardam `value` (PT) e mostram `label`.
 export default function RequestQuoteScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const params = route.params ?? {};
+  const T = useT();
   const { user, client, signIn, createAccountFromRequest } = useAuth();
   const { data: work, loading: workLoading } = useWork(params.workId);
 
@@ -62,7 +60,7 @@ export default function RequestQuoteScreen() {
   const workDepartment = useMemo(() => (work ? DEPARTMENTS.find((d) => d.category === work.category)?.id : undefined), [work]);
   const [chosenDepartment, setChosenDepartment] = useState<DepartmentId | undefined>(params.department);
   const department = params.department ?? workDepartment ?? chosenDepartment;
-  const form = department ? REQUEST_FORMS[department] : null;
+  const form = useMemo(() => (department ? requestForm(department) : null), [department]);
   const departmentMeta = department ? DEPARTMENTS.find((d) => d.id === department) : undefined;
   const departmentLocked = !!params.department || !!params.workId;
 
@@ -116,7 +114,7 @@ export default function RequestQuoteScreen() {
       if (uris.length) setPhotos((p) => [...p, ...uris.slice(0, room).map((uri) => ({ uri }))]);
     };
     // No browser o seletor só abre dentro do toque — nada de esperar antes.
-    run().catch((err) => setFeedback(err instanceof Error ? err.message : 'Não foi possível escolher a foto.'));
+    run().catch((err) => setFeedback(err instanceof Error ? err.message : T.photoPicker.pickFailed));
   };
 
   const onAddPhoto = () => {
@@ -125,8 +123,8 @@ export default function RequestQuoteScreen() {
   };
 
   const photoActions: SheetAction[] = [
-    { label: 'Escolher da galeria', onPress: () => addPhotos('library') },
-    { label: 'Tirar foto', onPress: () => addPhotos('camera') },
+    { label: T.photoPicker.fromLibrary, onPress: () => addPhotos('library') },
+    { label: T.photoPicker.takePhoto, onPress: () => addPhotos('camera') },
   ];
 
   const needsName = !user || !name.trim();
@@ -135,22 +133,22 @@ export default function RequestQuoteScreen() {
 
   const validate = (): boolean => {
     const next: Errors = {};
-    if (!department) next.department = 'Escolhe o departamento.';
+    if (!department) next.department = T.request.chooseDepartment;
     if (form) {
       for (const f of form.fields) {
         const v = (fieldValues[f.key] ?? '').trim();
-        if (f.required && !v) next[f.key] = f.options ? 'Escolhe uma opção.' : 'Preenche este campo.';
-        if (v.length > REQUEST_LIMITS.fieldMax) next[f.key] = `No máximo ${REQUEST_LIMITS.fieldMax} caracteres.`;
+        if (f.required && !v) next[f.key] = f.options ? T.request.chooseOption : T.request.fillField;
+        if (v.length > REQUEST_LIMITS.fieldMax) next[f.key] = T.request.maxChars(REQUEST_LIMITS.fieldMax);
       }
     }
-    if (message.trim().length < 5) next.message = 'Conta-nos um pouco mais sobre o que pretendes.';
-    if (message.length > REQUEST_LIMITS.messageMax) next.message = `No máximo ${REQUEST_LIMITS.messageMax} caracteres.`;
+    if (message.trim().length < 5) next.message = T.request.messageShort;
+    if (message.length > REQUEST_LIMITS.messageMax) next.message = T.request.maxChars(REQUEST_LIMITS.messageMax);
     if (!user) {
       next.name = validateName(name);
       next.email = validateEmail(email);
       next.phone = validatePhone(phone);
       if (mode === 'login') next.password = validatePassword(password);
-      else if (!acceptedTerms) next.terms = 'Para criarmos a tua conta precisamos que aceites os termos e a política de privacidade.';
+      else if (!acceptedTerms) next.terms = T.request.termsRequired;
     } else {
       if (needsName) next.name = validateName(name);
       if (needsPhone) next.phone = validatePhone(phone);
@@ -163,7 +161,7 @@ export default function RequestQuoteScreen() {
     setFeedback(null);
     if (!validate() || !department || !form) return;
     if (await deviceLimitReached()) {
-      setFeedback(`Já enviaste ${REQUEST_LIMITS.perDayMax} pedidos nas últimas 24 horas. Se quiseres acrescentar algo, espera pela nossa resposta ou fala connosco diretamente.`);
+      setFeedback(T.request.dailyLimit(REQUEST_LIMITS.perDayMax));
       return;
     }
 
@@ -173,17 +171,17 @@ export default function RequestQuoteScreen() {
       let accountCreated = false;
       if (!uid) {
         if (mode === 'login') {
-          setBusy('A entrar…');
+          setBusy(T.request.busyLogin);
           uid = await signIn(email, password);
         } else {
-          setBusy('A criar a tua conta…');
+          setBusy(T.request.busyCreating);
           try {
             uid = await createAccountFromRequest({ name, email, phone, acceptedTerms });
             accountCreated = true;
           } catch (err) {
             if (err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
               setMode('login');
-              setFeedback('Já existe uma conta com este email. Escreve a tua password para entrar e enviar o pedido.');
+              setFeedback(T.request.emailExists);
               return;
             }
             throw err;
@@ -195,17 +193,18 @@ export default function RequestQuoteScreen() {
       const id = newRequestId();
       const uploaded: RequestPhoto[] = [];
       for (let i = 0; i < photos.length; i++) {
-        setBusy(`A enviar foto ${i + 1} de ${photos.length}…`);
+        setBusy(T.request.busyPhoto(i + 1, photos.length));
         const photo = await uploadRequestPhoto(photos[i].uri, id, (fraction) =>
           setPhotos((p) => p.map((x, j) => (j === i ? { ...x, progress: fraction } : x)))
         );
         uploaded.push(photo);
       }
 
-      // 3. O pedido.
-      setBusy('A enviar o pedido…');
+      // 3. O pedido. As etiquetas guardadas são as em português
+      // (`storedLabel`), seja qual for o idioma da app.
+      setBusy(T.request.busySending);
       const fields: RequestField[] = form.fields
-        .map((f) => ({ key: f.key, label: f.label, value: (fieldValues[f.key] ?? '').trim() }))
+        .map((f) => ({ key: f.key, label: f.storedLabel, value: (fieldValues[f.key] ?? '').trim() }))
         .filter((f) => f.value);
       await createRequest(id, uid, {
         department,
@@ -224,13 +223,7 @@ export default function RequestQuoteScreen() {
       setDone({ accountCreated, email: email.trim(), contact, phone: phone.trim() });
     } catch (err) {
       const code = err instanceof FirebaseError ? err.code : '';
-      setFeedback(
-        code.startsWith('auth/')
-          ? authErrorMessage(err)
-          : err instanceof Error && !code
-            ? err.message
-            : `Não foi possível enviar o pedido. Tenta outra vez.${code ? ` (${code})` : ''}`
-      );
+      setFeedback(code.startsWith('auth/') ? authErrorMessage(err) : err instanceof Error && !code ? err.message : T.request.sendFailed(code));
     } finally {
       setBusy(null);
     }
@@ -242,7 +235,11 @@ export default function RequestQuoteScreen() {
       return (
         <View key={f.key} style={styles.block}>
           <Text style={styles.label}>{f.label}</Text>
-          <OptionChips options={f.options} selected={value ? [value] : []} onToggle={(o) => setField(f.key, value === o ? '' : o)} />
+          <OptionChips
+            options={f.options.map((o) => ({ key: o.value, label: o.label }))}
+            selected={value ? [value] : []}
+            onToggle={(o) => setField(f.key, value === o ? '' : o)}
+          />
           {errors[f.key] ? <Text style={styles.error}>{errors[f.key]}</Text> : null}
         </View>
       );
@@ -262,38 +259,32 @@ export default function RequestQuoteScreen() {
     );
   };
 
+  // "por WhatsApp (912…)" / "por chamada (912…)" / "por email (x@y)".
+  const doneContactLabel = done ? (done.contact === 'whatsapp' ? 'WhatsApp' : T.contactPreference[done.contact].toLowerCase()) : '';
+  const doneContactDetail = done ? (done.contact === 'email' ? done.email : done.phone) : '';
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel={T.common.back}>
           <BackIcon />
         </Pressable>
-        <Text style={styles.topTitle}>Pedir orçamento</Text>
+        <Text style={styles.topTitle}>{T.request.title}</Text>
         <View style={styles.backBtn} />
       </View>
 
       {done ? (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.doneCard}>
-            <Text style={styles.doneEyebrow}>Pedido enviado</Text>
-            <Text style={styles.doneTitle}>Recebemos o teu pedido.</Text>
-            <Text style={styles.doneText}>
-              A equipa da Marble Studios responde {REQUEST_RESPONSE_PROMISE}, por {done.contact === 'whatsapp' ? 'WhatsApp' : CONTACT_PREFERENCE_LABEL[done.contact].toLowerCase()}
-              {done.contact === 'email' ? ` (${done.email})` : ` (${done.phone})`}.
-            </Text>
-            {done.accountCreated ? (
-              <Text style={styles.doneText}>
-                Criámos-te uma conta na app com estes dados — já estás com sessão iniciada neste dispositivo e podes acompanhar o pedido no
-                Perfil. Enviámos um email para {done.email} para definires a tua password (se não aparecer, vê o spam).
-              </Text>
-            ) : (
-              <Text style={styles.doneText}>Podes acompanhar o estado do pedido no teu Perfil, em "Os teus pedidos".</Text>
-            )}
+            <Text style={styles.doneEyebrow}>{T.request.doneEyebrow}</Text>
+            <Text style={styles.doneTitle}>{T.request.doneTitle}</Text>
+            <Text style={styles.doneText}>{T.request.doneText(T.request.responsePromise, doneContactLabel, doneContactDetail)}</Text>
+            <Text style={styles.doneText}>{done.accountCreated ? T.request.doneAccountCreated(done.email) : T.request.doneFollow}</Text>
             <Pressable style={styles.cta} onPress={() => navigation.navigate('Tabs', { screen: 'Profile' })} accessibilityRole="button">
-              <Text style={styles.ctaText}>Ver os meus pedidos</Text>
+              <Text style={styles.ctaText}>{T.request.seeMyRequests}</Text>
             </Pressable>
             <Pressable style={styles.ghost} onPress={() => navigation.navigate('Tabs', { screen: 'Home' })} accessibilityRole="button">
-              <Text style={styles.ghostText}>Voltar ao início</Text>
+              <Text style={styles.ghostText}>{T.request.backHome}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -305,13 +296,13 @@ export default function RequestQuoteScreen() {
               <View style={styles.contextCard}>
                 <View style={styles.contextThumb}>{work ? <Photo url={work.photoUrl} seed={work.id} /> : null}</View>
                 <View style={styles.flex}>
-                  <Text style={styles.contextEyebrow}>Orçamento semelhante a</Text>
+                  <Text style={styles.contextEyebrow}>{T.request.similarTo}</Text>
                   {workLoading ? (
                     <ActivityIndicator color={colors.gold} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
                   ) : (
                     <>
                       <Text style={styles.contextTitle} numberOfLines={2}>
-                        {work?.title ?? 'Trabalho já não disponível'}
+                        {work?.title ?? T.request.workUnavailable}
                       </Text>
                       {work ? <Text style={styles.contextSub}>{categoryFullName(work.category)}</Text> : null}
                     </>
@@ -321,21 +312,18 @@ export default function RequestQuoteScreen() {
             ) : departmentLocked && departmentMeta ? (
               <View style={styles.contextCard}>
                 <View style={styles.flex}>
-                  <Text style={styles.contextEyebrow}>Departamento</Text>
+                  <Text style={styles.contextEyebrow}>{T.request.department}</Text>
                   <Text style={styles.contextTitle}>{departmentMeta.name}</Text>
                   <Text style={styles.contextSub}>{departmentMeta.tagline}</Text>
                 </View>
               </View>
             ) : (
               <View style={styles.block}>
-                <Text style={styles.label}>Departamento</Text>
+                <Text style={styles.label}>{T.request.department}</Text>
                 <OptionChips
-                  options={DEPARTMENTS.map((d) => d.name)}
-                  selected={departmentMeta ? [departmentMeta.name] : []}
-                  onToggle={(n) => {
-                    const d = DEPARTMENTS.find((x) => x.name === n);
-                    if (d) pickDepartment(d.id);
-                  }}
+                  options={DEPARTMENTS.map((d) => ({ key: d.id, label: d.name }))}
+                  selected={department ? [department] : []}
+                  onToggle={(id) => pickDepartment(id as DepartmentId)}
                 />
                 {errors.department ? <Text style={styles.error}>{errors.department}</Text> : null}
               </View>
@@ -347,13 +335,13 @@ export default function RequestQuoteScreen() {
 
                 <View style={styles.block}>
                   <Text style={styles.label}>{form.servicesLabel}</Text>
-                  <OptionChips options={form.services} selected={services} onToggle={toggleService} />
+                  <OptionChips options={form.services.map((s) => ({ key: s.value, label: s.label }))} selected={services} onToggle={toggleService} />
                 </View>
 
                 {form.fields.map(renderField)}
 
                 <FormField
-                  label="Mensagem"
+                  label={T.request.message}
                   value={message}
                   onChangeText={setMessage}
                   placeholder={form.messagePlaceholder}
@@ -374,33 +362,33 @@ export default function RequestQuoteScreen() {
                 ) : null}
 
                 <View style={styles.block}>
-                  <Text style={styles.label}>Como preferes que te contactemos?</Text>
+                  <Text style={styles.label}>{T.request.contactHow}</Text>
                   <OptionChips
-                    options={CONTACT_OPTIONS.map((o) => o.label)}
-                    selected={[CONTACT_PREFERENCE_LABEL[contact]]}
-                    onToggle={(label) => {
-                      const o = CONTACT_OPTIONS.find((x) => x.label === label);
-                      if (o) setContact(o.key);
-                    }}
+                    options={CONTACT_KEYS.map((k) => ({ key: k, label: T.contactPreference[k] }))}
+                    selected={[contact]}
+                    onToggle={(k) => setContact(k as ContactPreference)}
                   />
                 </View>
 
                 {showContactBlock ? (
                   <>
-                    <Text style={styles.secTitle}>{user ? 'Falta-nos' : 'Os teus dados'}</Text>
-                    {!user ? (
-                      <Text style={styles.secDesc}>
-                        {mode === 'login'
-                          ? 'Entra com a tua conta para enviares o pedido e o acompanhares na app.'
-                          : 'Com estes dados criamos-te uma conta na app, para acompanhares o pedido e receberes a resposta. Recebes um email para definires a password.'}
-                      </Text>
-                    ) : null}
+                    <Text style={styles.secTitle}>{user ? T.request.missing : T.request.yourData}</Text>
+                    {!user ? <Text style={styles.secDesc}>{mode === 'login' ? T.request.loginLead : T.request.createLead}</Text> : null}
                     {needsName ? (
-                      <FormField label="Nome" value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" autoComplete="name" textContentType="name" placeholder="O teu nome" />
+                      <FormField
+                        label={T.login.name}
+                        value={name}
+                        onChangeText={setName}
+                        error={errors.name}
+                        autoCapitalize="words"
+                        autoComplete="name"
+                        textContentType="name"
+                        placeholder={T.login.namePlaceholder}
+                      />
                     ) : null}
                     {!user ? (
                       <FormField
-                        label="Email"
+                        label={T.login.email}
                         value={email}
                         onChangeText={(t) => {
                           setEmail(t);
@@ -412,25 +400,25 @@ export default function RequestQuoteScreen() {
                         keyboardType="email-address"
                         autoComplete="email"
                         textContentType="emailAddress"
-                        placeholder="nome@exemplo.pt"
+                        placeholder={T.login.emailPlaceholder}
                       />
                     ) : null}
                     {needsPhone ? (
                       <FormField
-                        label="Telemóvel"
+                        label={T.login.phone}
                         value={phone}
                         onChangeText={setPhone}
                         error={errors.phone}
                         keyboardType="phone-pad"
                         autoComplete="tel"
                         textContentType="telephoneNumber"
-                        placeholder="912 345 678"
-                        hint="É por aqui que a equipa te contacta sobre o orçamento."
+                        placeholder={T.login.phonePlaceholder}
+                        hint={T.request.phoneHint}
                       />
                     ) : null}
                     {!user && mode === 'login' ? (
                       <FormField
-                        label="Password"
+                        label={T.login.password}
                         value={password}
                         onChangeText={setPassword}
                         error={errors.password}
@@ -438,8 +426,8 @@ export default function RequestQuoteScreen() {
                         autoCapitalize="none"
                         autoComplete="current-password"
                         textContentType="password"
-                        placeholder="A password da tua conta"
-                        hint="Esqueceste-te dela? No Perfil > Entrar podes pedir uma nova."
+                        placeholder={T.request.passwordPlaceholder}
+                        hint={T.request.passwordHint}
                       />
                     ) : null}
                     {!user && mode === 'form' ? (
@@ -451,24 +439,23 @@ export default function RequestQuoteScreen() {
                         }}
                         error={errors.terms}
                       >
-                        Li e aceito os{' '}
+                        {T.login.acceptPrefix}
                         <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'terms' })}>
-                          Termos de utilização
-                        </Text>{' '}
-                        e a{' '}
-                        <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
-                          Política de privacidade
+                          {T.login.termsLink}
                         </Text>
-                        , e que a app crie a minha conta com estes dados.
+                        {T.login.acceptMiddle}
+                        <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
+                          {T.login.privacyLink}
+                        </Text>
+                        {T.request.acceptSuffix}
                       </Checkbox>
                     ) : null}
                   </>
                 ) : (
                   <Text style={styles.contactLine}>
-                    Contactamos-te por {phone}
-                    {email ? ` · ${email}` : ''}.{' '}
+                    {T.request.contactLine(phone, email)}
                     <Text style={styles.inlineLink} onPress={() => navigation.navigate('PersonalData')}>
-                      Alterar
+                      {T.request.edit}
                     </Text>
                   </Text>
                 )}
@@ -482,17 +469,17 @@ export default function RequestQuoteScreen() {
                       <Text style={styles.ctaText}>{busy}</Text>
                     </View>
                   ) : (
-                    <Text style={styles.ctaText}>{mode === 'login' ? 'Entrar e enviar' : 'Enviar pedido'}</Text>
+                    <Text style={styles.ctaText}>{mode === 'login' ? T.request.loginAndSend : T.request.send}</Text>
                   )}
                 </Pressable>
-                <Text style={styles.legalNote}>Um orçamento só é vinculativo depois de confirmado por escrito pela equipa.</Text>
+                <Text style={styles.legalNote}>{T.request.legalNote}</Text>
               </>
             ) : null}
           </ScrollView>
         </KeyboardAvoidingView>
       )}
 
-      <ActionSheet visible={photoMenu} title="Adicionar foto" actions={photoActions} onClose={() => setPhotoMenu(false)} />
+      <ActionSheet visible={photoMenu} title={T.photoPicker.addTitle} actions={photoActions} onClose={() => setPhotoMenu(false)} />
     </SafeAreaView>
   );
 }
