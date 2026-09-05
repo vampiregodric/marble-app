@@ -1024,14 +1024,50 @@ o pequeno acerto na Function `handleVehicleUpdated` anotado pela Secção 7b
 (aprovação de uma proposta pela equipa vista como confirmação do cliente).
 
 ### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
-**Estado:** Por fazer
-**Depende de:** Secções 7 e 8 no master (feito — o backoffice está livre).
-**A Secção 12 — Inglês entrou primeiro (2026-09-05):** a app já está em
-PT + EN, por isso as listas fixas desta secção nascem nos dois idiomas
-(`LocalizedText { pt, en }` + `tx()`, como em `src/data/requestForms.ts`;
-ver "Para a Secção 13" na Secção 12). A 7b também já está no master; o
-backoffice está livre. Pode correr em paralelo com a parte 2 da Secção 11
-enquanto esta não fizer builds (a 11 não toca em `src/`).
+**Estado:** Feito (2026-09-05), verificado no dev: backoffice (formulário e
+lista), app web em PT e EN (Detalhe e Portfólio) e migração dos 8
+trabalhos de exemplo. Correu em paralelo com a 7b, a 11 (parte 1) e a 12,
+que entraram no master antes desta — o merge só teve conflito no
+Portfólio (textos passados para `src/i18n`).
+**Decisões do Fábio (escolha múltipla, 2026-09-05):** (1) campos novos
+`works.services: WorkServiceId[]` (ids de uma lista fixa por categoria,
+`WORK_SERVICES` em `src/firebase/models.ts`, igual nos dois projetos) +
+`works.brands: string[]` (texto livre com sugestões); `products[]` passou a
+opcional, só legado. (2) Listas: Epoxy Floors = Metallic Epoxy, Solid
+Colour Epoxy, Quartz Epoxy, Flake Epoxy; Automotive = PPF, PPF colorido,
+Vinil, Detailing, Proteção cerâmica, Teto estrelado; Graphic = Identidade
+visual, Decoração de viaturas, Montras e sinalética, Impressão, Redes
+sociais. (3) No Portfólio o serviço é um **filtro secundário** dentro da
+categoria: segunda fila de chips, só os serviços com trabalhos publicados,
+tocar outra vez desliga; em "Todos" não aparece; o cartão continua a
+mostrar a categoria. (4) Os trabalhos antigos migram já:
+`npm run works:migrate-tags -- ./serviceAccountKey.dev.json` (ensaio;
+`--apply` escreve) e o formulário do backoffice pré-preenche as marcas a
+partir de `products` nos que sobrarem.
+**O que ficou feito:** app — `models.ts` (tipos, `WORK_SERVICES`,
+`WORK_SERVICE_KIND`, `WORK_BRAND_SUGGESTIONS`, `WORK_TAG_LIMITS`),
+`data/works.ts` (`workTags()` pela ordem serviço → marcas, com fallback a
+`products`; `hasService()`), Detalhe (serviço em maiúsculas com contorno
+dourado, marca em texto normal), Portfólio (segunda fila), i18n
+(`workServices` em pt/en indexado pelo id, `portfolio.emptyService` /
+`seeCategory`, `work.serviceA11y` / `brandA11y`), seed com
+`services`/`brands`, `scripts/migrate-work-tags.mjs`. Backoffice —
+`models.ts` sincronizado, cartão "Tags" no formulário do trabalho (chips
+de escolha múltipla do sistema/serviço da categoria; marcas com Enter e
+sugestões das já usadas; aviso com o texto antigo; `products` apagado ao
+guardar; **publicar exige pelo menos um serviço**, rascunho não), lista de
+trabalhos com a linha das tags, selo "Sem tags" nos publicados sem serviço
+e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
+`works` já eram só da equipa, sem validação de campos). Detalhes em
+`DEVELOPMENT.md`, "Tags nos trabalhos".
+**Idioma (difere da sugestão deixada pela Secção 12):** em vez de
+`LocalizedText` em `models.ts`, os rótulos EN vivem em `src/i18n/en.ts`
+(`workServices`) — `models.ts` é copiado tal e qual para o backoffice, que
+não tem `tx()`; guarda-se sempre o id. Os sistemas de epóxi são nomes da
+Xtreme e ficam iguais nos dois idiomas.
+**Em aberto (pequeno, quando fizer falta):** ligar as páginas de
+departamento ao Portfólio já filtrado por serviço (um `service` nos params
+de `Portfolio`); um seletor de marca no Portfólio (hoje só o serviço filtra).
 **Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
 de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
 sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);

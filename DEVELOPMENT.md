@@ -686,6 +686,54 @@ dentro da página. Regras:
   o formulário desse departamento vem de `src/data/requestForms.ts` —
   a Xtreme ("Pedir cotação") usa o mesmo caminho, com `department: 'xps'`.
 
+## Tags nos trabalhos (Secção 13)
+
+Cada trabalho leva o **sistema/serviço** (lista fixa por categoria) e as
+**marcas** (texto). Pedido do Fábio (2026-09-04); decisões no ROADMAP,
+Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
+
+- **Modelo:** `works.services: WorkServiceId[]` — ids de `WORK_SERVICES`
+  (`src/firebase/models.ts`: id, `category`, rótulo PT), sempre da
+  categoria do trabalho; `works.brands: string[]` — nomes próprios, sem
+  tradução. `products[]` (`{ brand, item }`) é **legado**: opcional, só em
+  trabalhos anteriores à Secção 13 ainda não migrados. `WORK_SERVICE_KIND`
+  diz como a tag se chama ("Sistema" nos chãos, "Serviço" no resto).
+  **Acrescentar um sistema/serviço** = uma linha em `WORK_SERVICES` (app e
+  backoffice — o `models.ts` do backoffice é cópia), a tradução em
+  `src/i18n/pt.ts` e `en.ts` (`workServices`; sem ela o typecheck falha) e
+  uma versão nova da app. Não há regras novas: as escritas em `works` já
+  eram só da equipa, sem validação de campos.
+- **Idioma:** guarda-se o id; a app mostra `S.workServices[id]` (pt/en) e
+  cai no rótulo PT de `models.ts` se receber um id que não conhece
+  (backoffice mais novo do que a app instalada). Os sistemas de epóxi são
+  nomes da Xtreme e ficam iguais nos dois idiomas. Optou-se por isto em vez
+  de `LocalizedText` em `models.ts` (sugestão da Secção 12) para o ficheiro
+  continuar igual nos dois projetos.
+- **App:** `data/works.ts` → `workTags(work)` devolve as tags pela ordem
+  **serviço → marcas** (chips no Detalhe: serviço em maiúsculas com contorno
+  dourado, marca em texto normal) e cai em `products` quando não há tags;
+  `hasService()` serve o Portfólio, que dentro de uma categoria mostra uma
+  segunda fila de chips com os serviços que têm trabalhos publicados (tocar
+  outra vez desliga; em "Todos" não há segunda fila; mudar de categoria
+  limpa o serviço).
+- **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
+  escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
+  cair os que não pertencem), marcas com Enter/vírgula e sugestões
+  (`datalist`) das fixas + já usadas noutros trabalhos. **Publicar exige
+  pelo menos um serviço**; um rascunho pode ficar sem. Trabalhos antigos:
+  marcas pré-preenchidas a partir de `products`, aviso com o texto antigo,
+  `products` apagado ao guardar. A lista mostra a linha das tags, o selo
+  "Sem tags" nos publicados sem serviço, e a pesquisa apanha tags.
+- **Migrar os trabalhos antigos:**
+  `npm run works:migrate-tags -- ./serviceAccountKey.dev.json` mostra o que
+  faria (marca → `brands`; título, modelo e itens → serviço por
+  palavras-chave, só entre os serviços da categoria do trabalho; ignora
+  quem já tem tags); `--apply` escreve e apaga `products` onde reconheceu
+  um serviço (onde não reconheceu, mantém-o para a equipa ver no
+  formulário). Só aceita chaves `-dev`; o prod ainda não tem trabalhos,
+  nascem já com tags. O seed (`npm run seed`) já escreve
+  `services`/`brands`. Feito no dev a 2026-09-05 (8 trabalhos).
+
 ## Firebase: os dois projetos
 
 | | dev | prod |
