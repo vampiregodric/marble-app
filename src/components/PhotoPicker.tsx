@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { colors, fonts } from '../theme/theme';
+import { useT } from '../i18n';
 
 export type PickedPhoto = {
   uri: string;
@@ -21,6 +22,7 @@ type Props = {
 // cliente; o único símbolo é o "×" de remover, que é uma ação.
 export default function PhotoPicker({ photos, max, onAdd, onRemove, disabled }: Props) {
   const canAdd = photos.length < max && !disabled;
+  const T = useT();
   return (
     <View style={styles.row}>
       {photos.map((p, i) => (
@@ -32,15 +34,15 @@ export default function PhotoPicker({ photos, max, onAdd, onRemove, disabled }: 
             </View>
           ) : null}
           {!disabled ? (
-            <Pressable style={styles.remove} onPress={() => onRemove(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remover foto ${i + 1}`}>
+            <Pressable style={styles.remove} onPress={() => onRemove(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={T.photoPicker.removeA11y(i + 1)}>
               <Text style={styles.removeText}>×</Text>
             </Pressable>
           ) : null}
         </View>
       ))}
       {canAdd ? (
-        <Pressable style={[styles.tile, styles.addTile]} onPress={onAdd} accessibilityRole="button" accessibilityLabel="Adicionar foto">
-          <Text style={styles.addText}>Adicionar</Text>
+        <Pressable style={[styles.tile, styles.addTile]} onPress={onAdd} accessibilityRole="button" accessibilityLabel={T.photoPicker.addA11y}>
+          <Text style={styles.addText}>{T.photoPicker.add}</Text>
           <Text style={styles.addCount}>
             {photos.length}/{max}
           </Text>

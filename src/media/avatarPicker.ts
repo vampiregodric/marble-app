@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { shrinkImage } from './images';
+import { S } from '../i18n';
 
 // Escolher a foto de perfil: galeria ou câmara, recorte quadrado nativo
 // (iOS/Android) e redução a 1024 px no próprio telemóvel antes de subir —
@@ -31,7 +32,7 @@ export async function pickAvatar(source: AvatarSource): Promise<string | null> {
   let result: ImagePicker.ImagePickerResult;
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) throw new Error('Sem acesso à câmara. Dá permissão à app nas definições do telemóvel.');
+    if (!perm.granted) throw new Error(S.errors.cameraDenied);
     result = await ImagePicker.launchCameraAsync(PICKER_OPTIONS);
   } else {
     result = await ImagePicker.launchImageLibraryAsync(PICKER_OPTIONS);

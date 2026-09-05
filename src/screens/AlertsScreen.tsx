@@ -12,6 +12,7 @@ import { AppNotification } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { enablePush, getPushPermission, openNotificationSettings, PushPermission } from '../push/push';
 import { timeAgo } from '../utils/dates';
+import { useT } from '../i18n';
 
 // Estado da permissão de push deste telemóvel, reavaliado quando a app
 // volta ao primeiro plano (o cliente pode ter ido às Definições do sistema).
@@ -47,6 +48,7 @@ export default function AlertsScreen() {
   const { user } = useAuth();
   const { data: alerts, loading, error } = useNotifications(user?.uid);
   const unreadCount = alerts.filter((a) => !a.read).length;
+  const T = useT();
 
   const [push, refreshPush] = usePushPermission();
   const [enabling, setEnabling] = useState(false);
@@ -60,7 +62,7 @@ export default function AlertsScreen() {
     try {
       await enablePush(user.uid);
     } catch (err) {
-      setPushError(err instanceof Error ? err.message : 'Não foi possível ativar as notificações. Tenta outra vez.');
+      setPushError(err instanceof Error ? err.message : T.alerts.enableError);
     } finally {
       setEnabling(false);
       refreshPush();
@@ -78,36 +80,29 @@ export default function AlertsScreen() {
     else if (a.relatedVehicleId || a.relatedRequestId) navigation.navigate('Tabs', { screen: 'Profile' });
   };
 
-  const subtitle = loading ? 'A carregar…' : unreadCount === 0 ? 'Tudo lido' : unreadCount === 1 ? '1 por ler' : `${unreadCount} por ler`;
+  const subtitle = loading ? T.common.loading : unreadCount === 0 ? T.alerts.allRead : T.alerts.unread(unreadCount);
+  const pushCta = push === 'denied' ? T.alerts.openSettings : T.alerts.enable;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Alertas</Text>
+        <Text style={styles.title}>{T.alerts.title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
       {showPushCard && (
         <View style={styles.pushCard}>
-          <Text style={styles.pushTitle}>{push === 'denied' ? 'Notificações desligadas' : 'Recebe os alertas no telemóvel'}</Text>
-          <Text style={styles.pushDesc}>
-            {push === 'denied'
-              ? 'Liga-as nas definições do telemóvel para saberes dos checkups e das respostas da equipa mesmo com a app fechada.'
-              : 'Sabe logo quando há um checkup a confirmar ou uma resposta da equipa, mesmo com a app fechada. Ofertas e novidades só se as ligares no Perfil.'}
-          </Text>
+          <Text style={styles.pushTitle}>{push === 'denied' ? T.alerts.pushDeniedTitle : T.alerts.pushTitle}</Text>
+          <Text style={styles.pushDesc}>{push === 'denied' ? T.alerts.pushDeniedDesc : T.alerts.pushDesc}</Text>
           {pushError && <Text style={styles.pushError}>{pushError}</Text>}
           <Pressable
             style={[styles.cta, enabling && { opacity: 0.6 }]}
             onPress={push === 'denied' ? openNotificationSettings : onEnablePush}
             disabled={enabling}
             accessibilityRole="button"
-            accessibilityLabel={push === 'denied' ? 'Abrir definições' : 'Ativar notificações'}
+            accessibilityLabel={pushCta}
           >
-            {enabling ? (
-              <ActivityIndicator color="#0b0a08" />
-            ) : (
-              <Text style={styles.ctaText}>{push === 'denied' ? 'Abrir definições' : 'Ativar notificações'}</Text>
-            )}
+            {enabling ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{pushCta}</Text>}
           </Pressable>
         </View>
       )}
@@ -117,10 +112,7 @@ export default function AlertsScreen() {
       ) : error ? (
         <ErrorState error={error} />
       ) : alerts.length === 0 ? (
-        <EmptyState
-          title="Sem alertas por agora."
-          description="Quando houver um checkup a confirmar, um trabalho novo ou uma oferta para ti, aparece aqui."
-        />
+        <EmptyState title={T.alerts.emptyTitle} description={T.alerts.emptyDesc} />
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {alerts.map((a) => (
@@ -129,7 +121,7 @@ export default function AlertsScreen() {
               style={styles.row}
               onPress={() => open(a)}
               accessibilityRole="button"
-              accessibilityLabel={`${a.title}${a.read ? '' : ', por ler'}`}
+              accessibilityLabel={`${a.title}${a.read ? '' : T.alerts.unreadA11y}`}
             >
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>{a.title}</Text>

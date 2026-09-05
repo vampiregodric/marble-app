@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, StyleSheet, Platform } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme/theme';
 import { WEB_MAX_WIDTH } from '../utils/layout';
+import { useT } from '../i18n';
 
 // Menu de ações no fundo do ecrã, no estilo da app (o Alert/ActionSheet do
 // sistema não existe igual nos três lados e não segue o tema). Uma linha de
@@ -22,11 +23,12 @@ type Props = {
 
 export default function ActionSheet({ visible, title, actions, onClose }: Props) {
   const insets = useSafeAreaInsets();
+  const T = useT();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       {/* O fundo não leva accessibilityRole="button": na web viraria um
           <button> com botões lá dentro (HTML inválido, avisos do React). */}
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Fechar menu">
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={T.common.closeMenu}>
         {/* Pressable vazio a envolver o painel para o toque lá dentro não fechar. */}
         <Pressable style={[styles.sheet, { paddingBottom: 8 + insets.bottom }]} onPress={() => {}}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
@@ -36,7 +38,7 @@ export default function ActionSheet({ visible, title, actions, onClose }: Props)
             </Pressable>
           ))}
           <Pressable style={[styles.row, styles.cancelRow]} onPress={onClose} accessibilityRole="button">
-            <Text style={styles.cancelText}>Cancelar</Text>
+            <Text style={styles.cancelText}>{T.common.cancel}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

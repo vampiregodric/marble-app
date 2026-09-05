@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "Marble Studios uses your photos only so you can choose your profile photo and attach photos to a quote request.",
+    "NSCameraUsageDescription": "Marble Studios uses the camera only to take your profile photo or a photo for a quote request."
+  }
+}

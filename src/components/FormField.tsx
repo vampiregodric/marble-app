@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps, Pressable } from 'react-native';
 import { colors, fonts } from '../theme/theme';
 import { EyeIcon, EyeOffIcon } from './Icons';
+import { useT } from '../i18n';
 
 type Props = TextInputProps & {
   label: string;
@@ -16,6 +17,7 @@ export default function FormField({ label, error, hint, style, secureTextEntry, 
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const isSecure = !!secureTextEntry;
+  const T = useT();
 
   return (
     <View style={styles.wrap}>
@@ -43,7 +45,7 @@ export default function FormField({ label, error, hint, style, secureTextEntry, 
             style={styles.eye}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={revealed ? 'Ocultar password' : 'Mostrar password'}
+            accessibilityLabel={revealed ? T.form.hidePassword : T.form.showPassword}
           >
             {revealed ? <EyeOffIcon color={colors.gold} /> : <EyeIcon color={colors.inkMuted} />}
           </Pressable>

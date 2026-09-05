@@ -13,12 +13,13 @@ import {
   Vehicle,
 } from '../firebase/models';
 import { useFirestoreDoc } from './firestoreHooks';
-import { MONTHS_SHORT } from '../utils/dates';
+import { monthShort } from '../utils/dates';
+import { S } from '../i18n';
 
 // Agendamento de checkup (Secção 8): o que a app precisa de saber para o
 // cliente escolher um dia — a disponibilidade da equipa (`settings/checkups`)
 // transformada em opções concretas — e como ler o estado do pedido de um
-// carro/chão para o Perfil.
+// carro/chão para o Perfil. Os textos vêm de src/i18n (Secção 12).
 
 export type Availability = Omit<CheckupAvailability, 'id' | 'updatedAt'>;
 
@@ -78,31 +79,37 @@ export function checkupOptions(a: Availability, now: Date = new Date()): Checkup
   return out;
 }
 
-export const PERIOD_LABEL: Record<CheckupPeriod, string> = { morning: 'Manhã', afternoon: 'Tarde' };
+// "Manhã" / "Tarde" (chips da folha).
+export function periodLabel(p: CheckupPeriod): string {
+  return p === 'morning' ? S.checkup.morning : S.checkup.afternoon;
+}
 
-const WEEKDAYS_SHORT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-const WEEKDAYS_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+// "7 set" (PT, minúsculas como nos alertas das Functions) / "7 Sep" (EN).
+function dayMonth(d: Date): string {
+  const m = monthShort(d.getMonth());
+  return `${d.getDate()} ${S.dates.lowercaseMonthInSlot ? m.toLowerCase() : m}`;
+}
 
-// "seg, 7 set"
+// "seg, 7 set" / "Mon, 7 Sep"
 export function formatCheckupDay(day: string): string {
   const d = parseDay(day);
   if (!d) return day;
-  return `${WEEKDAYS_SHORT[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()].toLowerCase()}`;
+  return `${S.dates.weekdaysShort[d.getDay()]}, ${dayMonth(d)}`;
 }
 
 // Para os chips da folha: { "seg", "7 set" }.
 export function splitCheckupDay(day: string): { weekday: string; date: string; weekdayLong: string } {
   const d = parseDay(day);
   if (!d) return { weekday: '', date: day, weekdayLong: day };
-  return { weekday: WEEKDAYS_SHORT[d.getDay()], date: `${d.getDate()} ${MONTHS_SHORT[d.getMonth()].toLowerCase()}`, weekdayLong: WEEKDAYS_LONG[d.getDay()] };
+  return { weekday: S.dates.weekdaysShort[d.getDay()], date: dayMonth(d), weekdayLong: S.dates.weekdaysLong[d.getDay()] };
 }
 
 // "seg, 7 set, de manhã" ou, com hora da equipa, "seg, 7 set às 10:30" —
-// o mesmo texto que as Cloud Functions escrevem nos alertas.
+// em PT é o mesmo texto que as Cloud Functions escrevem nos alertas.
 export function formatCheckupSlot(req: Pick<CheckupRequest, 'day' | 'period' | 'time'>): string {
   const day = formatCheckupDay(req.day);
-  if (req.time) return `${day} às ${req.time}`;
-  return `${day}, ${req.period === 'morning' ? 'de manhã' : 'à tarde'}`;
+  if (req.time) return `${day} ${S.checkup.slotAt} ${req.time}`;
+  return `${day}, ${req.period === 'morning' ? S.checkup.slotMorning : S.checkup.slotAfternoon}`;
 }
 
 // O que o Perfil mostra para cada carro/chão:
@@ -140,9 +147,9 @@ export function checkupActionable(v: Vehicle): boolean {
 // não está no estado que a app pensava.
 export function checkupErrorMessage(err: unknown): string {
   const code = err instanceof FirebaseError ? err.code : '';
-  if (code === 'permission-denied') return 'Não foi possível guardar: o estado deste checkup mudou entretanto. Vê o cartão atualizado e tenta outra vez.';
-  if (code === 'unavailable') return 'Sem ligação. Verifica a internet e tenta outra vez.';
-  return 'Algo correu mal. Tenta outra vez.';
+  if (code === 'permission-denied') return S.checkup.errorChanged;
+  if (code === 'unavailable') return S.common.offline;
+  return S.common.somethingWrong;
 }
 
 // O carro/chão do cartão "Ação pendente": primeiro o que precisa de uma

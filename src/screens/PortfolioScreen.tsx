@@ -12,8 +12,10 @@ import { WorkCategory, WorkServiceId, workServicesOf } from '../firebase/models'
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
+import { useT } from '../i18n';
 
-const ALL = 'Todos';
+// Chave interna do filtro "Todos" (o rótulo vem de i18n).
+const ALL = 'all';
 type Filter = typeof ALL | WorkCategory;
 
 // Portfólio público: todos os trabalhos publicados no Firestore, filtrados por
@@ -29,6 +31,7 @@ export default function PortfolioScreen() {
   const screenW = useAppWidth();
   const cardW = (screenW - 36 - 10) / 2;
   const { data: works, loading, error } = usePublishedWorks();
+  const T = useT();
 
   // Mudar de categoria limpa o serviço (as listas são por categoria).
   const choose = (c: Filter) => {
@@ -50,16 +53,12 @@ export default function PortfolioScreen() {
   );
   const filtered = useMemo(() => (service ? inCategory.filter((w) => hasService(w, service)) : inCategory), [inCategory, service]);
 
-  const subtitle = loading
-    ? 'A carregar…'
-    : works.length === 1
-      ? '1 trabalho publicado'
-      : `${works.length} trabalhos publicados`;
+  const subtitle = loading ? T.common.loading : T.portfolio.count(works.length);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Portfólio</Text>
+        <Text style={styles.title}>{T.portfolio.title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
@@ -70,7 +69,7 @@ export default function PortfolioScreen() {
         contentContainerStyle={styles.chipsRowContent}
       >
         {[ALL, ...CATEGORIES.map((c) => c.key)].map((c) => {
-          const label = CATEGORIES.find((m) => m.key === c)?.label ?? c;
+          const label = c === ALL ? T.portfolio.all : (CATEGORIES.find((m) => m.key === c)?.label ?? c);
           return (
             <Pressable
               key={c}
@@ -90,6 +89,7 @@ export default function PortfolioScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subRow} contentContainerStyle={styles.chipsRowContent}>
           {serviceOptions.map((s) => {
             const on = service === s.id;
+            const label = T.workServices[s.id];
             return (
               <Pressable
                 key={s.id}
@@ -97,9 +97,9 @@ export default function PortfolioScreen() {
                 style={[styles.subChip, on && styles.subChipActive]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={s.label}
+                accessibilityLabel={label}
               >
-                <Text style={[styles.subChipText, on && styles.subChipTextActive]}>{s.label}</Text>
+                <Text style={[styles.subChipText, on && styles.subChipTextActive]}>{label}</Text>
               </Pressable>
             );
           })}
@@ -112,15 +112,9 @@ export default function PortfolioScreen() {
         <ErrorState error={error} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={
-            active === ALL
-              ? 'Ainda não há trabalhos publicados.'
-              : service
-                ? 'Ainda não há trabalhos com este serviço.'
-                : 'Ainda não há trabalhos nesta categoria.'
-          }
-          description="Assim que a equipa publicar um trabalho novo, aparece aqui."
-          actionLabel={active === ALL ? undefined : service ? 'Ver toda a categoria' : 'Ver todos'}
+          title={active === ALL ? T.portfolio.emptyAll : service ? T.portfolio.emptyService : T.portfolio.emptyCategory}
+          description={T.portfolio.emptyDesc}
+          actionLabel={active === ALL ? undefined : service ? T.portfolio.seeCategory : T.portfolio.seeAll}
           onAction={active === ALL ? undefined : service ? () => setService(null) : () => choose(ALL)}
         />
       ) : (

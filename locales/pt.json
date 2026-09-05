@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "A Marble Studios usa as tuas fotografias só para escolheres a tua foto de perfil e para juntares fotos a um pedido de orçamento.",
+    "NSCameraUsageDescription": "A Marble Studios usa a câmara só para tirares a tua foto de perfil ou uma foto para um pedido de orçamento."
+  }
+}

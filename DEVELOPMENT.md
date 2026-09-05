@@ -56,6 +56,9 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   (Secções 9/10) ou do Perfil; sem sessão cria a conta na hora
 
 Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
+Todos os textos da interface existem em **PT e EN** (Secção 12,
+2026-09-05), em `src/i18n/` — ver "Idiomas" abaixo antes de escrever
+qualquer texto novo num ecrã.
 
 ## Por fazer a seguir
 
@@ -83,6 +86,13 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
    (`src/data/localPhotos.ts`) foi apagada — a real está no Cloudinary;
    `assets/work-jaguar-purple.jpg` fica só como ficheiro de origem, a app
    não o usa. Ver "Galeria, fotos dos serviços e foto de perfil" abaixo.
+7. **Lançamento nas lojas** — parte 1 feita (Secção 11, 2026-09-05):
+   ícones/splash finais, variantes dev/prod, perfil de produção do EAS,
+   regras e app Android no Firebase prod, páginas legais publicadas em
+   https://marble-studios-app.web.app/, ficha das lojas em `docs/store/`.
+   Falta o que só o Fábio faz (contas, Blaze, segredos —
+   `docs/store/checklist-contas.md`) e a parte 2 (build, screenshots,
+   submissão). Ver "Lançamento nas lojas" abaixo.
 
 ## Autenticação (Secção 2)
 
@@ -388,13 +398,16 @@ Passos (uma vez):
    `npx.cmd firebase-tools apps:create ANDROID "Marble Studios App" --package-name pt.marble.app --project dev`
    e `npx.cmd firebase-tools apps:sdkconfig ANDROID <appId> --project dev --out google-services.json`.
    O ficheiro fica na raiz e em `android.googleServicesFile` (só tem
-   identificadores públicos; pode ir para o git). O prod precisa do seu
-   próprio (Secção 11).
+   identificadores públicos; pode ir para o git). O prod tem o seu próprio,
+   no EAS (Secção 11). **Desde a Secção 11 a dev build usa o pacote
+   `pt.marble.app.dev`** ("Marble Dev") e o ficheiro da raiz já tem esse
+   cliente — ver "Lançamento nas lojas" abaixo.
 4. Credencial FCM V1 no EAS (é o que deixa o Expo entregar no Android): em
    https://expo.dev → projeto → Credentials → Android → Service
    Credentials → FCM V1 → carregar a chave de service account do Firebase
    (a mesma `serviceAccountKey.dev.json` serve). Ou `npx.cmd eas-cli credentials`
-   (interativo).
+   (interativo). A credencial é **por nome de pacote**: a do dev fica em
+   `pt.marble.app.dev`; `pt.marble.app` é só produção (Secção 11).
 5. Build na nuvem: `npx.cmd eas-cli build --profile development --platform android`
    (perfis em `eas.json`; o keystore é gerado pelo EAS). Demora 10–20 min
    na fila gratuita; no fim há um link/QR para instalar o APK no telemóvel.
@@ -439,6 +452,10 @@ push).
   (`1:418501225214:android:caea02432c45ce895ed3af`);
   `google-services.json` na raiz. Chave FCM V1 (a
   `serviceAccountKey.dev.json`) carregada pelo Fábio no dashboard do Expo.
+  **Secção 11 (2026-09-05):** app `pt.marble.app.dev` "Marble Studios Dev"
+  também no dev (`1:418501225214:android:d65581b56503bca85ed3af`, no mesmo
+  `google-services.json`); no **prod**, `pt.marble.app`
+  (`1:1081673947718:android:4fab7bdcfd8fb0bb4d4847`, ficheiro só no EAS).
 - Primeira development build:
   https://expo.dev/accounts/marble-studios/projects/marble-studios/builds/31ef345b-3867-41d4-a527-3a3155815632
   (APK instalado no Android do Fábio; keystore gerado pelo EAS). Push real
@@ -590,7 +607,8 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   marca `followUp.checkupConfirmedAt` nos trabalhos ativos do carro/chão —
   o job diário nunca chega a mandar ligar. Ao cancelar, `checkupStatus` →
   `'declined'`; ao voltar a pedir, → `'pending'`.
-- **O papel da equipa até à Secção 7b** (página "Checkups" no backoffice):
+- **O papel da equipa na linha de comandos** (a página Checkups do
+  backoffice faz o mesmo desde a Secção 7b; o script fica para testes):
   `npm run checkup:admin -- ./serviceAccountKey.dev.json list|show <id>|approve <id> [--time 10:30] [--note "…"]|propose <id> --day AAAA-MM-DD --period morning|afternoon [--time] [--note]|done <id>|reset <id>|availability [--weekly "mon:morning,afternoon;sat:morning" --closed 2026-09-15 --weeks 3 --min 1]`.
   Escreve exatamente o que o backoffice vai escrever; a Function publicada
   no dev faz o resto (o cliente recebe o alerta e o push). `reset` limpa o
@@ -604,11 +622,23 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   simula o trigger. Nos testes no browser, um clique programático em
   vários chips e no botão no mesmo instante usa os valores anteriores (o
   React ainda não re-renderizou) — clica, espera, e só depois submete.
-- **Backoffice (Secção 7b, por fazer):** página "Checkups" com pedidos a
-  aprovar (Aprovar / Propor outro dia), agendados ("Marcar em dia") e o
-  editor de disponibilidade; `models.ts` do backoffice sincronizado
-  (`CheckupRequest`, `CheckupAvailability`, `CheckupStatus` `'declined'`,
-  `CHECKUP.declined` em `utils/format.ts`). Ver ROADMAP.md.
+- **Backoffice (Secção 7b, feito 2026-09-05):** página **Checkups**
+  (`/checkups`) com três blocos — A aprovar (Aprovar com hora opcional e
+  nota / Propor outro dia, só dias abertos na disponibilidade a partir de
+  amanhã, com saída avisada), Agendados (Marcar em dia / Propor outro dia;
+  dias já passados com selo "Por fechar") e Disponibilidade (editor de
+  `settings/checkups`, grava com "Guardar") — mais "Cancelados pelo
+  cliente", a coluna "Pedido na app" no Painel, "Ver em Checkups" nos
+  alertas internos e na ficha do cliente, e `'declined'` = "Cancelou o
+  checkup". As escritas (`marble-backoffice/src/data/writes.ts`:
+  `decideCheckupRequest`, `proposeCheckupDay`, `markCheckupDone`,
+  `saveCheckupAvailability`) são as do `checkup-admin.mjs`; `models.ts`
+  copiado. Detalhe no README do backoffice, "Checkups (Secção 7b)".
+  **Por corrigir aqui (Function, pequeno):** quando a equipa aprova uma
+  proposta ("Aprovar na mesma"), `handleVehicleUpdated` vê
+  `proposed → approved` e cria o alerta interno "confirmou o checkup" como
+  se fosse o cliente — distinguir por `decidedAt` (mudou = equipa) vs
+  `confirmedAt` (cliente).
 
 ## Páginas de departamento (Secção 9)
 
@@ -664,7 +694,10 @@ dentro da página. Regras:
 | Firestore | `(default)`, `eur3`, production mode | idem |
 | Auth | Email/Password | Email/Password |
 | App web | "Marble Studios App" | "Marble Studios App" |
-| Config | `.env` | `.env.production` |
+| App Android | `pt.marble.app` (dev build antiga) e `pt.marble.app.dev` ("Marble Dev") | `pt.marble.app` |
+| Config | `.env` (fora do git) | `.env.production` (no git desde a Secção 11) |
+| Hosting | `marble-studios-backoffice-dev` (backoffice) | `marble-studios-app` (páginas legais/suporte da app) |
+| Blaze / Functions | ativo / publicadas (Secção 6) | **por fazer** (Secção 11, parte 2) |
 | Analytics / Gemini / Dev Program | desligados | desligados |
 
 Conta Google dona dos dois: `v.godric@gmail.com`. Se um dia a Marble
@@ -673,10 +706,11 @@ Studios tiver conta Google própria, adiciona-a como Owner em
 
 Ambos foram criados em **production mode** (tudo negado por defeito) — não
 há janela de 30 dias de base de dados aberta. As regras reais estão em
-`firestore.rules` e os índices em `firestore.indexes.json`; ambos publicados
-no **dev** (versão da Secção 4, 2026-09-03). O **prod** ainda tem as regras
-iniciais de production mode (tudo negado) e nenhum índice — publica lá na
-Secção 11, antes do lançamento.
+`firestore.rules` e os índices em `firestore.indexes.json`; publicados no
+**dev** (Secção 4, 2026-09-03) e no **prod** (Secção 11, 2026-09-05, com a
+versão do master desse dia, que já inclui as Secções 7 e 8). Sempre que as
+regras ou os índices mudarem, o prod tem de ser republicado antes do
+lançamento — é um dos passos da parte 2 da Secção 11.
 
 O Firebase CLI já está autenticado nesta máquina (`v.godric@gmail.com`).
 Sempre que mudares `firestore.rules` ou `firestore.indexes.json`, corre a
@@ -697,8 +731,10 @@ autorizam o deploy para `--project dev`, o seed (`npm run seed`, incluindo
 (no Bash do Claude o `node` não está no PATH). A secção `autoMode.allow` do
 mesmo ficheiro explica ao classificador do modo automático porque é que
 isso é seguro. Deploys para **prod** continuam a pedir-te confirmação, de
-propósito. Se uma conversa aberta antes destas regras existirem for
-bloqueada, corre tu o comando no teu PowerShell.
+propósito — mas, dada essa confirmação na conversa, o Claude consegue
+corrê-los (foi assim na Secção 11: regras, app Android e Hosting no prod).
+Se uma conversa aberta antes destas regras existirem for bloqueada, corre
+tu o comando no teu PowerShell.
 
 Para confirmar que tudo está ligado (config do `.env` + regras):
 
@@ -736,11 +772,226 @@ lançamento (Secção 11).
 
 ### Trocar entre dev e prod
 
-Nunca à mão. `npx expo start` lê sempre `.env` (dev). Só uma build de
-produção (`eas build --profile production`) lê `.env.production`. Se
-precisares de testar contra prod localmente (raro, e só depois do
-lançamento), cria `.env.local` com os valores de prod — está no
-`.gitignore` e sobrepõe-se ao `.env`; apaga-o quando acabares.
+Nunca à mão. `npx expo start` lê sempre `.env` (dev). Só o `expo export`
+de produção — o que o EAS Build corre nos perfis `preview` e `production` —
+lê `.env.production` (que está no git desde a Secção 11). Se precisares de
+testar contra prod localmente (raro, e só depois do lançamento), cria
+`.env.local` com os valores de prod — está no `.gitignore` e sobrepõe-se ao
+`.env`; apaga-o quando acabares.
+
+## Idiomas (Secção 12)
+
+A app está em **português e inglês**, escolhido pelo idioma do telemóvel
+(decisão do Fábio, 2026-09-05: sem seletor próprio — português → PT,
+qualquer outro idioma → EN; o sistema reinicia a app quando o idioma
+muda). Tudo vive em `src/i18n/`:
+
+- `locale.ts` — deteção com `expo-localization` (`getLocales()[0]`),
+  `locale` ('pt' | 'en'), `languageTag` (para o Firebase Auth e o `lang`
+  da web), o tipo `LocalizedText = { pt, en }` e `tx()` que escolhe a
+  versão atual. **No browser, `?lang=en` (ou `?lang=pt`) no URL força o
+  idioma** — é assim que se testa a app web nos dois idiomas
+  (`http://localhost:8082/profile?lang=en`; com o token de dev:
+  `http://localhost:8082/?lang=en#token=…`).
+- `pt.ts` — **a fonte de verdade**, organizada por ecrã/componente
+  (`common`, `tabs`, `home`, `profile`, `checkup`, `request`, `errors`,
+  `dates`, …). Texto com valores dentro é uma função:
+  `count: (n) => \`${n} trabalhos publicados\``.
+- `en.ts` — as mesmas chaves em inglês, tipado como `Strings = typeof pt`
+  (`types.ts`): **uma chave em falta ou com outra forma é erro de
+  `npm run typecheck`**. É a única verificação — não há teste de que os
+  dois textos dizem o mesmo.
+- `index.ts` — `useT()` nos componentes (`const T = useT();
+  T.profile.signOut`) e `S` fora deles (`S.errors.cameraDenied` em
+  `media/`, `auth/errors.ts`, `data/checkups.ts`, `utils/dates.ts`). É uma
+  constante decidida no arranque; se um dia houver seletor no Perfil,
+  `useT()` passa a ler de um estado e os ecrãs não mudam.
+
+**Para acrescentar um texto novo:** escreve-o em `pt.ts` na secção do ecrã
+(ou cria uma), escreve o mesmo em `en.ts` com a mesma chave, e usa
+`T.secção.chave` no ecrã. Sem a tradução o typecheck falha — é de
+propósito. Nunca escrevas texto solto num ecrã.
+
+**O que NÃO está em `src/i18n`:**
+- `src/legal/texts.ts` — política e termos **só em PT** (a revisão
+  jurídica é de um texto). Em EN o `LegalScreen` mostra a linha
+  "This document is available in Portuguese only" por cima do texto.
+- `src/data/departmentContent.ts` — o conteúdo das páginas de departamento
+  tem `PT` e `EN` completos, um objeto por departamento;
+  `departmentContent(id)` devolve o idioma da app e cai para PT se a
+  tradução faltar. Ao mudar um texto em PT, muda o de EN.
+- `src/data/requestForms.ts` — cada opção/etiqueta é `{ pt, en }`
+  (`t('Vinil / wrap', 'Vinyl / wrap')`). `requestForm(department)` devolve
+  o formulário no idioma da app com `value` (o texto PT, **o que se
+  guarda** em `requests.services` / `fields[].label` via `storedLabel`) e
+  `label` (o que se vê). Assim o backoffice e o email à equipa leem sempre
+  PT, seja qual for o idioma do cliente. `OptionChips` recebe
+  `{ key, label }` e devolve a chave.
+- `src/data/departments.ts` — nomes são marca (não se traduzem); taglines e
+  o selo "Oficial" vêm de `S.departments`.
+- `src/firebase/models.ts` — `REQUEST_STATUS_LABEL` e
+  `CONTACT_PREFERENCE_LABEL` ficam em PT (o ficheiro é copiado para o
+  backoffice); a app usa `S.requestStatus` / `S.contactPreference`.
+- **Alertas** (`notifications`): os escritos pela equipa no backoffice e
+  pelas Cloud Functions (`functions/src/texts.ts`) são em PT e assim
+  ficam (decisão do Fábio). Se um dia os automáticos tiverem de sair em EN:
+  gravar o idioma em `clients/{uid}.locale` (app, no `touchLastActive`),
+  `texts.ts` bilingue e `models.ts` do backoffice sincronizado — é uma
+  mini-secção própria.
+
+**Datas:** `utils/dates.ts` e `data/checkups.ts` usam as tabelas de meses e
+dias de `S.dates` (não `Intl`, que varia entre iOS/Android/web e o Hermes
+só implementa em parte). Em PT o resultado é igual ao que as Functions
+escrevem nos alertas ("seg, 7 set às 10:30"); em EN "Mon, 7 Sep at 10:30".
+
+**Firebase Auth:** `AuthContext` define `auth.languageCode = languageTag`
+no arranque — os templates **por defeito** do Firebase (repor password,
+que é também o "define a tua password" das contas criadas por um pedido de
+orçamento) saem em PT ou EN conforme o telemóvel. Um template
+personalizado na consola é só numa língua; se o Fábio o traduzir na
+Secção 11, é ele que manda.
+
+**Builds (só contam na parte 2 da Secção 11):** o plugin
+`expo-localization` no `app.json` leva `supportedLocales: ["pt", "en"]`
+(iOS: `CFBundleLocalizations`, aparece "Idioma" nas Definições da app;
+Android 13+: `locales_config.xml`, idem) e `locales/pt.json` +
+`locales/en.json` têm os textos de permissão iOS (câmara e fotos) nos dois
+idiomas, com `CFBundleAllowMixedLocalizations`. O `expo-image-picker`
+continua com os textos PT como reserva. O nome da app não está localizado
+(é "Marble Studios" nos dois).
+
+**Push (Android):** o nome do canal de notificações
+("Alertas da Marble Studios" / "Marble Studios alerts") é decidido na
+primeira vez que a app cria o canal; mudar o idioma do telemóvel depois
+não o renomeia (limitação do Android, cosmético).
+
+## Lançamento nas lojas (Secção 11)
+
+Parte 1 feita a 2026-09-05 — **sem builds nem submissão**, que são a parte
+2 (depois das Secções 7, 8, 10 e 12 estarem no master). O que só o Fábio
+pode fazer (contas Apple/Google, D-U-N-S, Blaze no prod, segredos, chave
+FCM do prod), com links e prazos, está em `docs/store/checklist-contas.md`;
+a ficha das lojas (PT/EN) e os formulários "Data safety" / "App Privacy"
+em `docs/store/ficha-loja.md`, `data-safety.md` e `app-privacy.md`.
+
+### Ícones, ícone adaptativo e splash
+
+- Tudo sai de `npm run build:icons` (`scripts/build-icons.mjs`) a partir do
+  `assets/logo.png` (dourado sobre preto puro, sem alfa): o script recorta o
+  logo, deriva a transparência da luminosidade e redimensiona por média de
+  área. Nunca edites os PNG à mão — troca o logo e corre o script. Usa o
+  `pngjs` que já vem com o Expo (sem dependências novas; o `sharp` foi
+  evitado porque o npm bloqueia scripts de instalação).
+- Ficheiros: `assets/icon.png` (1024, opaco — a Apple recusa transparência),
+  `android-icon-foreground.png` (logo a 600 px em 1024: dentro da zona
+  segura de 66 % de qualquer máscara), `android-icon-monochrome.png`
+  (silhueta branca com alfa, ícones temáticos do Android 13+),
+  `splash-icon.png` (transparente; o plugin `expo-splash-screen` centra-o
+  num fundo preto com `imageWidth: 260`), `favicon.png`,
+  `logo-transparent.png` (o logo com alfa real, para materiais futuros — o
+  SPEC pedia-o) e, para o Play Console, `docs/store/play-icon-512.png` e
+  `docs/store/feature-graphic-1024x500.png`.
+- `app.json`: `name` "Marble Studios" (era "marble-app" — é o nome que
+  aparece debaixo do ícone), `userInterfaceStyle: "dark"` e
+  `backgroundColor: "#000000"` (a app é preta; sem flash branco entre o
+  splash e o primeiro ecrã, e os diálogos nativos saem escuros),
+  `ios.supportsTablet: false` (sem screenshots nem revisão de iPad),
+  `ios.config.usesNonExemptEncryption: false` (só HTTPS; evita a pergunta de
+  export compliance em cada build), `android.adaptiveIcon.backgroundColor`
+  preto (o PNG de fundo do template foi apagado). Nada disto chega ao
+  telemóvel sem uma build EAS nova.
+
+### Variantes: "Marble Dev" e "Marble Studios"
+
+`app.config.js` (config dinâmica, por cima do `app.json`, que continua a
+ser a fonte de tudo o que é estático) escolhe pela variável `APP_VARIANT`:
+
+| `APP_VARIANT` | Nome | Pacote / bundle | Firebase | Quando |
+|---|---|---|---|---|
+| `production` | Marble Studios | `pt.marble.app` | prod | perfis `production` e `preview` do `eas.json` |
+| outro / vazio | Marble Dev | `pt.marble.app.dev` | dev | perfil `development`, `expo start`, `expo config` |
+
+Porquê: no EAS as credenciais Android (keystore e a chave FCM V1 que
+entrega o push) são guardadas **por nome de pacote**, não por perfil. Com um
+só pacote, dev e prod partilhariam a chave FCM e o push só chegaria a um
+deles. Consequências: (1) a próxima development build sai como "Marble
+Dev" e instala-se ao lado da app real; (2) `pt.marble.app` no EAS passa a
+ser só produção — a chave FCM V1 que lá está é a do **dev** e tem de ser
+trocada pela do prod (checklist, passo 7), e a do dev volta a ser carregada
+em `pt.marble.app.dev` depois da primeira dev build nova; (3) a dev build
+atual continua a funcionar, mas fica sem push a partir dessa troca.
+
+### Firebase Android: `google-services.json`
+
+- O da **raiz** é o do dev e traz os dois clientes do projeto dev
+  (`pt.marble.app`, o antigo, e `pt.marble.app.dev`) — o plugin do Gradle
+  escolhe o que bate com o pacote. Vai para o git (só identificadores
+  públicos).
+- O do **prod** (`google-services.prod.json`, pacote `pt.marble.app`) está
+  no `.gitignore` e carregado no EAS como variável **secreta de ficheiro**
+  `GOOGLE_SERVICES_JSON` do ambiente `production` (`npx.cmd eas-cli env:list
+  --environment production`). Os perfis `preview`/`production` têm
+  `environment: "production"`, o EAS expõe a variável como caminho absoluto
+  e `app.config.js` usa-a em `android.googleServicesFile`; sem a variável
+  (local, dev) cai no ficheiro da raiz. Para o refazer:
+  `npx.cmd firebase-tools apps:sdkconfig ANDROID 1:1081673947718:android:4fab7bdcfd8fb0bb4d4847 --project prod --out google-services.prod.json`
+  e depois `npx.cmd eas-cli env:set --environment production --name GOOGLE_SERVICES_JSON --type file --value ./google-services.prod.json --visibility secret --scope project`
+  (o `env:create` ainda funciona mas está deprecado).
+- iOS não precisa de `GoogleService-Info.plist`: a app usa o SDK JS do
+  Firebase e o push no iOS vai por APNs através do Expo.
+
+### `.env.production` e perfis do EAS
+
+- `.env.production` **está no git** desde a Secção 11 (o `.gitignore`
+  deixou de o excluir): os valores são públicos e o EAS Build só vê
+  ficheiros que o git conhece. O Expo carrega-o sempre que
+  `NODE_ENV=production` — o `expo export` que o EAS corre — e nunca no
+  `expo start`. O `.env` (dev) continua fora do git.
+- `eas.json`: `development` (dev client, APK, `APP_VARIANT=development`,
+  ambiente `development`); `preview` (APK interno **com config de prod**,
+  para testar a release candidate antes da loja; para testar contra dados
+  de dev usa-se a dev build + `expo start`); `production` (AAB para a loja,
+  `autoIncrement` do `versionCode`/`buildNumber` geridos no EAS —
+  `appVersionSource: remote`). `submit.production.android` usa
+  `serviceAccountKey.play.json` (chave da conta de serviço do Play, parte 2;
+  já no `.gitignore`), track `internal`, estado `draft`. iOS submete-se
+  interativamente (`eas submit` pergunta o Apple ID e cria o registo no App
+  Store Connect).
+- Parte 2: `npx.cmd eas-cli build --profile production --platform android`
+  (e `ios`), depois `npx.cmd eas-cli submit --profile production --platform android`.
+
+### Páginas públicas (Firebase Hosting)
+
+- `docs/` é publicado no site **`marble-studios-app`** do projeto prod
+  (target `legal` em `.firebaserc`; `firebase.json` ignora `store/**` e
+  `*.md`): https://marble-studios-app.web.app/ (suporte, com resumo em
+  inglês), `/legal/politica-de-privacidade.html`,
+  `/legal/termos-de-utilizacao.html` e `/legal/apagar-conta.html`. São os
+  URLs que vão para as duas lojas (`docs/store/ficha-loja.md`).
+- `npm run build:legal` gera também `docs/index.html`. Depois de mudar
+  `src/legal/texts.ts`: `npm run build:legal` e
+  `npx.cmd firebase-tools deploy --only hosting:legal --project prod` (prod:
+  pede confirmação ao Fábio).
+- GitHub Pages ficou de fora: o repositório é privado e o Pages em
+  repositórios privados exige GitHub Pro.
+- Domínio próprio (ex. `app.marble.pt`): consola Firebase → Hosting → site
+  `marble-studios-app` → Add custom domain (dois registos DNS, SSL
+  automático). Trocar depois os URLs na ficha das lojas.
+
+### Estado do prod (2026-09-05)
+
+| | Estado |
+|---|---|
+| Regras e índices do Firestore | publicados (versão do master de 2026-09-05, já com as Secções 7 e 8; republicar na parte 2 se mudarem entretanto) |
+| App Android `pt.marble.app` | registada; `google-services.prod.json` no EAS |
+| Hosting `marble-studios-app` | publicado (4 páginas) |
+| Blaze | **por fazer (Fábio)** — ligar o projeto à "My Billing Account" |
+| Segredos do Cloudinary e do Resend | **por fazer (Fábio)** — `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY` |
+| Cloud Functions | **por publicar** (depois do Blaze): `deploy --only functions --project prod`; depois dos segredos, `CLOUDINARY_CLEANUP=on`, `QUOTE_EMAIL=on` e `BACKOFFICE_URL` do prod em `functions/.env` |
+| Chave FCM V1 do prod no EAS | **por fazer (Fábio)** |
+| App Check (pedidos de orçamento) | **por fazer** (parte 2, precisa das apps nas lojas) |
+| Auth | Email/Password ativo; templates de email por defeito em inglês — traduzir em Authentication → Templates (o "Password reset" é também o "define a tua password" das contas criadas por um pedido de orçamento) |
+| Dados | vazio (o seed recusa chaves do prod, de propósito) |
 
 ## Onde vive o projeto (e porquê)
 

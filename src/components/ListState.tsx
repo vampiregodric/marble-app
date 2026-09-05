@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Pressable } from 'react-native';
 import { FirestoreError } from 'firebase/firestore';
 import { colors, fonts } from '../theme/theme';
+import { S } from '../i18n';
 
 // Estados de uma lista ligada ao Firestore: a carregar, vazia, ou com erro.
 // Todos os ecrãs com listas usam isto em vez de ficarem em branco.
@@ -38,10 +39,7 @@ export function EmptyState({ title, description, actionLabel, onAction }: EmptyP
 // Mensagem legível para o cliente; o código técnico fica em baixo, pequeno,
 // para o Fábio conseguir diagnosticar (ex: failed-precondition = índice em falta).
 export function ErrorState({ error }: { error: FirestoreError }) {
-  const friendly =
-    error.code === 'unavailable'
-      ? 'Sem ligação. Verifica a internet e tenta outra vez.'
-      : 'Não foi possível carregar. Tenta outra vez daqui a pouco.';
+  const friendly = error.code === 'unavailable' ? S.common.offline : S.errors.loadFailed;
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{friendly}</Text>

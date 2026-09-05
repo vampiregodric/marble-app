@@ -3,6 +3,7 @@ import { collection, doc, limit, orderBy, query, where } from 'firebase/firestor
 import { db } from '../firebase/config';
 import { COLLECTIONS, Work, WorkServiceId, workServiceLabel } from '../firebase/models';
 import { useFirestoreDoc, useFirestoreList, DocState, ListState } from './firestoreHooks';
+import { S } from '../i18n';
 
 // Leitura do portfólio. As queries em `works` TÊM de incluir
 // where('published', '==', true): as regras (firestore.rules) só deixam ler
@@ -63,7 +64,9 @@ export function workTags(work: Work): WorkTag[] {
   const brands = (work.brands ?? []).map((b) => (typeof b === 'string' ? b.trim() : '')).filter(Boolean);
   if (services.length > 0 || brands.length > 0) {
     return [
-      ...services.map((id): WorkTag => ({ key: `s-${id}`, kind: 'service', text: workServiceLabel(id) })),
+      // Rótulo no idioma da app; um id desconhecido (backoffice mais novo do
+      // que a app) cai no rótulo PT de models.ts ou no próprio id.
+      ...services.map((id): WorkTag => ({ key: `s-${id}`, kind: 'service', text: (S.workServices as Record<string, string>)[id] ?? workServiceLabel(id) })),
       ...brands.map((b, i): WorkTag => ({ key: `b-${i}-${b}`, kind: 'brand', text: b })),
     ];
   }

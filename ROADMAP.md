@@ -543,7 +543,8 @@ uso e pode sair na Secção 7b.
 App Check.
 
 ### Secção 7b — Backoffice: checkups (aprovar, propor outro dia, disponibilidade)
-**Estado:** Por fazer
+**Estado:** Feito no backoffice (2026-09-05), verificado e publicado no
+dev. Ver "Nota" no fim desta secção.
 **Depende de:** Secção 7 e Secção 8 no master (é no checkout do
 backoffice, que era da 7). **Pode correr em paralelo com a Secção 12 —
 Inglês**: não toca na app, só no backoffice (e na cópia de `models.ts`).
@@ -587,6 +588,42 @@ na app e a equipa recebe alerta interno. Ver DEVELOPMENT.md,
 "Agendamento de checkup", e `functions/src/handlers.ts` →
 `handleVehicleUpdated`. Para testar: app web (`npm run dev-token`) na
 conta de teste + a página nova; ou `npm run checkup:admin -- <chave> list`.
+**Nota (2026-09-05):** construído no backoffice (commit "Secção 7b").
+Página **Checkups** (`src/pages/CheckupsPage.tsx`, rota `/checkups`, item
+na barra lateral com "N a aprovar"): **A aprovar** — pedidos `pending` e
+propostas `proposed`, cartão com cliente + telemóvel, carro/chão,
+dia/período, nota; **Aprovar** (hora opcional + nota) →
+`decideCheckupRequest`; **Propor outro dia** → `proposeCheckupDay`, chips
+só com os dias abertos na disponibilidade a partir de amanhã, com saída
+"fora da disponibilidade" avisada; "Aprovar na mesma" numa proposta = o
+cliente confirmou por telefone. **Agendados** — por dia/hora, com notas,
+**Marcar em dia** → `markCheckupDone`, **Propor outro dia**; dias já
+passados no topo com selo "Por fechar". **Disponibilidade** — editor de
+`settings/checkups` (grelha seg–dom × manhã/tarde, dias fechados, semanas
+1–12, antecedência 0–30), tudo local até "Guardar" →
+`saveCheckupAvailability` (setDoc merge com os 7 dias explícitos).
+**Cancelados pelo cliente** (`declined`), só para se saber. Painel: coluna
+"Pedido na app" nos checkups pendentes e "Ver em Checkups" nos alertas
+internos (`/checkups#v-<id>`, com destaque); ficha do cliente e
+VehicleModal com o estado do pedido e `'declined'` = "Cancelou o
+checkup". Escritas em `src/data/writes.ts`, iguais às do
+`checkup-admin.mjs`; `src/utils/checkups.ts` espelha
+`src/data/checkups.ts` da app (opções e textos). `models.ts` copiado; o
+`'checkup'` de `RequestType` ficou porque vive no modelo da app e em
+`functions/src/texts.ts` — o backoffice já não o usa; tirar numa secção
+da app. **Decisões do Fábio (2026-09-05):** dias propostos só entre os
+abertos; hora opcional ao aprovar; agendados de dias passados destacados;
+disponibilidade inicial seg–sex manhã e tarde (seed) mantida.
+**Verificado** no dev (worktree, porta 5181, conta de teste,
+`vehicle-example`): propor → "Proposta de checkup" no cliente; aprovar →
+"Checkup agendado"; marcar em dia; cancelar (Admin SDK) → `declined` em
+todo o lado; "Por fechar"; guardar/repor disponibilidade (confirmado com
+`checkup:admin availability`); estados repostos no fim. **Para a
+Function (app, pequeno):** quando a equipa aprova uma proposta,
+`handleVehicleUpdated` vê `proposed → approved` e cria também o alerta
+interno "confirmou o checkup" como se fosse o cliente — distinguir por
+`decidedAt` (mudou = equipa) vs `confirmedAt` (cliente). Detalhe no
+README do backoffice, "Checkups (Secção 7b)".
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
@@ -797,7 +834,12 @@ trabalhos do backoffice e no Detalhe/Portfólio da app. Ficou como
 entrou no master, o backoffice está livre).
 
 ### Secção 11 — Preparação para lançamento nas lojas
-**Estado:** Por fazer
+**Estado:** Parte 1 feita (2026-09-05) — ícones/splash finais, variantes
+dev/prod, perfil de produção do EAS, regras + app Android no Firebase prod,
+páginas legais e de suporte publicadas em https://marble-studios-app.web.app/,
+ficha das lojas e formulários de privacidade em `docs/store/`. **Parte 2
+por fazer** (build, screenshots, submissão) e a checklist do Fábio em curso
+— ver "Nota (2026-09-05)" no fim.
 **Depende de:** praticamente todas as outras, incluindo a Secção 3
 (RGPD) e o projeto Firebase de produção da Secção 1
 **Objetivo:** Conta de developer Apple (99$/ano) e Google Play (25$
@@ -832,13 +874,91 @@ formulários "Data safety"/"App Privacy" a partir da política, páginas
 legais publicadas (GitHub Pages). Não toca em `src/`. A **parte 2**
 (build de produção, screenshots finais, submissão) só depois de 7, 8, 10
 e 12 estarem no master.
+**Decisões (2026-09-04/05, Fábio):** não existe ainda nenhuma conta de
+programador — criam-se as duas; Apple como **organização** (Cacto
+Elegante, Lda., com D-U-N-S — o Play também o exige e as contas pessoais
+do Play têm um teste fechado obrigatório de 14 dias); páginas legais em
+**Firebase Hosting no prod** (GitHub Pages exigiria GitHub Pro porque o
+repositório é privado), site `marble-studios-app`; a build de
+desenvolvimento passa a ter pacote próprio **`pt.marble.app.dev`** ("Marble
+Dev"), porque no EAS a chave FCM é por pacote e dev/prod não podem
+partilhá-la; a caixa app@marble.pt existe e é lida → é o email de suporte
+das lojas. Prod autorizado e feito: regras/índices, app Android,
+Hosting, `google-services.prod.json` no EAS.
+**Nota (2026-09-05):** construído nesta sessão, sem tocar em `src/`,
+`functions/src`, backoffice ou regras. **Assets:** `scripts/build-icons.mjs`
+(`npm run build:icons`) gera do `assets/logo.png` o ícone 1024 opaco, o
+ícone adaptativo (foreground na zona segura + monocromático, fundo preto
+por cor), o splash, o favicon, `logo-transparent.png` e os gráficos do
+Play (`docs/store/play-icon-512.png`, `feature-graphic-1024x500.png`); o PNG
+de fundo do template foi apagado. **Config:** `app.json` (nome "Marble
+Studios", tema escuro, fundo preto, sem iPad, sem pergunta de encriptação,
+plugin `expo-splash-screen` instalado e configurado), `app.config.js`
+(variantes por `APP_VARIANT` + `google-services` por ambiente), `eas.json`
+(`development`/`preview`/`production` com `environment` e `env`,
+`submit.production.android`), `.env.production` passou a ir para o git
+(valores públicos; o EAS Build só vê ficheiros do git), `.gitignore`
+(`google-services.prod.json`). **Firebase:** app `pt.marble.app.dev` no dev
+(o `google-services.json` da raiz tem os dois clientes); no prod, regras e
+índices publicados (republicados depois de juntar o master de 2026-09-05,
+já com as Secções 7 e 8; a `LEGAL_VERSION` 2026-09-05 da Secção 7 também
+já está no site), app Android
+`pt.marble.app` registada e o seu ficheiro carregado no EAS como variável
+secreta `GOOGLE_SERVICES_JSON` (ambiente `production`); site de Hosting
+`marble-studios-app` criado e `docs/` publicado (target `legal`;
+`firebase.json` ignora `store/**` e `*.md`). **Docs:** `npm run build:legal`
+gera também `docs/index.html` (suporte + resumo em inglês); `docs/store/`
+tem `ficha-loja.md` (nome, subtítulo, descrições PT/EN, palavras-chave,
+categorias, classificação etária, "App access"), `data-safety.md` (Play),
+`app-privacy.md` (Apple) e `checklist-contas.md` (o que só o Fábio faz,
+com links e prazos). Verificado: `npx expo config` resolve as duas
+variantes, `npm run typecheck` limpo, site no ar com as 4 páginas e links
+certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
+**Fica para a parte 2 (checklist):**
+- *Do Fábio, já a correr (docs/store/checklist-contas.md):* D-U-N-S →
+  Apple ID da empresa → Apple Developer Program (organização, 99 €/ano) →
+  Google Play Console (organização, 25 $) → Blaze no prod ("My Billing
+  Account") → segredos do Cloudinary no prod → chave FCM V1 do prod no EAS
+  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
+  criada ainda; Blaze, segredos e FCM por fazer.
+- *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
+  índices no prod se tiverem mudado; deploy das Functions no prod
+  (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
+  `RESEND_API_KEY` no Secret Manager do prod, depois `QUOTE_EMAIL=on` e
+  `BACKOFFICE_URL` do backoffice de produção em `functions/.env` — declarar
+  o segredo sem valor faz o deploy falhar, daí os interruptores); App Check
+  nos pedidos de orçamento (anotado pela Secção 7); traduzir os templates
+  de email do Firebase Auth nos dois projetos (o "Password reset" é também
+  o "define a tua password" das contas criadas por um pedido); nova dev build ("Marble Dev"); build de
+  produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
+  `eas submit`; conta de demonstração no prod para os revisores; rever as
+  linhas **[Secção 7/8]** de `data-safety.md`/`app-privacy.md` (o que os
+  formulários de orçamento e checkup enviam); confirmar o nome "Marble
+  Studios" na App Store (plano B: "Marble Studios App"); admins da equipa
+  no prod e Hosting do backoffice de produção (repositório do backoffice);
+  domínio próprio `app.marble.pt` se o Fábio quiser (DNS dele).
+- *Em aberto (da Secção 3):* cláusula 5 dos termos (fotos dos trabalhos no
+  portfólio/redes sem identificar o dono, matrícula ocultada, salvo pedido
+  em contrário) — confirmar com o dono; revisão dos textos por advogado; e
+  acrescentar à política, nos "dados técnicos mínimos", o endereço IP e o
+  agente do utilizador que o Firebase Authentication guarda por segurança
+  (já declarado nos formulários das lojas). Se algum texto mudar: subir
+  `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
+- *Para a Secção 12:* os textos de permissão iOS no `app.json` (plugin
+  `expo-image-picker`) estão só em PT; se a app ganhar inglês, decidir aí
+  se os localizas (`locales` no `app.json`).
 
 ### Secção 12 — Inglês
-**Estado:** Por fazer
-**Depende de:** Secções 7, 8, 10 e 13 no master (toca em todos os ecrãs —
+**Estado:** Feito (2026-09-05). Toda a interface da app em PT + EN,
+escolhido pelo idioma do telemóvel (`src/i18n/`), verificado no web nos
+dois idiomas; `npm run typecheck` e `npm run functions:build` limpos.
+Ver "Decisões" e "Nota" no fim desta secção.
+**Depende de:** Secções 7, 8 e 10 no master (toca em todos os ecrãs —
 **nunca em paralelo com secções de UI**), antes da parte 2 da Secção 11.
-Pode correr em paralelo com a **Secção 7b** (só backoffice) e com a
-parte 1 da Secção 11 (não toca em `src/`).
+Correu em paralelo com a **Secção 7b** (só backoffice) e depois da parte 1
+da Secção 11. **Arrancou antes da Secção 13** (decisão do Fábio,
+2026-09-05): a 13 é que passa a ter de escrever as listas fixas de
+serviços/sistemas nos dois idiomas (ver "Para a Secção 13" no fim).
 **Objetivo:** O SPEC diz Português + Inglês e a app está só em português.
 Pôr toda a UI em PT + EN, escolhido pelo idioma do telemóvel (sem seletor
 próprio, a não ser que o Fábio queira): textos dos ecrãs, estados vazios,
@@ -848,15 +968,70 @@ erros, `src/data/departmentContent.ts` (`CONTENT.en`, estrutura já pronta),
 é de um texto). Pesar `expo-localization` + um módulo `t()` simples em vez
 de uma biblioteca de i18n completa. Os alertas criados pelo backoffice e
 pelas Functions são escritos pela equipa em PT — decidir se ficam assim.
+**Decisões (2026-09-05, Fábio):** (1) `expo-localization` + módulo `t()`
+próprio (`src/i18n/`, dicionários PT/EN tipados — sem i18next); (2) idioma
+**só pelo do telemóvel**, sem seletor: telemóvel em português → PT,
+qualquer outro → EN; (3) os alertas escritos pela equipa no backoffice e
+pelas Cloud Functions **ficam em PT** nesta secção (`functions/` e o
+backoffice intocados; se um dia for preciso, uma mini-secção "12b" põe as
+Functions a escrever EN a partir de um `clients.locale`); (4) datas com
+tabelas de meses/dias por idioma, não `Intl` (igual nos três lados e
+igual ao texto que as Functions escrevem em PT). Assunções aceites: as
+opções dos formulários de orçamento aparecem no idioma do cliente mas o
+pedido guarda sempre o rótulo em PT (backoffice e email da equipa
+continuam a ler PT); a app diz ao Firebase Auth o idioma
+(`auth.languageCode`) para os emails por defeito saírem em PT/EN; os textos
+legais ficam só em PT com uma linha "This document is available in
+Portuguese only" em EN; `?lang=en` no URL força o idioma no web.
+**Nota (2026-09-05):** construído nesta sessão, só na app.
+`src/i18n/` — `locale.ts` (deteção, `?lang=`, `languageTag`, `tx()` para
+`{ pt, en }`), `pt.ts` (fonte de verdade, por ecrã), `en.ts` (tipado como
+`typeof pt`: chave em falta = erro de typecheck), `index.ts` (`useT()` nos
+componentes, `S` fora deles). Passaram a ler daí: os 12 ecrãs, os
+componentes (ListState, ActionSheet, PhotoPicker, WorkGallery, MediaViewer,
+FormField, CheckupSheet, OptionChips — que agora recebe `{ key, label }`),
+as tabs, `auth/errors.ts` e `validation.ts`, `data/checkups.ts` (dias,
+meses, "de manhã"/"in the morning", erros), `utils/dates.ts`
+(`monthShort`, `timeAgo`), `data/departments.ts` (taglines e selo
+"Oficial"/"Official"), `media/*` e `push.native.ts` (erros e nome do canal
+Android). `departmentContent.ts` ganhou o `EN` completo dos seis
+departamentos e devolve o idioma da app por defeito; `requestForms.ts`
+passou a `{ pt, en }` por opção e a função `requestForm(department)`
+devolve o formulário no idioma da app com `value` (PT, o que se guarda) e
+`label` (o que se vê) — `fields[].label` guardado = `storedLabel` (PT).
+`AuthContext` define `auth.languageCode` no arranque. `app.json`: plugin
+`expo-localization` com `supportedLocales: ["pt", "en"]` (iOS oferece
+"idioma da app" nas Definições; Android 13+ idem via `locales_config.xml`),
+`locales/pt.json` + `locales/en.json` com os textos de permissão iOS
+(câmara/fotos) e `CFBundleAllowMixedLocalizations` — só contam em builds
+novas (parte 2 da Secção 11). `models.ts`, regras, índices, `functions/`
+e o backoffice não mudaram. Verificado no web (8085 — a 8082 estava
+ocupada por outra conversa — com `npm run dev-token`, conta
+v.godric@gmail.com): Início, Portfólio, Eventos, Alertas, Perfil (cartão
+"A aguardar aprovação" / "Awaiting approval", folha de agendamento com
+"Mon, 14 Sep, in the afternoon"), Xtreme Polishing Systems, formulário de
+orçamento (Epoxy Floors em EN com chips traduzidos), Termos com o aviso em
+EN; sem erros na consola. Ver DEVELOPMENT.md, "Idiomas (Secção 12)".
+**Para a Secção 13:** as listas fixas de serviço/sistema entram como
+`LocalizedText` (`{ pt, en }`, ver `requestForms.ts`) e mostram-se com
+`tx()`; o que se guarda em `works` continua a ser uma chave/PT, para o
+backoffice não mudar. **Para a Secção 11 (parte 2):** a nova dev build e
+as builds de produção já levam os dois idiomas; os textos das lojas
+(`docs/store/ficha-loja.md`) já eram PT/EN; os alertas automáticos e os
+templates de email do Firebase Auth continuam em PT (decisão 3).
+**Em aberto:** os alertas automáticos em EN ("12b", só se o Fábio quiser);
+o pequeno acerto na Function `handleVehicleUpdated` anotado pela Secção 7b
+(aprovação de uma proposta pela equipa vista como confirmação do cliente).
 
 ### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
 **Estado:** Por fazer
 **Depende de:** Secções 7 e 8 no master (feito — o backoffice está livre).
-**Nunca em paralelo com a Secção 12 — Inglês** (as duas tocam no
-Detalhe e no Portfólio): esta entra no master antes de a 12 arrancar.
-**Nem com a Secção 7b** (as duas mexem no checkout do backoffice, que só
-tem um dono de cada vez). Corre ao lado da parte 1 da Secção 11; quando
-entrar, arrancam a 12 (app) e a 7b (backoffice) em paralelo.
+**A Secção 12 — Inglês entrou primeiro (2026-09-05):** a app já está em
+PT + EN, por isso as listas fixas desta secção nascem nos dois idiomas
+(`LocalizedText { pt, en }` + `tx()`, como em `src/data/requestForms.ts`;
+ver "Para a Secção 13" na Secção 12). A 7b também já está no master; o
+backoffice está livre. Pode correr em paralelo com a parte 2 da Secção 11
+enquanto esta não fizer builds (a 11 não toca em `src/`).
 **Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
 de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
 sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);

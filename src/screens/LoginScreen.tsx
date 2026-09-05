@@ -20,29 +20,9 @@ import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { validateEmail, validateName, validatePassword, validatePhone } from '../auth/validation';
 import { RootStackParamList } from '../navigation/types';
+import { useT } from '../i18n';
 
 type Mode = 'login' | 'register' | 'reset';
-
-const COPY: Record<Mode, { eyebrow: string; title: string; lead: string; cta: string }> = {
-  login: {
-    eyebrow: 'A tua conta',
-    title: 'Entrar',
-    lead: 'Vê os teus carros e chãos, confirma checkups e recebe os alertas da Marble Studios.',
-    cta: 'Entrar',
-  },
-  register: {
-    eyebrow: 'Bem-vindo',
-    title: 'Criar conta',
-    lead: 'Fica com o histórico dos teus trabalhos e lembretes de manutenção num só sítio.',
-    cta: 'Criar conta',
-  },
-  reset: {
-    eyebrow: 'Recuperar acesso',
-    title: 'Nova password',
-    lead: 'Enviamos-te um email com um link para definires uma password nova.',
-    cta: 'Enviar email',
-  },
-};
 
 // Ecrã de login / registo / recuperação de password. Aparece no lugar dos tabs
 // Perfil e Alertas quando não há sessão (ver components/AuthGate.tsx).
@@ -53,6 +33,7 @@ const COPY: Record<Mode, { eyebrow: string; title: string; lead: string; cta: st
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signIn, signUp, resetPassword } = useAuth();
+  const T = useT();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -63,7 +44,7 @@ export default function LoginScreen() {
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const copy = COPY[mode];
+  const copy = T.login[mode];
 
   const switchMode = (next: Mode) => {
     setMode(next);
@@ -78,7 +59,7 @@ export default function LoginScreen() {
     if (mode === 'register') {
       next.name = validateName(name);
       next.phone = validatePhone(phone);
-      if (!acceptedTerms) next.terms = 'Tens de aceitar os termos e a política de privacidade para criar conta.';
+      if (!acceptedTerms) next.terms = T.login.termsRequired;
     }
     setErrors(next);
     if (Object.values(next).some(Boolean)) return;
@@ -92,7 +73,7 @@ export default function LoginScreen() {
         await signUp({ name, email, phone, password, acceptedTerms });
       } else {
         await resetPassword(email);
-        setMessage({ kind: 'ok', text: 'Se existir conta com esse email, vais receber o link nos próximos minutos.' });
+        setMessage({ kind: 'ok', text: T.login.resetSent });
       }
     } catch (err) {
       setMessage({ kind: 'error', text: authErrorMessage(err) });
@@ -114,18 +95,18 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {mode === 'register' && (
               <FormField
-                label="Nome"
+                label={T.login.name}
                 value={name}
                 onChangeText={setName}
                 error={errors.name}
                 autoCapitalize="words"
                 autoComplete="name"
                 textContentType="name"
-                placeholder="O teu nome"
+                placeholder={T.login.namePlaceholder}
               />
             )}
             <FormField
-              label="Email"
+              label={T.login.email}
               value={email}
               onChangeText={setEmail}
               error={errors.email}
@@ -134,24 +115,24 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoComplete="email"
               textContentType="emailAddress"
-              placeholder="nome@exemplo.pt"
+              placeholder={T.login.emailPlaceholder}
             />
             {mode === 'register' && (
               <FormField
-                label="Telemóvel"
+                label={T.login.phone}
                 value={phone}
                 onChangeText={setPhone}
                 error={errors.phone}
-                hint="Para a equipa te ligar sobre checkups e marcações."
+                hint={T.login.phoneHint}
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 textContentType="telephoneNumber"
-                placeholder="912 345 678"
+                placeholder={T.login.phonePlaceholder}
               />
             )}
             {mode !== 'reset' && (
               <FormField
-                label="Password"
+                label={T.login.password}
                 value={password}
                 onChangeText={setPassword}
                 error={errors.password}
@@ -159,7 +140,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                 textContentType={mode === 'register' ? 'newPassword' : 'password'}
-                placeholder={mode === 'register' ? 'Mínimo 6 caracteres' : 'A tua password'}
+                placeholder={mode === 'register' ? T.login.passwordPlaceholderNew : T.login.passwordPlaceholder}
                 onSubmitEditing={submit}
                 returnKeyType="go"
               />
@@ -174,15 +155,15 @@ export default function LoginScreen() {
                 }}
                 error={errors.terms}
               >
-                Li e aceito os{' '}
+                {T.login.acceptPrefix}
                 <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'terms' })}>
-                  Termos de utilização
-                </Text>{' '}
-                e a{' '}
-                <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
-                  Política de privacidade
+                  {T.login.termsLink}
                 </Text>
-                .
+                {T.login.acceptMiddle}
+                <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
+                  {T.login.privacyLink}
+                </Text>
+                {T.login.acceptSuffix}
               </Checkbox>
             )}
 
@@ -198,7 +179,7 @@ export default function LoginScreen() {
 
             {mode === 'login' && (
               <Pressable onPress={() => switchMode('reset')} style={styles.linkRow}>
-                <Text style={styles.link}>Esqueceste-te da password?</Text>
+                <Text style={styles.link}>{T.login.forgot}</Text>
               </Pressable>
             )}
           </View>
@@ -207,13 +188,15 @@ export default function LoginScreen() {
             {mode === 'login' ? (
               <Pressable onPress={() => switchMode('register')}>
                 <Text style={styles.footerText}>
-                  Ainda não tens conta? <Text style={styles.footerLink}>Criar conta</Text>
+                  {T.login.noAccount}
+                  <Text style={styles.footerLink}>{T.login.createAccount}</Text>
                 </Text>
               </Pressable>
             ) : (
               <Pressable onPress={() => switchMode('login')}>
                 <Text style={styles.footerText}>
-                  Já tens conta? <Text style={styles.footerLink}>Entrar</Text>
+                  {T.login.haveAccount}
+                  <Text style={styles.footerLink}>{T.login.enter}</Text>
                 </Text>
               </Pressable>
             )}

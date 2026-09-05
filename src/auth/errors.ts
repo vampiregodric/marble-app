@@ -1,32 +1,35 @@
 import { FirebaseError } from 'firebase/app';
+import { S } from '../i18n';
 
-// Traduz os códigos de erro do Firebase Auth para mensagens curtas em PT.
-// Nota: os projetos Firebase novos têm "proteção contra enumeração de emails"
-// ligada — password errada e email inexistente dão ambos `invalid-credential`.
+// Traduz os códigos de erro do Firebase Auth para mensagens curtas no
+// idioma da app (src/i18n). Nota: os projetos Firebase novos têm "proteção
+// contra enumeração de emails" ligada — password errada e email inexistente
+// dão ambos `invalid-credential`.
 export function authErrorMessage(err: unknown): string {
   const code = err instanceof FirebaseError ? err.code : '';
+  const t = S.errors.auth;
   switch (code) {
     case 'auth/invalid-email':
-      return 'Esse email não parece válido.';
+      return t.invalidEmail;
     case 'auth/missing-password':
-      return 'Escreve a tua password.';
+      return t.missingPassword;
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found':
-      return 'Email ou password errados.';
+      return t.wrongCredentials;
     case 'auth/email-already-in-use':
-      return 'Já existe uma conta com este email. Entra ou recupera a password.';
+      return t.emailInUse;
     case 'auth/weak-password':
-      return 'A password tem de ter pelo menos 6 caracteres.';
+      return t.weakPassword;
     case 'auth/too-many-requests':
-      return 'Demasiadas tentativas. Espera uns minutos e tenta outra vez.';
+      return t.tooManyRequests;
     case 'auth/network-request-failed':
-      return 'Sem ligação. Verifica a internet e tenta outra vez.';
+      return S.common.offline;
     case 'auth/user-disabled':
-      return 'Esta conta foi desativada. Fala com a Marble Studios.';
+      return t.userDisabled;
     case 'auth/requires-recent-login':
-      return 'Por segurança, termina sessão e volta a entrar antes de fazer isto.';
+      return t.recentLogin;
     default:
-      return 'Algo correu mal. Tenta outra vez.';
+      return S.common.somethingWrong;
   }
 }

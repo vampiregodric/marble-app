@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { colors, fonts } from '../theme/theme';
 import { GalleryItem } from '../data/works';
+import { useT } from '../i18n';
 
 // Visualizador em ecrã inteiro da galeria de um trabalho: fotos inteiras
 // (sem recorte) e vídeo com controlos nativos, deslizável entre itens, com
@@ -34,6 +35,7 @@ export default function MediaViewer({ items, initialIndex, visible, onClose }: P
   const [active, setActive] = useState(initialIndex);
   const [stageHeight, setStageHeight] = useState(0);
   const listRef = useRef<FlatList<GalleryItem>>(null);
+  const T = useT();
 
   useEffect(() => {
     if (visible) setActive(initialIndex);
@@ -49,8 +51,8 @@ export default function MediaViewer({ items, initialIndex, visible, onClose }: P
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <Text style={styles.counter}>{items.length > 1 ? `${active + 1} / ${items.length}` : ''}</Text>
-          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar">
-            <Text style={styles.close}>Fechar</Text>
+          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel={T.common.close}>
+            <Text style={styles.close}>{T.common.close}</Text>
           </Pressable>
         </View>
         <View style={styles.stage} onLayout={(e) => setStageHeight(e.nativeEvent.layout.height)}>
@@ -86,10 +88,11 @@ function Slide({ item, width, height, active }: { item: GalleryItem; width: numb
 function PhotoSlide({ uri, width, height }: { uri: string; width: number; height: number }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const T = useT();
   return (
     <View style={[styles.slide, { width, height }]}>
       {failed ? (
-        <Text style={styles.failed}>Não foi possível carregar esta foto.</Text>
+        <Text style={styles.failed}>{T.gallery.photoFailed}</Text>
       ) : (
         <Image
           source={{ uri }}

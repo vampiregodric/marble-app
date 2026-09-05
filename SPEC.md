@@ -85,7 +85,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   `src/legal/texts.ts`. Entidade legal: Cacto Elegante, Lda., NIF
   519355849, Rua Quinta das Rosas 12A, 2840-131 Paio Pires; email de
   privacidade app@marble.pt.
-- **Idioma:** Português + Inglês — a app é construída em português; o inglês entra de uma vez na Secção 12 do ROADMAP (decidido 2026-09-04), depois das secções de ecrãs e antes da submissão às lojas.
+- **Idioma:** Português + Inglês — a app é construída em português; o inglês entrou de uma vez na Secção 12 do ROADMAP (decidido 2026-09-04, feito 2026-09-05). **Decisões da Secção 12 (Fábio):** o idioma é o do telemóvel (português → PT, qualquer outro → EN), sem seletor na app; os alertas escritos pela equipa e pelas Cloud Functions ficam em português; os textos legais existem só em português (em inglês a app avisa "This document is available in Portuguese only"); os formulários de orçamento mostram as opções no idioma do cliente mas guardam sempre o texto em português, para a equipa ler sempre a mesma coisa.
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 
 ## Ecrã de Portfólio (protótipo desenhado)

@@ -4,9 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme/theme';
 import { WEB_MAX_WIDTH } from '../utils/layout';
 import { CHECKUP_LIMITS, CheckupPeriod, Vehicle } from '../firebase/models';
-import { checkupErrorMessage, checkupOptions, PERIOD_LABEL, splitCheckupDay, useCheckupAvailability } from '../data/checkups';
+import { checkupErrorMessage, checkupOptions, periodLabel, splitCheckupDay, useCheckupAvailability } from '../data/checkups';
 import { requestCheckup } from '../data/vehicles';
 import FormField from './FormField';
+import { useT } from '../i18n';
 
 // Folha de agendamento de checkup (Secção 8), no estilo do menu da foto de
 // perfil: o cliente escolhe um dia entre os que a equipa abriu
@@ -25,6 +26,7 @@ type Props = {
 
 export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
   const insets = useSafeAreaInsets();
+  const T = useT();
   const { availability, loading } = useCheckupAvailability();
   const options = useMemo(() => checkupOptions(availability), [availability]);
   const editing = !!vehicle?.checkupRequest && vehicle.checkupRequest.status !== 'cancelled';
@@ -72,12 +74,14 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
     }
   };
 
+  const ctaLabel = editing ? T.checkup.save : T.checkup.request;
+
   return (
     <Modal visible={!!vehicle} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView style={styles.backdropWrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose} accessibilityLabel="Fechar agendamento" />
+        <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose} accessibilityLabel={T.checkup.sheetCloseA11y} />
         <View style={[styles.sheet, { paddingBottom: 12 + insets.bottom }]}>
-          <Text style={styles.eyebrow}>{editing ? 'Alterar o pedido' : 'Checkup gratuito'}</Text>
+          <Text style={styles.eyebrow}>{editing ? T.checkup.sheetEditTitle : T.checkup.sheetNewTitle}</Text>
           <Text style={styles.title} numberOfLines={2}>
             {vehicle?.name ?? ''}
           </Text>
@@ -88,16 +92,14 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
             </View>
           ) : options.length === 0 ? (
             <View style={styles.center}>
-              <Text style={styles.emptyTitle}>Ainda não há dias abertos para checkups.</Text>
-              <Text style={styles.emptyDesc}>A equipa está a organizar a agenda. Tenta mais tarde ou liga-nos para marcar.</Text>
+              <Text style={styles.emptyTitle}>{T.checkup.sheetNoDays}</Text>
+              <Text style={styles.emptyDesc}>{T.checkup.sheetNoDaysDesc}</Text>
             </View>
           ) : (
             <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={styles.intro}>
-                Escolhe o dia e o período que te dão jeito. A equipa confirma e recebes um alerta quando estiver agendado.
-              </Text>
+              <Text style={styles.intro}>{T.checkup.sheetIntro}</Text>
 
-              <Text style={styles.label}>Dia</Text>
+              <Text style={styles.label}>{T.checkup.day}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
                 {options.map((o) => {
                   const on = o.day === day;
@@ -112,7 +114,7 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
                       }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
-                      accessibilityLabel={`Dia ${parts.weekdayLong}, ${parts.date}`}
+                      accessibilityLabel={T.checkup.dayA11y(parts.weekdayLong, parts.date)}
                     >
                       <Text style={[styles.dayChipWeekday, on && styles.chipTextOn]}>{parts.weekday}</Text>
                       <Text style={[styles.dayChipDate, on && styles.chipTextOn]}>{parts.date}</Text>
@@ -121,7 +123,7 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
                 })}
               </ScrollView>
 
-              <Text style={styles.label}>Período</Text>
+              <Text style={styles.label}>{T.checkup.period}</Text>
               <View style={styles.periodRow}>
                 {(['morning', 'afternoon'] as CheckupPeriod[]).map((p) => {
                   const available = periods.includes(p);
@@ -134,11 +136,11 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
                       disabled={!available}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on, disabled: !available }}
-                      accessibilityLabel={`Período ${PERIOD_LABEL[p]}`}
+                      accessibilityLabel={T.checkup.periodA11y(periodLabel(p))}
                     >
                       <Text style={[styles.periodText, on && styles.chipTextOn, !available && styles.chipTextOff]}>
-                        {PERIOD_LABEL[p]}
-                        {!available ? ' · fechado' : ''}
+                        {periodLabel(p)}
+                        {!available ? T.checkup.periodClosed : ''}
                       </Text>
                     </Pressable>
                   );
@@ -146,15 +148,15 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
               </View>
 
               <FormField
-                label="Nota para a equipa (opcional)"
+                label={T.checkup.noteLabel}
                 value={note}
                 onChangeText={(t) => setNote(t.slice(0, CHECKUP_LIMITS.noteMax))}
-                placeholder="Ex.: só depois das 15h, ou o carro tem um risco novo"
+                placeholder={T.checkup.notePlaceholder}
                 multiline
                 numberOfLines={3}
                 style={styles.noteInput}
                 maxLength={CHECKUP_LIMITS.noteMax}
-                accessibilityLabel="Nota para a equipa"
+                accessibilityLabel={T.checkup.noteA11y}
               />
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -163,18 +165,12 @@ export default function CheckupSheet({ vehicle, onClose, onSaved }: Props) {
 
           <View style={styles.actions}>
             {options.length > 0 ? (
-              <Pressable
-                style={[styles.cta, !canSubmit && styles.ctaDisabled]}
-                onPress={submit}
-                disabled={!canSubmit}
-                accessibilityRole="button"
-                accessibilityLabel={editing ? 'Guardar alteração' : 'Pedir checkup'}
-              >
-                {busy ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{editing ? 'Guardar alteração' : 'Pedir checkup'}</Text>}
+              <Pressable style={[styles.cta, !canSubmit && styles.ctaDisabled]} onPress={submit} disabled={!canSubmit} accessibilityRole="button" accessibilityLabel={ctaLabel}>
+                {busy ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{ctaLabel}</Text>}
               </Pressable>
             ) : null}
-            <Pressable style={styles.cancelRow} onPress={onClose} disabled={busy} accessibilityRole="button" accessibilityLabel="Fechar">
-              <Text style={styles.cancelText}>{options.length > 0 ? 'Cancelar' : 'Fechar'}</Text>
+            <Pressable style={styles.cancelRow} onPress={onClose} disabled={busy} accessibilityRole="button" accessibilityLabel={T.common.close}>
+              <Text style={styles.cancelText}>{options.length > 0 ? T.common.cancel : T.common.close}</Text>
             </Pressable>
           </View>
         </View>

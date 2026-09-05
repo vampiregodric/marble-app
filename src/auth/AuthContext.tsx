@@ -17,6 +17,7 @@ import { COLLECTIONS, Client } from '../firebase/models';
 import { LEGAL_VERSION } from '../legal/texts';
 import { forgetPushToken, syncPushToken } from '../push/push';
 import { signInWithDevTokenFromUrl } from './devToken';
+import { languageTag, S } from '../i18n';
 
 export type SignUpInput = {
   name: string;
@@ -119,6 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<Client | null>(null);
 
   useEffect(() => {
+    // Idioma dos emails do Firebase Auth (repor password, "definir password"
+    // do pedido de orçamento): os templates por defeito saem no idioma da
+    // app (Secção 12). Um template personalizado na consola é só numa língua.
+    auth.languageCode = languageTag;
     // Só web + projeto de dev: #token=… no URL entra sem password (testes).
     signInWithDevTokenFromUrl().catch(() => {});
     return onAuthStateChanged(auth, (u) => {
@@ -163,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return cred.user.uid;
       },
       async createAccountFromRequest({ name, email, phone, acceptedTerms }) {
-        if (!acceptedTerms) throw new Error('Tens de aceitar os termos para criar conta.');
+        if (!acceptedTerms) throw new Error(S.errors.auth.termsRequired);
         // Ninguém conhece esta password: a conta só se usa pela sessão que
         // fica neste dispositivo e pelo link "definir password" do email.
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), randomPassword());
@@ -175,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return cred.user.uid;
       },
       async signUp({ name, email, phone, password, acceptedTerms }) {
-        if (!acceptedTerms) throw new Error('Tens de aceitar os termos para criar conta.');
+        if (!acceptedTerms) throw new Error(S.errors.auth.termsRequired);
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(cred.user, { displayName: name.trim() });
         await createClientDoc(cred.user, { name: name.trim(), phone: phone.trim(), acceptedTerms: true });

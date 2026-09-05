@@ -12,15 +12,16 @@ import { CameraIcon, ChevronRightIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
 import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
-import { checkupErrorMessage, checkupState, CheckupState, formatCheckupSlot } from '../data/checkups';
+import { checkupErrorMessage, checkupState, formatCheckupSlot } from '../data/checkups';
 import { useMyRequests } from '../data/requests';
 import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
 import { avatarUploadConfigured, uploadAvatar } from '../media/cloudinary';
-import { Client, REQUEST_STATUS_LABEL, ServiceRequest, Vehicle } from '../firebase/models';
+import { Client, ServiceRequest, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
+import { S, useT } from '../i18n';
 
 // Linha secundária de um carro/chão: o checkup em curso quando há um
 // (Secção 8); senão a última visita (carro) ou a data de instalação (chão);
@@ -28,39 +29,21 @@ import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
 function vehicleSubtitle(v: Vehicle): string {
   const state = checkupState(v);
   const req = v.checkupRequest;
-  if (req && state === 'requested') return `Checkup pedido: ${formatCheckupSlot({ day: req.day, period: req.period })}`;
-  if (req && state === 'proposed') return `Proposta da equipa: ${formatCheckupSlot(req)}`;
-  if (req && state === 'scheduled') return `Checkup: ${formatCheckupSlot(req)}`;
-  if (state === 'declined') return 'Checkup cancelado · toca para voltar a pedir';
-  if (v.lastServiceAt) return `${v.type === 'floor' ? 'Instalado' : 'Última visita'}: ${formatDate(v.lastServiceAt)}`;
-  return v.createdAt ? `Registado: ${formatDate(v.createdAt)}` : '';
+  const t = S.checkup;
+  if (req && state === 'requested') return t.subRequested(formatCheckupSlot({ day: req.day, period: req.period }));
+  if (req && state === 'proposed') return t.subProposed(formatCheckupSlot(req));
+  if (req && state === 'scheduled') return t.subScheduled(formatCheckupSlot(req));
+  if (state === 'declined') return t.subDeclined;
+  if (v.lastServiceAt) return v.type === 'floor' ? S.profile.installed(formatDate(v.lastServiceAt)) : S.profile.lastVisit(formatDate(v.lastServiceAt));
+  return v.createdAt ? S.profile.registered(formatDate(v.createdAt)) : '';
 }
-
-// Etiqueta de estado na linha do carro/chão.
-const ROW_STATUS: Record<CheckupState, string> = {
-  ok: 'Em dia',
-  todo: 'Checkup',
-  requested: 'Pedido',
-  proposed: 'Proposta',
-  scheduled: 'Agendado',
-  declined: 'Sem checkup',
-};
-
-// Etiqueta do cartão "Ação pendente" por estado do pedido.
-const CARD_TAG: Record<CheckupState, string> = {
-  ok: '',
-  todo: 'Ação pendente',
-  requested: 'A aguardar aprovação',
-  proposed: 'Proposta da equipa',
-  scheduled: 'Agendado',
-  declined: '',
-};
 
 type PrefKey = keyof Client['notificationPrefs'];
 
 // Linha de um pedido: departamento e o que foi pedido, com o estado que a
 // equipa lhe deu (Recebido / Em contacto / Fechado).
 function RequestRow({ request }: { request: ServiceRequest }) {
+  const T = useT();
   const dept = DEPARTMENTS.find((d) => d.id === request.department)?.name ?? request.department;
   const what = request.services.length ? request.services.join(', ') : request.fields[0]?.value || request.message;
   const closed = request.status === 'closed';
@@ -68,7 +51,7 @@ function RequestRow({ request }: { request: ServiceRequest }) {
     <View style={styles.assetRow}>
       <View style={styles.assetText}>
         <Text style={styles.assetName} numberOfLines={1}>
-          {request.workTitle ? `Semelhante a: ${request.workTitle}` : dept}
+          {request.workTitle ? T.profile.similarTo(request.workTitle) : dept}
         </Text>
         <Text style={styles.assetSub} numberOfLines={1}>
           {request.workTitle ? `${dept} · ` : ''}
@@ -77,7 +60,7 @@ function RequestRow({ request }: { request: ServiceRequest }) {
         </Text>
       </View>
       <View style={[styles.assetStatus, closed ? styles.assetStatusOk : styles.assetStatusPending]}>
-        <Text style={[styles.assetStatusText, closed ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>{REQUEST_STATUS_LABEL[request.status]}</Text>
+        <Text style={[styles.assetStatusText, closed ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>{T.requestStatus[request.status]}</Text>
       </View>
     </View>
   );
@@ -96,6 +79,7 @@ function Toggle({ on }: { on: boolean }) {
 // Este ecrã está dentro de AuthGate — há sempre sessão aqui.
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const T = useT();
   const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, signOut } = useAuth();
   const { data: vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(user?.uid);
   const pending = pendingCheckup(vehicles);
@@ -166,19 +150,19 @@ export default function ProfileScreen() {
     switch (checkupState(v)) {
       case 'requested':
         return [
-          { label: 'Alterar o dia', onPress: () => openSheet(v) },
-          { label: 'Cancelar o pedido', onPress: () => askCancel(v), destructive: true },
+          { label: T.checkup.changeDay, onPress: () => openSheet(v) },
+          { label: T.checkup.cancelRequestLong, onPress: () => askCancel(v), destructive: true },
         ];
       case 'proposed':
         return [
-          { label: `Confirmar ${v.checkupRequest ? formatCheckupSlot(v.checkupRequest) : 'a proposta'}`, onPress: () => confirmProposal(v) },
-          { label: 'Escolher outro dia', onPress: () => openSheet(v) },
-          { label: 'Cancelar o checkup', onPress: () => askCancel(v), destructive: true },
+          { label: T.checkup.confirmSlot(v.checkupRequest ? formatCheckupSlot(v.checkupRequest) : null), onPress: () => confirmProposal(v) },
+          { label: T.checkup.chooseAnotherDay, onPress: () => openSheet(v) },
+          { label: T.checkup.cancelCheckup, onPress: () => askCancel(v), destructive: true },
         ];
       case 'scheduled':
         return [
-          { label: 'Alterar o dia', onPress: () => openSheet(v) },
-          { label: 'Cancelar o checkup', onPress: () => askCancel(v), destructive: true },
+          { label: T.checkup.changeDay, onPress: () => openSheet(v) },
+          { label: T.checkup.cancelCheckup, onPress: () => askCancel(v), destructive: true },
         ];
       default:
         return [];
@@ -247,7 +231,7 @@ export default function ProfileScreen() {
       await updateClient({ avatarUrl: url });
     };
     run()
-      .catch((err) => setAvatarError(err instanceof Error ? err.message : 'Não foi possível guardar a foto.'))
+      .catch((err) => setAvatarError(err instanceof Error ? err.message : T.profile.avatarSaveFailed))
       .finally(() => setUploading(null));
   };
 
@@ -262,9 +246,9 @@ export default function ProfileScreen() {
   };
 
   const avatarActions: SheetAction[] = [
-    { label: 'Escolher da galeria', onPress: () => changeAvatar('library') },
-    ...(canUseCamera ? [{ label: 'Tirar foto', onPress: () => changeAvatar('camera') }] : []),
-    ...(avatarUrl ? [{ label: 'Remover foto', onPress: removeAvatar, destructive: true }] : []),
+    { label: T.photoPicker.fromLibrary, onPress: () => changeAvatar('library') },
+    ...(canUseCamera ? [{ label: T.photoPicker.takePhoto, onPress: () => changeAvatar('camera') }] : []),
+    ...(avatarUrl ? [{ label: T.profile.removePhoto, onPress: removeAvatar, destructive: true }] : []),
   ];
 
   return (
@@ -276,7 +260,7 @@ export default function ProfileScreen() {
             onPress={() => setAvatarMenu(true)}
             disabled={!client || uploading !== null || !avatarUploadConfigured}
             accessibilityRole="button"
-            accessibilityLabel={avatarUrl ? 'Mudar ou remover a foto de perfil' : 'Escolher foto de perfil'}
+            accessibilityLabel={avatarUrl ? T.profile.avatarA11yChange : T.profile.avatarA11yPick}
           >
             <Avatar url={avatarUrl} name={displayName} size={56} />
             {uploading !== null ? (
@@ -293,9 +277,9 @@ export default function ProfileScreen() {
             <Text style={styles.name} numberOfLines={1}>
               {displayName}
             </Text>
-            <Text style={styles.since}>{since ? `Cliente desde ${since}` : user?.email}</Text>
+            <Text style={styles.since}>{since ? T.profile.since(since) : user?.email}</Text>
             {uploading !== null ? (
-              <Text style={styles.avatarHint}>A enviar a foto…</Text>
+              <Text style={styles.avatarHint}>{T.profile.avatarUploading}</Text>
             ) : avatarError ? (
               <Text style={styles.avatarErrorText}>{avatarError}</Text>
             ) : null}
@@ -304,21 +288,21 @@ export default function ProfileScreen() {
 
         {needsTermsAcceptance && (
           <View style={styles.termsCard}>
-            <Text style={styles.termsTitle}>Termos e privacidade atualizados</Text>
+            <Text style={styles.termsTitle}>{T.profile.termsUpdatedTitle}</Text>
             <Text style={styles.termsDesc}>
-              Para continuares a usar a tua conta precisamos que leias e aceites a versão atual dos{' '}
+              {T.profile.termsUpdatedPrefix}
               <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'terms' })}>
-                Termos de utilização
-              </Text>{' '}
-              e da{' '}
-              <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
-                Política de privacidade
+                {T.profile.terms}
               </Text>
-              .
+              {T.profile.termsUpdatedMiddle}
+              <Text style={styles.inlineLink} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
+                {T.profile.privacy}
+              </Text>
+              {T.profile.termsUpdatedSuffix}
             </Text>
             {termsError && <Text style={styles.termsError}>{termsError}</Text>}
             <Pressable style={[styles.cta, acceptingTerms && { opacity: 0.6 }]} onPress={onAcceptTerms} disabled={acceptingTerms}>
-              {acceptingTerms ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>Li e aceito</Text>}
+              {acceptingTerms ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{T.profile.termsAccept}</Text>}
             </Pressable>
           </View>
         )}
@@ -333,34 +317,35 @@ export default function ProfileScreen() {
             const req = pending.checkupRequest;
             const busy = checkupBusy === pending.id;
             const good = state === 'scheduled';
-            let title = `Checkup ${pending.type === 'floor' ? 'do teu chão' : 'do teu carro'}`;
-            let desc = `${pending.name}${pending.lastServiceAt ? ` · trabalho concluído ${timeAgo(pending.lastServiceAt).toLowerCase()}` : ''}. Escolhe o dia que te dá jeito para o checkup gratuito — a equipa confirma.`;
+            const t = T.checkup;
+            let title = t.cardTitleTodo(pending.type === 'floor');
+            let desc = t.cardDescTodo(pending.name, pending.lastServiceAt ? timeAgo(pending.lastServiceAt) : null);
             if (req && state === 'requested') {
-              title = `Checkup pedido: ${formatCheckupSlot({ day: req.day, period: req.period })}`;
-              desc = `${pending.name}. A equipa vai confirmar em breve — recebes um alerta quando estiver agendado.${req.note ? ` A tua nota: "${req.note}".` : ''}`;
+              title = t.cardTitleRequested(formatCheckupSlot({ day: req.day, period: req.period }));
+              desc = t.cardDescRequested(pending.name, req.note);
             } else if (req && state === 'proposed') {
-              title = `A equipa propõe ${formatCheckupSlot(req)}`;
-              desc = `${pending.name}. ${req.teamNote?.trim() || 'O dia que pediste não dá. Confirma esta proposta ou escolhe outro dia.'}`;
+              title = t.cardTitleProposed(formatCheckupSlot(req));
+              desc = t.cardDescProposed(pending.name, req.teamNote?.trim() || '');
             } else if (req && state === 'scheduled') {
               // A nota da equipa só se mostra se veio com a aprovação; se o
               // cliente confirmou uma proposta, a nota era a pergunta dela.
               const teamNote = !req.confirmedAt ? req.teamNote?.trim() : '';
-              title = `Checkup agendado: ${formatCheckupSlot(req)}`;
-              desc = `${pending.name}. ${teamNote || 'Até lá! Se precisares de mudar o dia, altera aqui.'}`;
+              title = t.cardTitleScheduled(formatCheckupSlot(req));
+              desc = t.cardDescScheduled(pending.name, teamNote || '');
             }
             return (
               <View style={[styles.pendingCard, good && styles.pendingCardOk]}>
                 <View style={styles.pendingTag}>
                   <View style={[styles.pendingDot, good && styles.pendingDotOk]} />
-                  <Text style={[styles.pendingTagText, good && styles.pendingTagTextOk]}>{CARD_TAG[state]}</Text>
+                  <Text style={[styles.pendingTagText, good && styles.pendingTagTextOk]}>{t.cardTag[state]}</Text>
                 </View>
                 <Text style={styles.pendingTitle}>{title}</Text>
                 <Text style={styles.pendingDesc}>{desc}</Text>
                 {checkupError ? <Text style={styles.checkupError}>{checkupError}</Text> : null}
                 <View style={styles.pendingActions}>
                   {state === 'todo' ? (
-                    <Pressable style={styles.cta} onPress={() => openSheet(pending)} accessibilityRole="button" accessibilityLabel="Agendar agora">
-                      <Text style={styles.ctaText}>Agendar agora</Text>
+                    <Pressable style={styles.cta} onPress={() => openSheet(pending)} accessibilityRole="button" accessibilityLabel={t.scheduleNow}>
+                      <Text style={styles.ctaText}>{t.scheduleNow}</Text>
                     </Pressable>
                   ) : null}
                   {state === 'proposed' ? (
@@ -369,9 +354,9 @@ export default function ProfileScreen() {
                       onPress={() => confirmProposal(pending)}
                       disabled={busy}
                       accessibilityRole="button"
-                      accessibilityLabel="Confirmar a proposta"
+                      accessibilityLabel={t.confirmA11y}
                     >
-                      {busy ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>Confirmar</Text>}
+                      {busy ? <ActivityIndicator color="#0b0a08" /> : <Text style={styles.ctaText}>{t.confirm}</Text>}
                     </Pressable>
                   ) : null}
                   {state !== 'todo' ? (
@@ -380,20 +365,14 @@ export default function ProfileScreen() {
                       onPress={() => openSheet(pending)}
                       disabled={busy}
                       accessibilityRole="button"
-                      accessibilityLabel={state === 'proposed' ? 'Escolher outro dia' : 'Alterar o dia'}
+                      accessibilityLabel={state === 'proposed' ? t.chooseAnotherDay : t.changeDay}
                     >
-                      <Text style={styles.ctaGhostText}>{state === 'proposed' ? 'Escolher outro dia' : 'Alterar'}</Text>
+                      <Text style={styles.ctaGhostText}>{state === 'proposed' ? t.chooseAnotherDay : t.change}</Text>
                     </Pressable>
                   ) : null}
                   {state !== 'todo' ? (
-                    <Pressable
-                      style={styles.ctaLink}
-                      onPress={() => askCancel(pending)}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      accessibilityLabel="Cancelar o checkup"
-                    >
-                      <Text style={styles.ctaLinkText}>{state === 'requested' ? 'Cancelar pedido' : 'Cancelar'}</Text>
+                    <Pressable style={styles.ctaLink} onPress={() => askCancel(pending)} disabled={busy} accessibilityRole="button" accessibilityLabel={t.cancelCheckup}>
+                      <Text style={styles.ctaLinkText}>{state === 'requested' ? t.cancelRequest : T.common.cancel}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -401,7 +380,7 @@ export default function ProfileScreen() {
             );
           })()}
 
-        <Text style={styles.secTitle}>Os teus carros & chãos</Text>
+        <Text style={styles.secTitle}>{T.profile.vehiclesTitle}</Text>
         <View style={styles.assetList}>
           {vehiclesLoading ? (
             <View style={styles.assetEmpty}>
@@ -409,15 +388,13 @@ export default function ProfileScreen() {
             </View>
           ) : vehiclesError ? (
             <View style={styles.assetEmpty}>
-              <Text style={styles.assetEmptyTitle}>Não foi possível carregar os teus carros e chãos.</Text>
+              <Text style={styles.assetEmptyTitle}>{T.profile.vehiclesError}</Text>
               <Text style={styles.assetEmptyDesc}>{vehiclesError.code}</Text>
             </View>
           ) : vehicles.length === 0 ? (
             <View style={styles.assetEmpty}>
-              <Text style={styles.assetEmptyTitle}>Ainda não tens carros ou chãos registados.</Text>
-              <Text style={styles.assetEmptyDesc}>
-                A equipa associa-os à tua conta quando fizeres um trabalho connosco — e a partir daí acompanhas aqui os checkups.
-              </Text>
+              <Text style={styles.assetEmptyTitle}>{T.profile.vehiclesEmpty}</Text>
+              <Text style={styles.assetEmptyDesc}>{T.profile.vehiclesEmptyDesc}</Text>
             </View>
           ) : (
             vehicles.map((v) => {
@@ -432,7 +409,7 @@ export default function ProfileScreen() {
                   onPress={() => onRowPress(v)}
                   disabled={!actionable || checkupBusy === v.id}
                   accessibilityRole={actionable ? 'button' : undefined}
-                  accessibilityLabel={actionable ? `${v.name}: ${ROW_STATUS[state].toLowerCase()} — opções de checkup` : undefined}
+                  accessibilityLabel={actionable ? T.checkup.rowA11y(v.name, T.checkup.rowStatus[state]) : undefined}
                 >
                   <View style={styles.assetThumb}>
                     <Photo url={v.photoUrl} seed={v.id} />
@@ -445,7 +422,7 @@ export default function ProfileScreen() {
                   </View>
                   <View style={[styles.assetStatus, good ? styles.assetStatusOk : faint ? styles.assetStatusFaint : styles.assetStatusPending]}>
                     <Text style={[styles.assetStatusText, good ? styles.assetStatusTextOk : faint ? styles.assetStatusTextFaint : styles.assetStatusTextPending]}>
-                      {ROW_STATUS[state]}
+                      {T.checkup.rowStatus[state]}
                     </Text>
                   </View>
                 </Pressable>
@@ -454,31 +431,31 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <Text style={styles.secTitle}>Os teus pedidos</Text>
+        <Text style={styles.secTitle}>{T.profile.requestsTitle}</Text>
         <View style={styles.assetList}>
           {requests.length === 0 ? (
             <View style={styles.assetEmpty}>
-              <Text style={styles.assetEmptyTitle}>Ainda não pediste nenhum orçamento.</Text>
-              <Text style={styles.assetEmptyDesc}>Pede a partir de um trabalho do Portfólio ("Pedir orçamento semelhante") ou aqui.</Text>
+              <Text style={styles.assetEmptyTitle}>{T.profile.requestsEmpty}</Text>
+              <Text style={styles.assetEmptyDesc}>{T.profile.requestsEmptyDesc}</Text>
             </View>
           ) : (
             requests.map((r) => <RequestRow key={r.id} request={r} />)
           )}
           <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('RequestQuote')} accessibilityRole="button">
-            <Text style={styles.ghostBtnText}>Pedir orçamento</Text>
+            <Text style={styles.ghostBtnText}>{T.profile.requestQuote}</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.secTitle}>Notificações</Text>
+        <Text style={styles.secTitle}>{T.profile.notificationsTitle}</Text>
         <View style={styles.prefList}>
           {/* Operacionais: fazem parte do serviço, não dependem de consentimento. */}
           <View style={styles.prefRow}>
             <View style={styles.prefText}>
-              <Text style={styles.prefLabel}>Lembretes dos teus carros e chãos</Text>
-              <Text style={styles.prefHint}>Checkups e contactos sobre trabalhos teus. Fazem parte do serviço.</Text>
+              <Text style={styles.prefLabel}>{T.profile.operationalLabel}</Text>
+              <Text style={styles.prefHint}>{T.profile.operationalHint}</Text>
             </View>
             <View style={styles.alwaysOn}>
-              <Text style={styles.alwaysOnText}>Sempre</Text>
+              <Text style={styles.alwaysOnText}>{T.profile.always}</Text>
             </View>
           </View>
 
@@ -491,8 +468,8 @@ export default function ProfileScreen() {
             accessibilityState={{ checked: marketing }}
           >
             <View style={styles.prefText}>
-              <Text style={styles.prefLabel}>Ofertas e novidades</Text>
-              <Text style={styles.prefHint}>Novos trabalhos no portfólio, eventos e ofertas. Podes desligar quando quiseres.</Text>
+              <Text style={styles.prefLabel}>{T.profile.marketingLabel}</Text>
+              <Text style={styles.prefHint}>{T.profile.marketingHint}</Text>
             </View>
             <Toggle on={marketing} />
           </Pressable>
@@ -513,40 +490,40 @@ export default function ProfileScreen() {
             ))}
         </View>
 
-        <Text style={styles.secTitle}>Conta</Text>
+        <Text style={styles.secTitle}>{T.profile.accountTitle}</Text>
         <View style={styles.accountList}>
           <Pressable style={styles.accountRow} onPress={() => navigation.navigate('PersonalData')}>
-            <Text style={styles.accountLabel}>Dados pessoais</Text>
+            <Text style={styles.accountLabel}>{T.profile.personalData}</Text>
             <ChevronRightIcon />
           </Pressable>
           <Pressable style={styles.accountRow} onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}>
-            <Text style={styles.accountLabel}>Política de privacidade</Text>
+            <Text style={styles.accountLabel}>{T.profile.privacy}</Text>
             <ChevronRightIcon />
           </Pressable>
           <Pressable style={styles.accountRow} onPress={() => navigation.navigate('Legal', { doc: 'terms' })}>
-            <Text style={styles.accountLabel}>Termos de utilização</Text>
+            <Text style={styles.accountLabel}>{T.profile.terms}</Text>
             <ChevronRightIcon />
           </Pressable>
           <Pressable style={styles.accountRow} onPress={() => signOut()}>
-            <Text style={styles.accountLabel}>Terminar sessão</Text>
+            <Text style={styles.accountLabel}>{T.profile.signOut}</Text>
             <ChevronRightIcon />
           </Pressable>
           <Pressable style={[styles.accountRow, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('DeleteAccount')}>
-            <Text style={[styles.accountLabel, styles.accountDanger]}>Apagar a minha conta e dados</Text>
+            <Text style={[styles.accountLabel, styles.accountDanger]}>{T.profile.deleteAccount}</Text>
             <ChevronRightIcon color={colors.danger} />
           </Pressable>
         </View>
       </ScrollView>
 
-      <ActionSheet visible={avatarMenu} title="Foto de perfil" actions={avatarActions} onClose={() => setAvatarMenu(false)} />
+      <ActionSheet visible={avatarMenu} title={T.profile.avatarMenuTitle} actions={avatarActions} onClose={() => setAvatarMenu(false)} />
 
       {/* Agendamento de checkup (Secção 8). */}
       <CheckupSheet vehicle={sheetVehicle} onClose={() => setSheetVehicle(null)} />
       <ActionSheet visible={!!rowVehicle} title={rowVehicle?.name} actions={rowActions} onClose={() => setRowVehicle(null)} />
       <ActionSheet
         visible={!!cancelVehicle}
-        title={cancelVehicle ? `Cancelar o checkup do ${cancelVehicle.name}?` : undefined}
-        actions={[{ label: 'Sim, cancelar o checkup', onPress: doCancel, destructive: true }]}
+        title={cancelVehicle ? T.checkup.cancelTitle(cancelVehicle.name) : undefined}
+        actions={[{ label: T.checkup.cancelYes, onPress: doCancel, destructive: true }]}
         onClose={() => setCancelVehicle(null)}
       />
     </SafeAreaView>

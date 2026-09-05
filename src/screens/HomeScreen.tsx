@@ -28,10 +28,12 @@ import { hasDepartmentContent } from '../data/departmentContent';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { useAppWidth } from '../utils/layout';
+import { useT } from '../i18n';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, client } = useAuth();
+  const T = useT();
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const screenW = useAppWidth();
@@ -65,7 +67,7 @@ export default function HomeScreen() {
             style={styles.iconBtn}
             onPress={() => navigation.navigate('Tabs', { screen: 'Alerts' })}
             accessibilityRole="button"
-            accessibilityLabel={unread > 0 ? `Alertas, ${unread} por ler` : 'Alertas'}
+            accessibilityLabel={T.home.alertsA11y(unread)}
           >
             <BellIcon size={15} color={colors.gold} />
             {unread > 0 ? <View style={styles.dot} /> : null}
@@ -75,7 +77,7 @@ export default function HomeScreen() {
             style={[styles.iconBtn, !!avatarUrl && styles.iconBtnAvatar]}
             onPress={() => navigation.navigate('Tabs', { screen: 'Profile' })}
             accessibilityRole="button"
-            accessibilityLabel="Perfil"
+            accessibilityLabel={T.home.profileA11y}
           >
             {avatarUrl ? <Avatar url={avatarUrl} name={client?.name ?? ''} size={30} /> : <UserIcon size={15} color={colors.gold} />}
           </Pressable>
@@ -101,8 +103,8 @@ export default function HomeScreen() {
               <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
               <View style={styles.slideOverlay} />
               <View style={styles.slideText}>
-                <Text style={styles.slideTag}>Marble Studios</Text>
-                <Text style={styles.slideTitle}>Os nossos trabalhos em destaque chegam em breve.</Text>
+                <Text style={styles.slideTag}>{T.common.brand}</Text>
+                <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
               </View>
             </Pressable>
           ) : (
@@ -117,7 +119,9 @@ export default function HomeScreen() {
                 <Photo url={w.photoUrl} seed={w.id} />
                 <View style={styles.slideOverlay} />
                 <View style={styles.slideText}>
-                  <Text style={styles.slideTag}>{categoryFullName(w.category)} · Concluído</Text>
+                  <Text style={styles.slideTag}>
+                    {categoryFullName(w.category)} · {T.home.completed}
+                  </Text>
                   <Text style={styles.slideTitle} numberOfLines={2}>
                     {w.title}
                   </Text>
@@ -137,7 +141,7 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.gridLabelRow}>
-          <Text style={styles.gridLabel}>OS NOSSOS SERVIÇOS</Text>
+          <Text style={styles.gridLabel}>{T.home.servicesLabel}</Text>
           <View style={styles.gridLabelLine} />
         </View>
 

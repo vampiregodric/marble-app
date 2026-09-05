@@ -2,10 +2,15 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, fonts } from '../theme/theme';
 
+// Uma opção: `key` é o valor que se guarda/compara, `label` o que se vê
+// (Secção 12: o rótulo muda com o idioma, o valor não).
+export type ChipOption = { key: string; label: string };
+
 type Props = {
-  options: string[];
+  options: ChipOption[];
+  // Chaves das opções marcadas.
   selected: string[];
-  onToggle: (option: string) => void;
+  onToggle: (key: string) => void;
   // Escolha única: tocar numa opção desmarca as outras (quem chama decide).
   accessibilityLabel?: string;
 };
@@ -17,16 +22,16 @@ export default function OptionChips({ options, selected, onToggle, accessibility
   return (
     <View style={styles.wrap} accessibilityLabel={accessibilityLabel}>
       {options.map((o) => {
-        const on = selected.includes(o);
+        const on = selected.includes(o.key);
         return (
           <Pressable
-            key={o}
+            key={o.key}
             style={[styles.chip, on && styles.chipOn]}
-            onPress={() => onToggle(o)}
+            onPress={() => onToggle(o.key)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: on }}
           >
-            <Text style={[styles.text, on && styles.textOn]}>{o}</Text>
+            <Text style={[styles.text, on && styles.textOn]}>{o.label}</Text>
           </Pressable>
         );
       })}
