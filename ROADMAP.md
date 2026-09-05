@@ -579,7 +579,12 @@ parceria ser oficial (SPEC) — o `DepartmentId` novo exige o backoffice,
 que é da Secção 7.
 
 ### Secção 11 — Preparação para lançamento nas lojas
-**Estado:** Por fazer
+**Estado:** Parte 1 feita (2026-09-05) — ícones/splash finais, variantes
+dev/prod, perfil de produção do EAS, regras + app Android no Firebase prod,
+páginas legais e de suporte publicadas em https://marble-studios-app.web.app/,
+ficha das lojas e formulários de privacidade em `docs/store/`. **Parte 2
+por fazer** (build, screenshots, submissão) e a checklist do Fábio em curso
+— ver "Nota (2026-09-05)" no fim.
 **Depende de:** praticamente todas as outras, incluindo a Secção 3
 (RGPD) e o projeto Firebase de produção da Secção 1
 **Objetivo:** Conta de developer Apple (99$/ano) e Google Play (25$
@@ -614,6 +619,71 @@ formulários "Data safety"/"App Privacy" a partir da política, páginas
 legais publicadas (GitHub Pages). Não toca em `src/`. A **parte 2**
 (build de produção, screenshots finais, submissão) só depois de 7, 8, 10
 e 12 estarem no master.
+**Decisões (2026-09-04/05, Fábio):** não existe ainda nenhuma conta de
+programador — criam-se as duas; Apple como **organização** (Cacto
+Elegante, Lda., com D-U-N-S — o Play também o exige e as contas pessoais
+do Play têm um teste fechado obrigatório de 14 dias); páginas legais em
+**Firebase Hosting no prod** (GitHub Pages exigiria GitHub Pro porque o
+repositório é privado), site `marble-studios-app`; a build de
+desenvolvimento passa a ter pacote próprio **`pt.marble.app.dev`** ("Marble
+Dev"), porque no EAS a chave FCM é por pacote e dev/prod não podem
+partilhá-la; a caixa app@marble.pt existe e é lida → é o email de suporte
+das lojas. Prod autorizado e feito: regras/índices, app Android,
+Hosting, `google-services.prod.json` no EAS.
+**Nota (2026-09-05):** construído nesta sessão, sem tocar em `src/`,
+`functions/src`, backoffice ou regras. **Assets:** `scripts/build-icons.mjs`
+(`npm run build:icons`) gera do `assets/logo.png` o ícone 1024 opaco, o
+ícone adaptativo (foreground na zona segura + monocromático, fundo preto
+por cor), o splash, o favicon, `logo-transparent.png` e os gráficos do
+Play (`docs/store/play-icon-512.png`, `feature-graphic-1024x500.png`); o PNG
+de fundo do template foi apagado. **Config:** `app.json` (nome "Marble
+Studios", tema escuro, fundo preto, sem iPad, sem pergunta de encriptação,
+plugin `expo-splash-screen` instalado e configurado), `app.config.js`
+(variantes por `APP_VARIANT` + `google-services` por ambiente), `eas.json`
+(`development`/`preview`/`production` com `environment` e `env`,
+`submit.production.android`), `.env.production` passou a ir para o git
+(valores públicos; o EAS Build só vê ficheiros do git), `.gitignore`
+(`google-services.prod.json`). **Firebase:** app `pt.marble.app.dev` no dev
+(o `google-services.json` da raiz tem os dois clientes); no prod, regras e
+índices publicados (versão do master de 2026-09-04), app Android
+`pt.marble.app` registada e o seu ficheiro carregado no EAS como variável
+secreta `GOOGLE_SERVICES_JSON` (ambiente `production`); site de Hosting
+`marble-studios-app` criado e `docs/` publicado (target `legal`;
+`firebase.json` ignora `store/**` e `*.md`). **Docs:** `npm run build:legal`
+gera também `docs/index.html` (suporte + resumo em inglês); `docs/store/`
+tem `ficha-loja.md` (nome, subtítulo, descrições PT/EN, palavras-chave,
+categorias, classificação etária, "App access"), `data-safety.md` (Play),
+`app-privacy.md` (Apple) e `checklist-contas.md` (o que só o Fábio faz,
+com links e prazos). Verificado: `npx expo config` resolve as duas
+variantes, `npm run typecheck` limpo, site no ar com as 4 páginas e links
+certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
+**Fica para a parte 2 (checklist):**
+- *Do Fábio, já a correr (docs/store/checklist-contas.md):* D-U-N-S →
+  Apple ID da empresa → Apple Developer Program (organização, 99 €/ano) →
+  Google Play Console (organização, 25 $) → Blaze no prod ("My Billing
+  Account") → segredos do Cloudinary no prod → chave FCM V1 do prod no EAS
+  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
+  criada ainda; Blaze, segredos e FCM por fazer.
+- *Do Claude, depois de 7, 8, 10 e 12 no master:* republicar regras e
+  índices no prod; deploy das Functions no prod (`CLOUDINARY_CLEANUP=on`
+  quando os segredos existirem); nova dev build ("Marble Dev"); build de
+  produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
+  `eas submit`; conta de demonstração no prod para os revisores; rever as
+  linhas **[Secção 7/8]** de `data-safety.md`/`app-privacy.md` (o que os
+  formulários de orçamento e checkup enviam); confirmar o nome "Marble
+  Studios" na App Store (plano B: "Marble Studios App"); admins da equipa
+  no prod e Hosting do backoffice de produção (repositório do backoffice);
+  domínio próprio `app.marble.pt` se o Fábio quiser (DNS dele).
+- *Em aberto (da Secção 3):* cláusula 5 dos termos (fotos dos trabalhos no
+  portfólio/redes sem identificar o dono, matrícula ocultada, salvo pedido
+  em contrário) — confirmar com o dono; revisão dos textos por advogado; e
+  acrescentar à política, nos "dados técnicos mínimos", o endereço IP e o
+  agente do utilizador que o Firebase Authentication guarda por segurança
+  (já declarado nos formulários das lojas). Se algum texto mudar: subir
+  `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
+- *Para a Secção 12:* os textos de permissão iOS no `app.json` (plugin
+  `expo-image-picker`) estão só em PT; se a app ganhar inglês, decidir aí
+  se os localizas (`locales` no `app.json`).
 
 ### Secção 12 — Inglês
 **Estado:** Por fazer
