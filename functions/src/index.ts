@@ -17,11 +17,11 @@ import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebas
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { CloudinaryConfig } from './cloudinary';
-import { handleClientUpdated, handleWorkWritten } from './handlers';
+import { handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from './handlers';
 import { runDailyJobs } from './jobs';
 import { pushNotification } from './push';
 import { handleRequestWritten, RequestEmailConfig } from './requests';
-import { AppNotification, Client, ServiceRequest, Work } from './types';
+import { AppNotification, Client, ServiceRequest, Vehicle, Work } from './types';
 
 initializeApp();
 // Firestore está em eur3 (Europa); europe-west1 (Bélgica) é a região v2
@@ -96,6 +96,16 @@ export const onRequestWritten = onDocumentWritten({ document: 'requests/{id}', s
   const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as ServiceRequest) : null;
   const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as ServiceRequest) : null;
   await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig() }, new Date(), log);
+});
+
+// Agendamento de checkup (Secção 8): o cliente pediu/alterou/cancelou na
+// app, ou a equipa aprovou/propôs outro dia → alerta interno ou `message`.
+export const onVehicleUpdated = onDocumentUpdated('vehicles/{id}', async (event) => {
+  if (!event.data) return;
+  const before = { id: event.params.id, ...event.data.before.data() } as Vehicle;
+  const after = { id: event.params.id, ...event.data.after.data() } as Vehicle;
+  const summary = await handleVehicleUpdated(getFirestore(), before, after, new Date(), log);
+  if (summary.teamAlerts || summary.messages || summary.declined) logger.info('onVehicleUpdated', { id: event.params.id, ...summary });
 });
 
 // Job diário: recibos de push, acompanhamento pós-serviço, lembretes de

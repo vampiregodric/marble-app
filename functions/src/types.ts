@@ -7,7 +7,26 @@ import type { Timestamp } from 'firebase-admin/firestore';
 
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
 export type VehicleType = 'car' | 'floor';
-export type CheckupStatus = 'pending' | 'ok';
+// 'declined' (Secção 8): o cliente cancelou o pedido de checkup na app.
+export type CheckupStatus = 'pending' | 'ok' | 'declined';
+
+// Agendamento de checkup (Secção 8) — ver Vehicle.checkupRequest em
+// src/firebase/models.ts para quem escreve cada estado.
+export type CheckupPeriod = 'morning' | 'afternoon';
+export type CheckupRequestStatus = 'pending' | 'proposed' | 'approved' | 'cancelled';
+
+export interface CheckupRequest {
+  day: string; // "AAAA-MM-DD"
+  period: CheckupPeriod;
+  note?: string;
+  status: CheckupRequestStatus;
+  requestedAt: Timestamp;
+  time?: string; // "HH:MM", opcional (equipa)
+  teamNote?: string;
+  decidedAt?: Timestamp;
+  confirmedAt?: Timestamp;
+  cancelledAt?: Timestamp;
+}
 
 export type NotificationType = 'checkup_reminder' | 'offer' | 'new_work' | 'event_reminder' | 'message' | 'team_alert';
 
@@ -68,6 +87,7 @@ export interface Vehicle {
   checkupStatus: CheckupStatus;
   checkupDoneAt?: Timestamp;
   checkupRequestedAt?: Timestamp;
+  checkupRequest?: CheckupRequest;
   photoUrl?: string;
   updatedAt?: Timestamp;
 }

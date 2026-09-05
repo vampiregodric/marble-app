@@ -17,7 +17,9 @@ rules_version = '2';
 //   query toda (ver src/data/works.ts). A equipa vê também os rascunhos.
 // - `events`: públicos.
 // - `clients/{uid}`: só o próprio (uid do Auth == id do doc) ou a equipa.
-// - `vehicles`: só o dono lê; quem escreve é a equipa.
+// - `vehicles`: só o dono lê; quem escreve é a equipa — exceto o pedido de
+//   checkup (Secção 8): o dono pode escrever `checkupRequest` (pedir,
+//   alterar, confirmar a proposta da equipa, cancelar) e nada mais.
 // - `notifications`: só o dono lê; a única alteração permitida ao cliente é
 //   marcar como lida (`read`) — nada mais muda pelo SDK de cliente.
 // - `requests` (Secção 7, 2026-09-04): pedidos de orçamento (e, na Secção 8,
@@ -108,9 +110,62 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Agendamento de checkup (Secção 8). O cliente só toca em
+    // `checkupRequest` (+ `checkupRequestedAt`, que o job de acompanhamento
+    // lê, e `updatedAt`), e só enquanto houver checkup por fazer. Três
+    // escritas possíveis, nada mais:
+    // 1. pedir/alterar: escreve o mapa inteiro com status 'pending' — dia
+    //    "AAAA-MM-DD", período, nota até 300 caracteres, requestedAt = agora;
+    // 2. confirmar a proposta da equipa: 'proposed' → 'approved', só o
+    //    estado e `confirmedAt`;
+    // 3. cancelar: → 'cancelled', só o estado e `cancelledAt`.
+    // Aprovar/propor é da equipa (isAdmin). Os limites são os de
+    // CHECKUP_LIMITS em src/firebase/models.ts.
+    function checkupRequestOf(data) {
+      return data.checkupRequest;
+    }
+    function validNewCheckupRequest(req) {
+      return req.keys().hasOnly(['day', 'period', 'note', 'status', 'requestedAt'])
+        && req.keys().hasAll(['day', 'period', 'status', 'requestedAt'])
+        && req.status == 'pending'
+        && req.day is string && req.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && req.period in ['morning', 'afternoon']
+        && (!('note' in req) || (req.note is string && req.note.size() <= 300))
+        && req.requestedAt == request.time;
+    }
+    function ownerCheckupWrite() {
+      let after = request.resource.data;
+      let before = resource.data;
+      let keys = after.diff(before).affectedKeys();
+      return ownsResource()
+        && before.checkupStatus in ['pending', 'declined']
+        && 'checkupRequest' in after
+        && (
+          // 1. Pedir ou alterar (mapa novo).
+          (keys.hasOnly(['checkupRequest', 'checkupRequestedAt', 'updatedAt'])
+            && validNewCheckupRequest(checkupRequestOf(after))
+            && after.checkupRequestedAt == request.time)
+          // 2. Confirmar a proposta da equipa.
+          || (keys.hasOnly(['checkupRequest', 'updatedAt'])
+            && 'checkupRequest' in before
+            && checkupRequestOf(before).status == 'proposed'
+            && checkupRequestOf(after).status == 'approved'
+            && checkupRequestOf(after).diff(checkupRequestOf(before)).affectedKeys().hasOnly(['status', 'confirmedAt'])
+            && checkupRequestOf(after).confirmedAt == request.time)
+          // 3. Cancelar.
+          || (keys.hasOnly(['checkupRequest', 'updatedAt'])
+            && 'checkupRequest' in before
+            && checkupRequestOf(before).status in ['pending', 'proposed', 'approved']
+            && checkupRequestOf(after).status == 'cancelled'
+            && checkupRequestOf(after).diff(checkupRequestOf(before)).affectedKeys().hasOnly(['status', 'cancelledAt'])
+            && checkupRequestOf(after).cancelledAt == request.time)
+        );
+    }
+
     match /vehicles/{vehicleId} {
       allow read: if ownsResource() || isAdmin();
-      allow write: if isAdmin();
+      allow update: if isAdmin() || ownerCheckupWrite();
+      allow create, delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {

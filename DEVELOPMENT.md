@@ -168,8 +168,10 @@ Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
   `overflow: 'hidden'`). URL vazio ou que falha → gradiente estável por ID.
 - **Datas** em `src/utils/dates.ts` (`timeAgo`, `formatDate`,
   `formatMonthYear`). Sempre a partir de `Timestamp`.
-- **Escritas do cliente:** só `clients/{uid}` (perfil) e `read` em
-  `notifications` (`markNotificationRead`). Tudo o resto é da equipa.
+- **Escritas do cliente:** `clients/{uid}` (perfil), `read` em
+  `notifications` (`markNotificationRead`), criar em `requests` (Secção 7)
+  e `checkupRequest` em `vehicles/{id}` (Secção 8: pedir, confirmar a
+  proposta, cancelar — `src/data/vehicles.ts`). Tudo o resto é da equipa.
 - **Ecrãs empilhados** (Detalhe, Dados pessoais, Legal, Apagar conta) usam
   `edges={['top', 'bottom']}` no `SafeAreaView` porque não têm barra de tabs
   a proteger a margem inferior — sem isto o botão fixo em baixo fica tapado
@@ -246,6 +248,7 @@ backoffice (`marble-backoffice/src/data/writes.ts` → `sendNotification`).
 | `onNotificationCreated` | doc novo em `notifications` (backoffice ou jobs) | push para `clients.pushTokens`; escreve `push` no doc (`sent`/`no_device`/`skipped`/`error`); tira tokens `DeviceNotRegistered`. `team_alert` nunca leva push. |
 | `onWorkWritten` | `works/{id}` criado/alterado | passou a publicado → `new_work` a quem tem "Ofertas e novidades" **e** a categoria ligada (uma vez: `newWorkNotifiedAt`); com carro/chão ligado, `vehicles.lastServiceAt` ← `completedAt` se for mais recente. |
 | `onClientUpdated` | `clients/{uid}` alterado | `avatarUrl` removido/trocado (ou conta apagada) → apaga no Cloudinary os ficheiros com a tag `uid_<uid>`, menos a foto atual. Cumpre os 30 dias da política de privacidade em segundos. |
+| `onVehicleUpdated` (Secção 8) | `vehicles/{id}` alterado | só reage a `checkupRequest`: pedido/alteração do cliente → `team_alert` com dia, nota e telemóvel + `followUp.checkupConfirmedAt` no trabalho; proposta da equipa → `message` ao cliente; aprovado/confirmado → `message` "Checkup agendado" (+ `team_alert` se foi o cliente a confirmar); cancelado → `team_alert` + `checkupStatus: 'declined'`; voltar a pedir → `'pending'`. Ver "Agendamento de checkup". |
 | `dailyJobs` | todos os dias às **10:00 de Lisboa** | recibos de push de ontem; acompanhamento pós-serviço; lembrete de eventos ("Amanhã: …", só com consentimento de marketing); retenção de contas (aviso aos 3 anos − 30 dias, anonimização + Auth + Cloudinary aos 3 anos; abrir a app cancela). |
 
 Consentimento (RGPD, Secção 3) aplicado em `functions/src/consent.ts`
@@ -331,7 +334,11 @@ um alerta já criado — com um token inválido o Expo responde
 trigger de publicação), `--avatar <uid>` (limpeza no Cloudinary; precisa de
 `CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` no ambiente), `--request <id>`
 (simula o trigger de um pedido de orçamento acabado de criar — Secção 7; o
-email só sai com `RESEND_API_KEY` no ambiente). Foi assim que a
+email só sai com `RESEND_API_KEY` no ambiente), `--vehicle <id>
+[--before none|pending|proposed|approved]` (simula o trigger do
+agendamento de checkup — Secção 8 — a partir do estado atual de
+`vehicles/{id}.checkupRequest`; `--before` diz qual era o estado anterior,
+senão adivinha-se o plausível). Foi assim que a
 Secção 6 verificou o fluxo inteiro (checkup → alerta interno → oferta
 recusada por falta de consentimento; aviso e anonimização por
 inatividade; `new_work` só a quem tem categoria e consentimento).
@@ -530,6 +537,78 @@ Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
   <chave> --request <id>` simula o trigger sem deploy. Contas de teste
   criadas nesta secção no dev: `teste.seccao7@example.com` (pedido AI
   Business, criada pelo próprio formulário).
+
+## Agendamento de checkup (Secção 8)
+
+O botão "Agendar agora" do Perfil abre uma folha no estilo da app
+(`src/components/CheckupSheet.tsx`) onde o cliente escolhe um **dia e um
+período** entre os que a equipa abriu, deixa uma nota opcional e pede. O
+pedido fica **a aguardar aprovação**; a equipa aprova ou propõe outro dia;
+o cliente recebe alerta com push; pode alterar e cancelar. Decisões do
+Fábio em SPEC.md ("Decidido … Secção 8").
+
+- **Onde vive o pedido:** no próprio carro/chão, `vehicles/{id}.checkupRequest`
+  (`CheckupRequest` em `models.ts`: `day` "AAAA-MM-DD", `period`
+  `morning|afternoon`, `note`, `status`, `requestedAt`; da equipa: `time`
+  "HH:MM", `teamNote`, `decidedAt`; `confirmedAt`/`cancelledAt`). Estados:
+  `pending` (cliente pediu) → `proposed` (equipa propôs outro dia) ou
+  `approved` (equipa aprovou, ou cliente confirmou a proposta) →
+  `cancelled` (cliente). `checkupRequestedAt` no doc é o que o job de
+  acompanhamento já lia ("lembrete atendido"). `CheckupStatus` ganhou
+  `'declined'` = cancelou ("não quis"); sai do cartão "Ação pendente" e dos
+  checkups pendentes do backoffice, mas a linha do carro/chão no Perfil
+  deixa voltar a pedir (a Function repõe `'pending'`). Não se usou a
+  coleção `requests` da Secção 7 (fluxo de estados diferente).
+- **Disponibilidade:** `settings/checkups` (`CheckupAvailability`:
+  `weekly` seg–dom × períodos, `closedDays`, `weeksAhead`, `minDaysAhead`).
+  Sem doc, a app usa `CHECKUP_AVAILABILITY_DEFAULT` (seg–sex, manhã e
+  tarde, 3 semanas, a partir de amanhã). `src/data/checkups.ts` calcula as
+  opções (`checkupOptions`), lê o estado (`checkupState`) e formata
+  (`formatCheckupSlot` → "seg, 7 set, de manhã" / "às 10:30" — o mesmo
+  texto que as Functions escrevem). Leitura pública como `settings/home`.
+- **Regras** (`match /vehicles`, função `ownerCheckupWrite`): o dono só
+  pode (1) pedir/alterar — escreve o mapa `checkupRequest` inteiro com
+  `status: 'pending'`, dia no formato certo, período válido, nota até 300
+  caracteres, `requestedAt`/`checkupRequestedAt` iguais a `request.time`;
+  (2) confirmar uma proposta — `proposed` → `approved`, só `status` e
+  `confirmedAt`; (3) cancelar — só `status` e `cancelledAt`. Só enquanto
+  `checkupStatus` for `pending`/`declined`. Aprovar, propor e "marcar em
+  dia" são `isAdmin()`. `npm run check:firestore:auth` cobre os 12 casos.
+- **Perfil:** o cartão muda com o estado — Ação pendente ("Agendar
+  agora"), A aguardar aprovação ("Alterar" / "Cancelar pedido"), Proposta
+  da equipa ("Confirmar" / "Escolher outro dia" / "Cancelar"), Agendado
+  ("Alterar" / "Cancelar"). O cartão escolhe primeiro o carro/chão que
+  precisa de decisão do cliente (`pendingCheckup`). Cada linha da lista é
+  tocável: sem pedido abre a folha; com pedido abre um menu com as mesmas
+  ações. Escritas em `src/data/vehicles.ts` (`requestCheckup`,
+  `confirmCheckupProposal`, `cancelCheckupRequest`).
+- **Function `onVehicleUpdated`** (`handlers.ts` → `handleVehicleUpdated`,
+  textos em `texts.ts`): compara `checkupRequest` antes/depois e, por
+  transição, cria o alerta interno (pedido, alteração, cliente confirmou,
+  cancelou — sempre com o telemóvel) ou o `message` ao cliente (proposta,
+  agendado — com push pela `onNotificationCreated`). Ao pedir ou cancelar,
+  marca `followUp.checkupConfirmedAt` nos trabalhos ativos do carro/chão —
+  o job diário nunca chega a mandar ligar. Ao cancelar, `checkupStatus` →
+  `'declined'`; ao voltar a pedir, → `'pending'`.
+- **O papel da equipa até à Secção 7b** (página "Checkups" no backoffice):
+  `npm run checkup:admin -- ./serviceAccountKey.dev.json list|show <id>|approve <id> [--time 10:30] [--note "…"]|propose <id> --day AAAA-MM-DD --period morning|afternoon [--time] [--note]|done <id>|reset <id>|availability [--weekly "mon:morning,afternoon;sat:morning" --closed 2026-09-15 --weeks 3 --min 1]`.
+  Escreve exatamente o que o backoffice vai escrever; a Function publicada
+  no dev faz o resto (o cliente recebe o alerta e o push). `reset` limpa o
+  pedido e volta a pôr o checkup pendente, para testar outra vez.
+- **Testar de ponta a ponta:** app web na 8084 com `npm run dev-token`
+  (ou o telemóvel com a dev build, para ver o push) → Perfil → "Agendar
+  agora" → pedir; `npm run checkup:admin -- <chave> propose …` → alerta
+  "Proposta de checkup" nos Alertas + cartão "Proposta da equipa" →
+  Confirmar → "Checkup agendado"; Cancelar → linha "Sem checkup" → tocar →
+  voltar a pedir. Sem deploy: `npm run functions:jobs -- <chave> --vehicle <id>`
+  simula o trigger. Nos testes no browser, um clique programático em
+  vários chips e no botão no mesmo instante usa os valores anteriores (o
+  React ainda não re-renderizou) — clica, espera, e só depois submete.
+- **Backoffice (Secção 7b, por fazer):** página "Checkups" com pedidos a
+  aprovar (Aprovar / Propor outro dia), agendados ("Marcar em dia") e o
+  editor de disponibilidade; `models.ts` do backoffice sincronizado
+  (`CheckupRequest`, `CheckupAvailability`, `CheckupStatus` `'declined'`,
+  `CHECKUP.declined` em `utils/format.ts`). Ver ROADMAP.md.
 
 ## Páginas de departamento (Secção 9)
 

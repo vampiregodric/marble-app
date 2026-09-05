@@ -114,7 +114,95 @@ export interface Client {
 }
 
 export type VehicleType = 'car' | 'floor';
-export type CheckupStatus = 'pending' | 'ok';
+// 'pending' = há um checkup por fazer (o lembrete saiu); 'ok' = em dia;
+// 'declined' (Secção 8) = o cliente cancelou o pedido na app — decisão do
+// Fábio: "considera que não quis fazer", a equipa não insiste. Pode voltar
+// a pedir a partir do Perfil.
+export type CheckupStatus = 'pending' | 'ok' | 'declined';
+
+// ---------- Agendamento de checkup (Secção 8) ----------
+
+export type CheckupPeriod = 'morning' | 'afternoon';
+
+// Ciclo de um pedido de checkup, guardado no próprio carro/chão
+// (`Vehicle.checkupRequest`). Quem escreve cada transição:
+// - pending: o CLIENTE, na app ("Agendar agora" / "Alterar") — escreve o
+//   mapa inteiro, com o dia e o período escolhidos entre a disponibilidade
+//   da equipa (`settings/checkups`).
+// - proposed: a EQUIPA (backoffice, Secção 7b) — o dia pedido não dá e
+//   propõe outro (dia, período, hora opcional, nota). O cliente recebe um
+//   alerta `message` e confirma ou escolhe outro dia.
+// - approved: a EQUIPA aprova o pedido, ou o CLIENTE confirma a proposta.
+//   O cliente recebe "Checkup agendado" (alerta + push).
+// - cancelled: o CLIENTE cancela. A Cloud Function passa o carro/chão a
+//   `checkupStatus: 'declined'` e avisa a equipa.
+// Feito = a equipa "marca em dia" (`checkupStatus: 'ok'`, `checkupDoneAt`),
+// como até aqui; o pedido fica como histórico.
+export type CheckupRequestStatus = 'pending' | 'proposed' | 'approved' | 'cancelled';
+
+export interface CheckupRequest {
+  // Dia pedido/agendado, "AAAA-MM-DD" (calendário de Lisboa), e período.
+  // Quando a equipa propõe outro dia, são os da proposta.
+  day: string;
+  period: CheckupPeriod;
+  // Nota do cliente (opcional; CHECKUP_LIMITS.noteMax). Só o cliente escreve.
+  note?: string;
+  status: CheckupRequestStatus;
+  // Quando o cliente pediu (esta ronda). Copiado para
+  // `Vehicle.checkupRequestedAt`, que é o que o job de acompanhamento lê.
+  requestedAt: Timestamp;
+  // --- equipa (backoffice) ---
+  // Hora concreta ao aprovar/propor ("HH:MM"), opcional; sem hora, fica
+  // "de manhã"/"à tarde".
+  time?: string;
+  teamNote?: string;
+  // Quando a equipa aprovou ou propôs.
+  decidedAt?: Timestamp;
+  // Quando o cliente confirmou a proposta da equipa (status → approved).
+  confirmedAt?: Timestamp;
+  cancelledAt?: Timestamp;
+}
+
+export type CheckupWeekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+// Indexado por Date.getDay() (0 = domingo).
+export const CHECKUP_WEEKDAYS: CheckupWeekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+// Documento único `settings/checkups`: quando a equipa faz checkups,
+// definido no backoffice (Secção 7b). A app calcula daqui as opções que o
+// cliente pode escolher (src/data/checkups.ts). Leitura pública como o
+// resto de `settings`; escrita só da equipa. Ausente → CHECKUP_AVAILABILITY_DEFAULT.
+export interface CheckupAvailability {
+  id: 'checkups';
+  // Períodos abertos em cada dia da semana. Dia ausente ou vazio = fechado.
+  weekly: Partial<Record<CheckupWeekday, CheckupPeriod[]>>;
+  // Dias fechados além do horário semanal (feriados, férias), "AAAA-MM-DD".
+  closedDays: string[];
+  // Quantas semanas à frente o cliente pode escolher.
+  weeksAhead: number;
+  // Antecedência mínima em dias (1 = a partir de amanhã).
+  minDaysAhead: number;
+  updatedAt?: Timestamp;
+}
+
+export const CHECKUP_AVAILABILITY_DEFAULT: Omit<CheckupAvailability, 'id' | 'updatedAt'> = {
+  weekly: {
+    mon: ['morning', 'afternoon'],
+    tue: ['morning', 'afternoon'],
+    wed: ['morning', 'afternoon'],
+    thu: ['morning', 'afternoon'],
+    fri: ['morning', 'afternoon'],
+  },
+  closedDays: [],
+  weeksAhead: 3,
+  minDaysAhead: 1,
+};
+
+// Limites partilhados entre a app (validação) e firestore.rules (que os
+// impõe). Se mudares aqui, muda lá.
+export const CHECKUP_LIMITS = {
+  noteMax: 300,
+  weeksAheadMax: 12,
+} as const;
 
 // Um carro ou um chão (piso epóxi) associado a um cliente.
 export interface Vehicle {
@@ -133,9 +221,14 @@ export interface Vehicle {
   // Quando a equipa marcou o checkup como feito. O job de acompanhamento
   // usa-o para saber que o lembrete foi atendido (não alerta a equipa).
   checkupDoneAt?: Timestamp;
-  // Quando o cliente confirmou/pediu o checkup na app. Reservado à
-  // Secção 8 (o botão "Agendar agora"); o job já o respeita.
+  // Quando o cliente pediu o checkup na app (Secção 8: "Agendar agora").
+  // Igual a `checkupRequest.requestedAt`; o job de acompanhamento trata-o
+  // como "o lembrete foi atendido" (não alerta a equipa para ligar).
   checkupRequestedAt?: Timestamp;
+  // O pedido de agendamento em curso (Secção 8). Ausente = ainda não pediu.
+  // Só o dono escreve os campos do cliente e só a equipa os dela — ver
+  // `match /vehicles` em firestore.rules.
+  checkupRequest?: CheckupRequest;
   photoUrl?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
