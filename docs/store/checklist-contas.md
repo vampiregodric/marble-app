@@ -10,7 +10,15 @@ Começa **hoje** pelo passo 1: é o que mais demora e destrava as duas lojas.
 A Apple é o caminho crítico (2 a 4 semanas no pior caso); o Play aprova em
 dias; o resto são minutos.
 
-### 1. Número D-U-N-S da Cacto Elegante, Lda. — grátis, 0 a 3 semanas
+### 1. Número D-U-N-S da Cacto Elegante, Lda. — FEITO (2026-09-06)
+
+**D-U-N-S: 348571438** (já existia na D&B; a Apple enviou-o por email a
+2026-09-06). Serve para a Apple e para o Google Play. Atenção: o registo
+da D&B tem a morada como "Rua Quinta das Rosas, 12H" e os textos legais da
+app dizem "12A" — confirmar na certidão permanente qual é o certo e alinhar
+o outro lado.
+
+Instruções originais, para referência:
 
 As duas lojas exigem-no para contas de **organização** (Apple sempre; Google
 Play desde 2023). Empresas registadas em Portugal costumam já ter um,
@@ -36,12 +44,12 @@ atribuído pela Informa D&B — por isso primeiro procura, só depois pedes.
 - https://developer.apple.com/programs/enroll/ (entra com o Apple ID do
   passo 2; podes inscrever-te pela app "Apple Developer" no iPhone ou no
   site).
-- Pedem: D-U-N-S, nome legal, morada, **site público com domínio associado
-  à empresa** (se marble.pt não tiver site, diz-me: ligo o domínio
-  `app.marble.pt` ao site das páginas legais em minutos, só preciso de
-  acesso ao DNS), e que quem se inscreve tenha **poder para vincular a
-  empresa** (gerente) ou uma carta de autorização. Costumam ligar por
-  telefone para confirmar.
+- Pedem: D-U-N-S (348571438), nome legal, morada, **site público com
+  domínio associado à empresa** — usar `https://app.marble.pt` (ligado a
+  2026-09-06 às páginas de suporte e legais; o marble.pt em si não tem
+  site) — e que quem se inscreve tenha **poder para vincular a empresa**
+  (gerente) ou uma carta de autorização. Costumam ligar por telefone para
+  confirmar.
 - O nome do vendedor na App Store passa a ser **Cacto Elegante, Lda.** (é
   sempre o nome legal). A app chama-se "Marble Studios" na mesma.
 - Depois de aprovado: nada mais para já. O EAS cria as certificações de

@@ -380,7 +380,12 @@ inatividade; `new_work` só a quem tem categoria e consentimento).
   push a sério é preciso a **development build** (ver abaixo); no Expo Go e
   no web `pushSupported` é false e o cartão não aparece. Sem
   `extra.eas.projectId` no `app.json` também não (é o que
-  `getExpoPushTokenAsync` exige).
+  `getExpoPushTokenAsync` exige). **Desde 2026-09-06 o `expo-notifications`
+  carrega-se só quando é preciso** (`notifications()` em
+  `src/push/push.native.ts`): no Expo Go (Android, SDK 53+) o simples
+  import do módulo rebentava no arranque com "[runtime not ready]: Android
+  Push notifications … removed from Expo Go", e a app não abria de todo no
+  Expo Go. Agora abre, só sem push.
 - Ícone da barra de notificações (Android exige silhueta branca com
   transparência): `assets/notification-icon.png`, gerado a partir do
   logótipo real (`assets/logo.png`) — não é um sino genérico. Cor de
@@ -704,6 +709,24 @@ dentro da página. Regras:
   A Xtreme tem `category: 'Epoxy Floors'` só para isto (os pavimentos
   feitos com os produtos dela); a cópia da lista no backoffice
   (`src/utils/departments.ts`) não precisa do campo, que só a app usa.
+- **Portfólio filtrado por serviço (Secção 14):** um cartão de "O que
+  fazemos" pode levar `service?: WorkServiceId` (id de `WORK_SERVICES`;
+  o mesmo em PT e EN — em dev há um `console.warn` se divergirem). Nos
+  departamentos com `category`, e só quando há pelo menos um trabalho
+  publicado dessa categoria com esse serviço, o cartão passa a
+  `Pressable` com a linha dourada "Ver trabalhos" (`T.department.seeWorks`)
+  e abre `Tabs > Portfolio { category, service }`; sem trabalhos fica
+  como era, só texto — nunca abre um Portfólio vazio. Os 14 cartões
+  ligados: Automotive (PPF → `ppf`, Vinil → `vinyl`, Detailing →
+  `detailing`, Proteção cerâmica → `ceramic`, Tetos estrelados →
+  `starlight`), Epoxy (Metallic → `metallic-epoxy`, Flake →
+  `flake-epoxy`, Cores sólidas → `solid-colour-epoxy`, Quartzo →
+  `quartz-epoxy`), Graphic (`brand-identity`, `vehicle-graphics`,
+  `signage`, `print`, `social-media`). "Preparação e reparação da base",
+  os produtos da Xtreme e as páginas AI/Ads não ligam (decisão do Fábio,
+  2026-09-06). O "Ver portfólio" dos trabalhos recentes continua a abrir a
+  categoria inteira. A escuta de `works` subiu para o ecrã (uma só, que
+  alimenta os cartões e os trabalhos recentes).
 - **`RequestQuote`** é o formulário da Secção 7 (ver "Pedidos de
   orçamento" acima): `cta.kind === 'quote'` abre-o com `{ department }` e
   o formulário desse departamento vem de `src/data/requestForms.ts` —
@@ -738,7 +761,11 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
   `hasService()` serve o Portfólio, que dentro de uma categoria mostra uma
   segunda fila de chips com os serviços que têm trabalhos publicados (tocar
   outra vez desliga; em "Todos" não há segunda fila; mudar de categoria
-  limpa o serviço).
+  limpa o serviço). A página de departamento pode mandar `service` nos
+  params do Portfólio (Secção 14; ver "Páginas de departamento"): o ecrã
+  aplica-o com a categoria e só se pertencer a ela. Na web chega pela query
+  string — `portfolio?category=Automotive&service=vinyl`; só `?service=…`
+  também serve (dá a categoria dele); categoria desconhecida é ignorada.
 - **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
   escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
   cair os que não pertencem), marcas com Enter/vírgula e sugestões
@@ -1053,9 +1080,13 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
   pede confirmação ao Fábio).
 - GitHub Pages ficou de fora: o repositório é privado e o Pages em
   repositórios privados exige GitHub Pro.
-- Domínio próprio (ex. `app.marble.pt`): consola Firebase → Hosting → site
-  `marble-studios-app` → Add custom domain (dois registos DNS, SSL
-  automático). Trocar depois os URLs na ficha das lojas.
+- **Domínio próprio `app.marble.pt`** ligado a 2026-09-06 (consola Firebase
+  → Hosting → site `marble-studios-app` → Add custom domain, "Quick setup":
+  um só CNAME `app` → `marble-studios-app.web.app`, criado no cPanel da
+  PTisp/dominios.pt, Zone Editor; certificado automático). É o URL das
+  lojas (`docs/store/ficha-loja.md`) e o "site da organização" que a Apple
+  pede na inscrição. O DNS do marble.pt (e o email) está na PTisp:
+  área de cliente dominios.pt → "Entrar no cPanel" → Zone Editor.
 
 ### Parte 2 (2026-09-06): dev build, App Check, emails do Auth
 

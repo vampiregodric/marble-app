@@ -17,8 +17,8 @@ Secções 12 e 13 — ver as notas no fim. Pronto a copiar para o formulário.
 | Pergunta | Resposta |
 |---|---|
 | Do you or your third-party partners collect data from this app? | **Yes** |
-| Privacy Policy URL | https://marble-studios-app.web.app/legal/politica-de-privacidade.html |
-| User Privacy Choices URL (opcional) | https://marble-studios-app.web.app/legal/apagar-conta.html |
+| Privacy Policy URL | https://app.marble.pt/legal/politica-de-privacidade.html |
+| User Privacy Choices URL (opcional) | https://app.marble.pt/legal/apagar-conta.html |
 | Data used to track you | **No** — em nenhum tipo de dado |
 
 ## Tipos de dados a declarar

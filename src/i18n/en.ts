@@ -110,6 +110,7 @@ export const en: Strings = {
     howItWorks: 'How it works',
     recentWorks: 'Recent work',
     seePortfolio: 'See portfolio',
+    seeWorks: 'See our work',
     recentEmpty: 'No published work in this category yet.',
     seeAlso: 'See also',
     pricing: 'Investment',

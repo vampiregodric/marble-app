@@ -22,17 +22,17 @@ entra em **português (Portugal)**, como idioma predefinido, e em **inglês
 | Categoria Apple | Primária **Lifestyle**, secundária **Business** (a Apple não tem categoria automóvel) |
 | Categoria Play | **Auto & Vehicles** (Automóveis e veículos) |
 | Email de suporte (público) | app@marble.pt (a caixa existe e é lida — confirmado 2026-09-05) |
-| URL de suporte | https://marble-studios-app.web.app/ |
+| URL de suporte | https://app.marble.pt/ |
 | URL de marketing (opcional) | igual ao de suporte, ou o site da Marble se existir |
-| Política de privacidade | https://marble-studios-app.web.app/legal/politica-de-privacidade.html |
-| Termos | https://marble-studios-app.web.app/legal/termos-de-utilizacao.html |
-| Apagar conta (exigido pelo Play) | https://marble-studios-app.web.app/legal/apagar-conta.html |
+| Política de privacidade | https://app.marble.pt/legal/politica-de-privacidade.html |
+| Termos | https://app.marble.pt/legal/termos-de-utilizacao.html |
+| Apagar conta (exigido pelo Play) | https://app.marble.pt/legal/apagar-conta.html |
 | Copyright (Apple) | `2026 Cacto Elegante, Lda.` |
 
-Os URLs acima assumem o site de Hosting `marble-studios-app` no projeto
-Firebase de produção (ver DEVELOPMENT.md). Se o site ficar com outro nome
-ou com domínio próprio (ex. `app.marble.pt`), trocar aqui e nos dois
-formulários das lojas.
+`app.marble.pt` é o domínio próprio ligado (2026-09-06) ao site de Hosting
+`marble-studios-app` do projeto Firebase de produção (ver DEVELOPMENT.md);
+`https://marble-studios-app.web.app/` continua a servir as mesmas páginas
+como reserva.
 
 ## Descrição curta (Play, 80 caracteres)
 

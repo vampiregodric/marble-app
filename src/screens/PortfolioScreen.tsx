@@ -8,7 +8,7 @@ import Photo from '../components/Photo';
 import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
 import { hasService, usePublishedWorks } from '../data/works';
 import { CATEGORIES } from '../data/categories';
-import { WorkCategory, WorkServiceId, workServicesOf } from '../firebase/models';
+import { WORK_SERVICES, WorkCategory, WorkServiceId, workServicesOf } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -19,10 +19,12 @@ const ALL = 'all';
 type Filter = typeof ALL | WorkCategory;
 
 // Portfólio público: todos os trabalhos publicados no Firestore, filtrados por
-// categoria em memória. Pode chegar aqui já filtrado (cartão de departamento
-// no Início → params.category). Dentro de uma categoria há um segundo
-// filtro, pelo sistema/serviço (Secção 13: `works.services`) — só aparecem
-// os que têm trabalhos publicados; em "Todos" não há segunda fila.
+// categoria em memória. Pode chegar aqui já filtrado: a página de um
+// departamento manda `params.category` ("Ver portfólio") e um cartão de
+// "O que fazemos" manda também `params.service` (Secção 14). Dentro de uma
+// categoria há um segundo filtro, pelo sistema/serviço (Secção 13:
+// `works.services`) — só aparecem os que têm trabalhos publicados; em
+// "Todos" não há segunda fila.
 export default function PortfolioScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, 'Portfolio'>>();
@@ -39,11 +41,16 @@ export default function PortfolioScreen() {
     setService(null);
   };
 
+  // Params de chegada. Na web vêm da query string e podem ser qualquer
+  // coisa: uma categoria desconhecida é ignorada; um serviço só entra se
+  // pertencer à categoria (e, sem categoria, dá a dele).
   useEffect(() => {
-    if (route.params?.category) {
-      setActive(route.params.category);
-      setService(null);
-    }
+    const p = route.params;
+    if (!p) return;
+    const category = p.category ?? WORK_SERVICES.find((s) => s.id === p.service)?.category;
+    if (!category || !CATEGORIES.some((c) => c.key === category)) return;
+    setActive(category);
+    setService(p.service && workServicesOf(category).some((s) => s.id === p.service) ? p.service : null);
   }, [route.params]);
 
   const inCategory = useMemo(() => (active === ALL ? works : works.filter((w) => w.category === active)), [works, active]);
