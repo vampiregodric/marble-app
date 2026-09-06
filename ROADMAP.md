@@ -848,8 +848,9 @@ entrou no master, o backoffice está livre).
 dev/prod, perfil de produção do EAS, regras + app Android no Firebase prod,
 páginas legais e de suporte publicadas em https://marble-studios-app.web.app/,
 ficha das lojas e formulários de privacidade em `docs/store/`. **Parte 2
-por fazer** (build, screenshots, submissão) e a checklist do Fábio em curso
-— ver "Nota (2026-09-05)" no fim.
+em curso:** a 2026-09-06 ficou feito tudo o que não depende das contas das
+lojas (ver "Nota (2026-09-06, parte 2)"); o que falta está bloqueado nas
+contas, pela ordem em "Bloqueado nas contas — ordem", no fim.
 **Depende de:** praticamente todas as outras, incluindo a Secção 3
 (RGPD) e o projeto Firebase de produção da Secção 1
 **Objetivo:** Conta de developer Apple (99$/ano) e Google Play (25$
@@ -937,22 +938,15 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   verificado no Resend); falta a chave FCM do prod no
   EAS, o domínio marble.pt no Resend (DNS) e rodar as duas chaves que
   ficaram na conversa antes do lançamento (checklist 6c e 6d).
-- *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
-  índices no prod se tiverem mudado; deploy das Functions no prod
-  (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
-  `RESEND_API_KEY` no Secret Manager do prod, depois `QUOTE_EMAIL=on` e
-  `BACKOFFICE_URL` do backoffice de produção em `functions/.env` — declarar
-  o segredo sem valor faz o deploy falhar, daí os interruptores); App Check
-  nos pedidos de orçamento (anotado pela Secção 7); traduzir os templates
-  de email do Firebase Auth nos dois projetos (o "Password reset" é também
-  o "define a tua password" das contas criadas por um pedido); nova dev build ("Marble Dev"); build de
-  produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
-  `eas submit`; conta de demonstração no prod para os revisores; rever as
-  linhas **[Secção 7/8]** de `data-safety.md`/`app-privacy.md` (o que os
-  formulários de orçamento e checkup enviam); confirmar o nome "Marble
-  Studios" na App Store (plano B: "Marble Studios App"); admins da equipa
-  no prod e Hosting do backoffice de produção (repositório do backoffice);
-  domínio próprio `app.marble.pt` se o Fábio quiser (DNS dele).
+- *Do Claude, depois de 12 (e 13, 7b) no master — feito a 2026-09-06, ver
+  a nota abaixo:* regras e índices republicados; App Check decidido
+  (adiado, com desenho); templates de email do Auth (por defeito, idioma de
+  reserva PT); nova dev build; docs das lojas revistos. *Fica bloqueado nas
+  contas:* deploy das Functions no prod (depois da 12b), builds de
+  produção, screenshots, `eas submit`, conta de demonstração, admins da
+  equipa no prod e Hosting do backoffice de produção, domínio próprio
+  `app.marble.pt` se o Fábio quiser (DNS dele), confirmar o nome "Marble
+  Studios" na App Store (plano B: "Marble Studios App").
 - *Em aberto (da Secção 3):* cláusula 5 dos termos (fotos dos trabalhos no
   portfólio/redes sem identificar o dono, matrícula ocultada, salvo pedido
   em contrário) — confirmar com o dono; revisão dos textos por advogado; e
@@ -960,9 +954,88 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   agente do utilizador que o Firebase Authentication guarda por segurança
   (já declarado nos formulários das lojas). Se algum texto mudar: subir
   `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
-- *Para a Secção 12:* os textos de permissão iOS no `app.json` (plugin
-  `expo-image-picker`) estão só em PT; se a app ganhar inglês, decidir aí
-  se os localizas (`locales` no `app.json`).
+- *Para a Secção 12 — feito lá:* os textos de permissão iOS estão em
+  `locales/pt.json` e `locales/en.json` (`locales` no `app.json`).
+**Nota (2026-09-06, parte 2 — o que não depende das contas):**
+- **App Check: adiado para depois das lojas, com o desenho fechado
+  (decisão do Fábio).** O que se descobriu: a app usa o **SDK JS** do
+  Firebase (app "web" nos dois projetos) em Android, iOS e web, e esse SDK
+  não tem Play Integrity nem DeviceCheck/App Attest — exige o módulo
+  nativo `@react-native-firebase/app-check` (build nova,
+  `GoogleService-Info.plist` no iOS) com uma ponte `CustomProvider` para o
+  SDK JS. As Functions de Firestore **não veem** tokens de App Check (só as
+  callables verificam); obrigá-lo no Firestore é por serviço e para o
+  projeto inteiro — bloqueava o backoffice e a app web até terem reCAPTCHA
+  —, por isso a forma de o obrigar só nos pedidos é mover a criação do
+  pedido para uma callable `createQuoteRequest` com `enforceAppCheck`. E
+  os fornecedores reais dependem das contas: o Play Integrity exige ligar
+  o projeto Cloud no Play Console e o DeviceCheck uma chave privada da
+  conta Apple Developer. Passos do Fábio na checklist ("Depois das lojas —
+  Secção 11c"); o código fica para essa mini-secção.
+- **Tecto diário de pedidos (a defesa até lá):** `REQUEST_DAILY_CAP` em
+  `functions/.env` (20 por 24 h no projeto inteiro; 0 = desligado). Acima
+  disso, `onRequestWritten` marca os pedidos novos com
+  `flagged: 'daily_cap'` (página Pedidos com aviso "possível spam", sem
+  alerta interno, confirmação nem email) e cria **um** `team_alert` por dia
+  ("Possível spam: N pedidos de orçamento em 24 h"; estado em
+  `system/requestGuard`, coleção sem regras de cliente). Contagem por
+  agregação no índice simples de `createdAt`. Complementa o limite de 3
+  por cliente — apanha inundações feitas com contas novas. Testado no dev
+  sem deploy (3 pedidos de teste: normal / marcado + alerta / marcado sem
+  alerta novo; tudo apagado). `models.ts` da app: `flagged` passou a
+  `'rate_limit' | 'daily_cap'`. **Depois da 12b:** alargar o mesmo tipo em
+  `functions/src/types.ts` e no `models.ts` do backoffice, e dar ao
+  `daily_cap` um rótulo na página Pedidos (hoje mostra "possível spam ·
+  daily_cap"). Entra no prod no próximo deploy das Functions.
+- **Regras e índices republicados no prod** (2026-09-06, com a Secção 7b:
+  `type` só `quote`, sem `vehicleId`; os índices não mudaram).
+- **Dev build "Marble Dev"** lançada no EAS (build `419b6df0`, pacote
+  `pt.marble.app.dev`, keystore novo gerado na nuvem, PT+EN, ícones e
+  splash novos). Instalar pelo link da build; `pt.marble.app.dev` passa a
+  aparecer nas credenciais do EAS → chave FCM V1 do dev lá (checklist 7.3,
+  Fábio). O EAS avisa que o perfil tem `channel` sem `expo-updates` — não
+  há OTA, é inofensivo.
+- **Emails do Firebase Auth (decisão do Fábio):** templates **por defeito**
+  — a app já define `auth.languageCode` e o "repor password" (= "define a
+  tua password" das contas criadas por um pedido) sai em PT/EN pelo
+  telemóvel; personalizar fixaria uma língua. Muda-se só o idioma de
+  reserva do projeto (PT) e o nome do remetente ("Marble Studios"):
+  `scripts/auth-email-config.mjs` (`npm run auth:emails -- <chave>
+  [--apply]`, API do Identity Toolkit; mostra `customized` para provar que
+  o texto continua o por defeito). Feito no dev; prod quando existir
+  `serviceAccountKey.prod.json` (checklist 7.1) ou pela consola.
+- **Docs das lojas revistos** contra a app atual: `data-safety.md` e
+  `app-privacy.md` sem linhas [Secção 7/8] — declaram o que os formulários
+  enviam (campos por departamento, mensagem livre como "conteúdo gerado
+  pelo utilizador" e não "mensagens", fotos dos pedidos, dia/período/nota
+  do checkup), idioma (12 e 12b), tags (13), `platform` e App Check;
+  `ficha-loja.md` com PT+EN nas duas lojas, tags e checkups na descrição,
+  nota de revisão em inglês, screenshots em PT e EN depois da Secção 14.
+- Verificado: `npm run typecheck` e `npm run functions:build` limpos;
+  nada de UI mudou (só um tipo em `models.ts`).
+**Bloqueado nas contas — ordem** (o que só o Fábio destrava está em
+`docs/store/checklist-contas.md`; o Claude faz o resto com confirmação):
+1. **Contas** (Fábio, em curso): D-U-N-S → Apple ID da empresa → Apple
+   Developer Program (organização) → Google Play Console (organização).
+2. **Blaze no prod** — feito 2026-09-06. **Segredos** (Cloudinary, Resend) —
+   feitos; faltam o domínio marble.pt no Resend (checklist 6c) e rodar as
+   duas chaves (6d).
+3. **Deploy das Functions no prod** — só depois da **Secção 12b** no
+   master: leva a 12b, o tecto diário e, quando 6c estiver, `QUOTE_EMAIL=on`
+   + `BACKOFFICE_URL` de produção em `functions/.env.marble-studios-prod`.
+4. **Chave FCM V1** do prod no EAS em `pt.marble.app`, e a do dev em
+   `pt.marble.app.dev` (checklist 7, Fábio).
+5. **Builds de produção**: `npx.cmd eas-cli build --profile production
+   --platform android` (AAB) e `--platform ios` (pede o Apple ID da conta
+   de organização).
+6. **Screenshots**: telemóvel, sem iPad, em PT e EN, com os dados de
+   exemplo do dev — depois da Secção 14.
+7. **`eas submit`**: Android com `serviceAccountKey.play.json` (conta de
+   serviço do Play, checklist parte 2); iOS interativo, pelo Fábio.
+8. **Conta de demonstração no prod** para os revisores, admins da equipa no
+   prod e Hosting do backoffice de produção (repositório do backoffice).
+9. **Depois do lançamento: Secção 11c — App Check** (checklist, "Depois das
+   lojas").
 
 ### Secção 12 — Inglês
 **Estado:** Feito (2026-09-05). Toda a interface da app em PT + EN,
@@ -1143,9 +1216,9 @@ e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
 (`workServices`) — `models.ts` é copiado tal e qual para o backoffice, que
 não tem `tx()`; guarda-se sempre o id. Os sistemas de epóxi são nomes da
 Xtreme e ficam iguais nos dois idiomas.
-**Em aberto (pequeno, quando fizer falta):** ligar as páginas de
-departamento ao Portfólio já filtrado por serviço (um `service` nos params
-de `Portfolio`); um seletor de marca no Portfólio (hoje só o serviço filtra).
+**Em aberto (pequeno, quando fizer falta):** um seletor de marca no
+Portfólio (hoje só o serviço filtra). As páginas de departamento já abrem o
+Portfólio filtrado por serviço — Secção 14.
 **Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
 de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
 sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);
@@ -1171,6 +1244,58 @@ se as regras validarem campos (a Secção 8 mexe no bloco `vehicles`). Não
 toca em ProfileScreen, vehicles, `functions/`, `app.json`, `eas.json`,
 `assets/`, `docs/`. Pré-visualização web: `marble-app-web-8082` (a 8082
 ficou livre com a 7); backoffice: `marble-backoffice-web` (5180).
+
+### Secção 14 — Portfólio filtrado por serviço a partir dos departamentos
+**Estado:** Feito (2026-09-06), verificado na app web (8084, dados do dev)
+em PT e EN: Automotive mostra "Ver trabalhos" em Vinil, Detailing e
+Proteção cerâmica (os serviços com trabalhos publicados) e não em PPF nem
+Tetos estrelados; tocar em "Vinil e mudança de cor" abre
+`portfolio?category=Automotive&service=vinyl` só com os dois vinis; Epoxy
+em EN liga "Metallic epoxy" e "Flake systems"; URLs à mão
+(`?service=metallic-epoxy` sem categoria, serviço de outra categoria,
+categoria desconhecida) caem no sítio certo. `npm run typecheck` limpo.
+Falta o teste no telemóvel (Expo Go).
+**Decisões do Fábio (escolha múltipla, 2026-09-06):** (a) correspondência
+cartão → serviço tal como proposta (14 cartões; "Preparação e reparação da
+base", os produtos da Xtreme e as páginas AI/Ads não ligam); (b) o cartão
+inteiro é tocável, com a linha dourada "Ver trabalhos" por baixo, e só
+quando há pelo menos um trabalho publicado com esse serviço — sem
+trabalhos fica como era (nunca abre um Portfólio vazio); (c) o "Ver
+portfólio" dos trabalhos recentes continua a abrir a categoria inteira.
+**O que ficou feito:** `types.ts` (`Portfolio: { category?, service? }`);
+`PortfolioScreen` aplica `service` junto com `category` no `useEffect`,
+valida os dois (categoria desconhecida ignorada; serviço só se for da
+categoria; só `service` dá a categoria dele) e continua a limpar o serviço
+ao mudar de categoria; `departmentContent.ts` — `DepartmentBlock.service?`
+nos 14 cartões, em PT e EN, com aviso em dev se divergirem;
+`DepartmentScreen` — cartão `Pressable` com "Ver trabalhos" quando há
+trabalhos, escuta de `works` uma só vez no ecrã (alimenta cartões e
+trabalhos recentes); `T.department.seeWorks` em pt/en. `RootNavigator`
+não precisou de nada: a query string já vira params. Detalhes em
+`DEVELOPMENT.md`, "Páginas de departamento" e "Tags nos trabalhos".
+**Depende de:** Secção 9 — Conteúdo estático: AI Business & Marble Ads
+(páginas de departamento) e Secção 13 — Tags nos trabalhos: marca e
+sistema/serviço (`works.services`, filtro secundário no Portfólio).
+**Objetivo:** Fechar o "Em aberto" da Secção 13. Hoje, numa página de
+departamento, "Ver portfólio" abre a categoria inteira e o cliente tem de
+escolher o serviço à mão na segunda fila de chips. Passa a haver um
+`service?: WorkServiceId` nos params de `Portfolio` (aplicado junto com
+`category`, e limpo ao mudar de categoria, como já acontece), e os cartões
+de "O que fazemos" dos departamentos com portfólio (Automotive, Epoxy
+Floors, Graphic) abrem o Portfólio já com categoria **e** serviço — só os
+cartões que correspondem a um `WorkServiceId` ("PPF" → `ppf`, "Metallic
+epoxy" → `metallic-epoxy`, …); os outros ("Preparação e reparação da
+base") ficam como estão. A Xtreme tem `category` só para os trabalhos
+recentes e os cartões dela são produtos, não serviços. Sem ícones
+decorativos. Toca só em `src/navigation/types.ts`,
+`src/screens/PortfolioScreen.tsx`, `src/screens/DepartmentScreen.tsx`,
+`src/data/departmentContent.ts` (campo `service?` nos cartões) e
+`src/i18n/pt.ts` + `en.ts`; `RootNavigator.tsx` só se o parâmetro
+precisar de configuração no URL web. Não toca em `functions/`,
+`src/auth`, ProfileScreen, RequestQuoteScreen, `app.json`, `eas.json`,
+`assets/`, `docs/` nem no backoffice. Corre em paralelo com a Secção 12b
+(alertas automáticos em inglês) e a Secção 11 parte 2 (builds, App Check).
+Pré-visualização web: `marble-app-web-8084`.
 
 ---
 

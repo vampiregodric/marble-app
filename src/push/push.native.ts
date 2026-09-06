@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Linking, Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsTypes from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,7 +25,12 @@ import { S } from '../i18n';
 //   anterior.
 // - Expo Go no Android já não recebe push remoto (SDK 53+): precisa da
 //   development build (ver DEVELOPMENT.md). Aí `pushSupported` é false e a
-//   interface não mostra nada.
+//   interface não mostra nada. E mais: no Expo Go o simples IMPORT de
+//   expo-notifications rebenta no arranque ("[runtime not ready]: Android
+//   Push notifications ... removed from Expo Go" — o módulo regista um
+//   listener de token ao carregar). Por isso o módulo só se carrega quando
+//   é preciso (`notifications()`), nunca no Expo Go — assim a app continua
+//   a servir para ver os ecrãs no Expo Go, só sem push.
 
 export type PushPermission = 'unsupported' | 'undetermined' | 'denied' | 'granted';
 
@@ -43,16 +48,28 @@ const inExpoGoOnAndroid = Platform.OS === 'android' && Constants.executionEnviro
 
 export const pushSupported = Device.isDevice && !!projectId && !inExpoGoOnAndroid;
 
+type NotificationsModule = typeof NotificationsTypes;
+let loaded: NotificationsModule | null = null;
+
+// expo-notifications carregado à primeira chamada. Só se chama atrás de
+// `pushSupported` / `inExpoGoOnAndroid` — no Expo Go (Android) nunca.
+function notifications(): NotificationsModule {
+  if (!loaded) loaded = require('expo-notifications') as NotificationsModule;
+  return loaded;
+}
+
 // Como se mostra um push com a app ABERTA: banner + lista, com som. O
 // ecrã Alertas já está em tempo real, por isso o badge não é preciso.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (!inExpoGoOnAndroid) {
+  notifications().setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 const TOKEN_KEY = 'marble.pushToken';
 const CHANNEL_ID = 'default';
@@ -61,26 +78,27 @@ const CHANNEL_ID = 'default';
 // de pedir o token (Android 13+ só mostra o pedido de permissão depois).
 async function ensureChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+  const N = notifications();
+  await N.setNotificationChannelAsync(CHANNEL_ID, {
     name: S.alerts.channelName,
-    importance: Notifications.AndroidImportance.MAX,
+    importance: N.AndroidImportance.MAX,
     lightColor: colors.gold,
   });
 }
 
-function permissionFrom(p: Notifications.NotificationPermissionsStatus): PushPermission {
+function permissionFrom(p: NotificationsTypes.NotificationPermissionsStatus): PushPermission {
   if (p.granted) return 'granted';
   return p.canAskAgain ? 'undetermined' : 'denied';
 }
 
 export async function getPushPermission(): Promise<PushPermission> {
   if (!pushSupported) return 'unsupported';
-  return permissionFrom(await Notifications.getPermissionsAsync());
+  return permissionFrom(await notifications().getPermissionsAsync());
 }
 
 async function saveToken(uid: string): Promise<void> {
   await ensureChannel();
-  const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+  const { data: token } = await notifications().getExpoPushTokenAsync({ projectId });
   const ref = doc(db, COLLECTIONS.clients, uid);
   // arrayUnion não duplica. Se o token deste telemóvel mudou, o antigo sai.
   await updateDoc(ref, { pushTokens: arrayUnion(token), pushTokensUpdatedAt: serverTimestamp() });
@@ -94,8 +112,9 @@ async function saveToken(uid: string): Promise<void> {
 export async function enablePush(uid: string): Promise<PushPermission> {
   if (!pushSupported) return 'unsupported';
   await ensureChannel();
-  let p = await Notifications.getPermissionsAsync();
-  if (!p.granted && p.canAskAgain) p = await Notifications.requestPermissionsAsync();
+  const N = notifications();
+  let p = await N.getPermissionsAsync();
+  if (!p.granted && p.canAskAgain) p = await N.requestPermissionsAsync();
   if (!p.granted) return permissionFrom(p);
   await saveToken(uid);
   return 'granted';
@@ -105,7 +124,7 @@ export async function enablePush(uid: string): Promise<PushPermission> {
 // telemóvel. Sem prompts. Quem chama trata os erros (rede, etc.).
 export async function syncPushToken(uid: string): Promise<void> {
   if (!pushSupported) return;
-  const p = await Notifications.getPermissionsAsync();
+  const p = await notifications().getPermissionsAsync();
   if (!p.granted) return;
   await saveToken(uid);
 }
@@ -125,27 +144,30 @@ export function openNotificationSettings(): void {
 
 // Chama `onOpen` quando o cliente toca num push — com a app aberta, em
 // segundo plano ou fechada (arranque a frio: o último toque fica guardado
-// pelo sistema e lê-se aqui uma vez).
+// pelo sistema e lê-se aqui uma vez). No Expo Go (Android) não há push,
+// logo não há nada a escutar.
 export function usePushOpens(onOpen: (data: PushOpenData) => void): void {
   const handled = useRef<string | null>(null);
   const callback = useRef(onOpen);
   callback.current = onOpen;
 
   useEffect(() => {
-    const handle = (response: Notifications.NotificationResponse | null) => {
+    if (inExpoGoOnAndroid) return;
+    const N = notifications();
+    const handle = (response: NotificationsTypes.NotificationResponse | null) => {
       if (!response) return;
       const id = response.notification.request.identifier;
       if (handled.current === id) return;
       handled.current = id;
       callback.current((response.notification.request.content.data ?? {}) as PushOpenData);
     };
-    Notifications.getLastNotificationResponseAsync()
+    N.getLastNotificationResponseAsync()
       .then((r) => {
         handle(r);
-        if (r) Notifications.clearLastNotificationResponseAsync().catch(() => {});
+        if (r) N.clearLastNotificationResponseAsync().catch(() => {});
       })
       .catch(() => {});
-    const sub = Notifications.addNotificationResponseReceivedListener(handle);
+    const sub = N.addNotificationResponseReceivedListener(handle);
     return () => sub.remove();
   }, []);
 }

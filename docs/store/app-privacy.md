@@ -1,22 +1,24 @@
-# Apple — "App Privacy" (rascunho, Secção 11 parte 1)
+# Apple — "App Privacy" (Secção 11)
 
 Respostas para **App Store Connect → App → App Privacy** ("privacy
 nutrition labels"), derivadas da Política de Privacidade
-(`src/legal/texts.ts`, versão 2026-09-04). Para a Apple, "recolher" é
+(`src/legal/texts.ts`, versão 2026-09-05). Para a Apple, "recolher" é
 transmitir para fora do dispositivo, mesmo que seja só para os nossos
 próprios servidores ou para fornecedores que trabalham por nossa conta.
 "Tracking" é cruzar dados com terceiros para publicidade ou medição — não
 fazemos nenhum.
 
-Rever as linhas **[Secção 7/8]** antes de submeter (parte 2).
+Revisto a 2026-09-06 (parte 2) com o que os formulários enviam de facto
+(pedido de orçamento da Secção 7 e pedido de checkup da Secção 8) e com as
+Secções 12 e 13 — ver as notas no fim. Pronto a copiar para o formulário.
 
 ## Perguntas iniciais
 
 | Pergunta | Resposta |
 |---|---|
 | Do you or your third-party partners collect data from this app? | **Yes** |
-| Privacy Policy URL | https://marble-studios-app.web.app/legal/politica-de-privacidade.html |
-| User Privacy Choices URL (opcional) | https://marble-studios-app.web.app/legal/apagar-conta.html |
+| Privacy Policy URL | https://app.marble.pt/legal/politica-de-privacidade.html |
+| User Privacy Choices URL (opcional) | https://app.marble.pt/legal/apagar-conta.html |
 | Data used to track you | **No** — em nenhum tipo de dado |
 
 ## Tipos de dados a declarar
@@ -46,11 +48,11 @@ Não.
 
 | Tipo | Recolhido | Usos | Ligado ao utilizador | Tracking |
 |---|---|---|---|---|
-| Photos or Videos | Sim — só a foto de perfil, opcional | App Functionality | Sim | Não |
-| Emails or Text Messages | Não | — | — | — |
+| Photos or Videos | Sim — a foto de perfil (opcional) e até 5 fotos que o cliente junte a um pedido de orçamento (opcional) | App Functionality | Sim | Não |
+| Emails or Text Messages | Não (a mensagem de um pedido de orçamento é um campo de formulário, não uma mensagem — vai em "Other User Content") | — | — | — |
 | Audio Data | Não | — | — | — |
 | Customer Support | Não (o suporte é por email, fora da app) | — | — | — |
-| Other User Content | **[Secção 7/8]** Sim, se o pedido de orçamento/checkup levar texto livre ou dados do carro | App Functionality | Sim | Não |
+| Other User Content | Sim — mensagem livre e campos de um pedido de orçamento (carro: marca, modelo, ano; espaço: tipo e m²; empresa: nome, site, orçamento mensal aproximado; projeto ou produto pretendido; opções escolhidas; canal de contacto preferido) e a nota opcional, o dia e o período de um pedido de checkup | App Functionality | Sim | Não |
 
 ### Browsing History / Search History
 
@@ -107,5 +109,16 @@ Não.
   React Native trazem o seu; a app não usa APIs de "required reason" fora
   disso. Se a build for rejeitada por `NSPrivacyAccessedAPITypes`, declara
   as razões em `ios.privacyManifests` no `app.json`.
-- **Fotos dos trabalhos** são carregadas pela equipa no backoffice, não pela
+- **Fotos dos trabalhos** e as **tags** de cada trabalho (serviço/sistema
+  e marcas, Secção 13) são carregadas pela equipa no backoffice, não pela
   app — não entram aqui.
+- **Idioma (Secção 12):** a app lê o idioma do dispositivo para escolher PT
+  ou EN e passa-o ao Firebase Auth só para os emails saírem nesse idioma;
+  não fica guardado. Com a Secção 12b passa a ficar na conta
+  (`clients.locale`) para os alertas automáticos — é uma definição da app,
+  não um tipo de dados a declarar.
+- **`platform`** (android / ios / web) guardado com cada pedido de
+  orçamento não é um identificador — não se declara.
+- **App Check** (depois das lojas — ROADMAP, Secção 11): o App Attest /
+  DeviceCheck envia à Apple e à Google um veredito sobre o dispositivo;
+  rever estas respostas nessa altura.

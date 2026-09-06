@@ -9,9 +9,10 @@ import { Client, ServiceRequest, Work } from './types';
 
 // Pedidos de orçamento (Secção 7; a Secção 8 junta os de checkup). Reage a
 // `requests/{id}` criado/alterado/apagado:
-// - criado → anti-spam (3 pedidos/24 h por cliente marca `flagged`), alerta
-//   interno no Painel do backoffice, alerta "Recebemos o teu pedido" ao
-//   cliente (push pela onNotificationCreated), email à equipa
+// - criado → anti-spam (3 pedidos/24 h por cliente marca `flagged`; e, com
+//   REQUEST_DAILY_CAP ligado, um tecto global de pedidos por dia — Secção
+//   11), alerta interno no Painel do backoffice, alerta "Recebemos o teu
+//   pedido" ao cliente (push pela onNotificationCreated), email à equipa
 //   (quotes@marble.pt) e ao cliente pelo Resend, quando ligado — o alerta
 //   e o email ao cliente no idioma dele (`clients.locale`, Secção 12b);
 // - fotos removidas (anonimização) ou pedido apagado → ficheiros fora do
@@ -23,6 +24,25 @@ export type Log = (msg: string) => void;
 
 export const RATE_LIMIT_PER_DAY = 3;
 export const REQUEST_RETENTION_DAYS = 365;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Estado do tecto diário (Secção 11): quando foi o último alerta à equipa.
+// A coleção `system` não tem regras de cliente — só o Admin SDK lá chega.
+export const REQUEST_GUARD_DOC = 'system/requestGuard';
+
+// Alerta interno do tecto diário. Em PT como os outros `team_alert` (a
+// equipa lê em português); vive aqui e não em texts.ts porque não depende
+// de um pedido concreto.
+const GUARD_TEXTS = {
+  dailyCap(total: number, cap: number) {
+    return {
+      title: `Possível spam: ${total} pedidos de orçamento em 24 h`,
+      description:
+        `Acima do tecto de ${cap} por dia. Até o volume das últimas 24 h baixar, os pedidos novos ficam marcados como possível spam na página Pedidos, sem alerta interno nem email. ` +
+        'Se forem pedidos reais, responde-lhes a partir de Pedidos.',
+    };
+  },
+};
 
 export function requestTag(id: string): string {
   return `request_${id}`;
@@ -37,6 +57,8 @@ export type RequestEmailConfig = EmailConfig & {
 export type RequestDeps = {
   email?: RequestEmailConfig | null;
   cloudinary?: CloudinaryConfig | null;
+  // Tecto global de pedidos por 24 h (REQUEST_DAILY_CAP); 0/ausente = desligado.
+  dailyCap?: number | null;
 };
 
 export type RequestSummary = { checked: number; anonymized: number };
@@ -94,6 +116,23 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
     return;
   }
 
+  // 1b. Tecto global (Secção 11): mais de `dailyCap` pedidos nas últimas
+  //     24 h no projeto inteiro, venham de que contas vierem, marca os que
+  //     sobram como `daily_cap` (página Pedidos com aviso, sem alerta nem
+  //     email) e avisa a equipa UMA vez por dia. Apanha inundações feitas
+  //     com contas novas, que o limite por cliente não vê; enquanto o App
+  //     Check não estiver ligado é a única trava do lado do servidor.
+  //     Contagem por agregação no índice simples de `createdAt`.
+  if (deps.dailyCap && deps.dailyCap > 0) {
+    const total = (await db.collection('requests').where('createdAt', '>=', Timestamp.fromMillis(since)).count().get()).data().count;
+    if (total > deps.dailyCap) {
+      await ref.update({ flagged: 'daily_cap', processedAt: ts, updatedAt: ts });
+      const alertId = await alertDailyCap(db, req, total, deps.dailyCap, now);
+      log(`pedido ${req.id}: marcado (${total} pedidos em 24 h, tecto ${deps.dailyCap})${alertId ? ` — alerta à equipa ${alertId}` : ' — equipa já avisada hoje'}`);
+      return;
+    }
+  }
+
   const [clientSnap, workSnap] = await Promise.all([
     db.collection('clients').doc(req.clientId).get(),
     req.workId ? db.collection('works').doc(req.workId).get() : null,
@@ -135,6 +174,21 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   }
   await ref.update(clean(patch));
   log(`pedido ${req.id} (${req.department}, ${req.name}): alerta interno ${teamAlertId}${confirmationId ? `, confirmação ${confirmationId}${locale === 'en' ? ' (en)' : ''}` : ' (cliente sem app)'}`);
+}
+
+// Um alerta interno por dia, não um por pedido: `system/requestGuard` guarda
+// quando foi o último e quantos pedidos ficaram marcados desde então.
+async function alertDailyCap(db: Firestore, req: ServiceRequest, total: number, cap: number, now: Date): Promise<string | null> {
+  const guard = db.doc(REQUEST_GUARD_DOC);
+  const ts = Timestamp.fromDate(now);
+  const last = ((await guard.get()).data()?.dailyCapAlertAt as Timestamp | undefined)?.toMillis?.() ?? 0;
+  if (now.getTime() - last < DAY_MS) {
+    await guard.set({ flaggedSinceAlert: FieldValue.increment(1), lastFlaggedAt: ts, updatedAt: ts }, { merge: true });
+    return null;
+  }
+  const id = await createNotification(db, { clientId: req.clientId, type: 'team_alert', relatedRequestId: req.id, ...GUARD_TEXTS.dailyCap(total, cap) }, now);
+  await guard.set({ dailyCapAlertAt: ts, dailyCapAlertId: id, flaggedSinceAlert: 1, lastFlaggedAt: ts, updatedAt: ts }, { merge: true });
+  return id;
 }
 
 // Tira os dados pessoais de um pedido: contactos, texto, campos, fotos e

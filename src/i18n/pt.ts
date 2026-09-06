@@ -125,6 +125,9 @@ export const pt = {
     howItWorks: 'Como funciona',
     recentWorks: 'Trabalhos recentes',
     seePortfolio: 'Ver portfólio',
+    // Cartão de "O que fazemos" que abre o Portfólio filtrado pelo serviço
+    // (Secção 14). Só aparece quando há trabalhos publicados com ele.
+    seeWorks: 'Ver trabalhos',
     recentEmpty: 'Ainda não há trabalhos publicados nesta categoria.',
     seeAlso: 'Ver também',
     pricing: 'Investimento',

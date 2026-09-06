@@ -1,11 +1,15 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { LegalDoc } from '../legal/texts';
-import { DepartmentId, WorkCategory } from '../firebase/models';
+import { DepartmentId, WorkCategory, WorkServiceId } from '../firebase/models';
 
 export type TabParamList = {
   Home: undefined;
-  // Os cartões dos departamentos no Início abrem o Portfólio já filtrado.
-  Portfolio: { category?: WorkCategory } | undefined;
+  // Portfólio já filtrado: a página de um departamento (Secção 9) manda a
+  // `category` ("Ver portfólio"); um cartão de "O que fazemos" manda também
+  // o `service` (Secção 14), sempre da mesma categoria. Na web chegam pela
+  // query string (portfolio?category=Automotive&service=ppf) — o ecrã
+  // valida os dois antes de os aplicar.
+  Portfolio: { category?: WorkCategory; service?: WorkServiceId } | undefined;
   Events: undefined;
   Alerts: undefined;
   Profile: undefined;
