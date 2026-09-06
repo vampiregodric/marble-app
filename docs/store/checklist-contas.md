@@ -66,12 +66,19 @@ app@marble.pt). Instruções originais, para referência:
 
 Conta **Marble Studios Portugal** (organização, Account ID
 6700585085532729198), dona: `v.godric@gmail.com`, contacto app@marble.pt,
-25 $ pagos. Faltam as três verificações da página inicial da Play Console:
-(a) **identidade** (documento de identificação do Fábio, "Get started";
-dias), (b) **site da organização** (`https://app.marble.pt`, via Search
-Console: registo TXT no DNS do marble.pt ou ficheiro HTML que o Claude põe
-em `docs/`), (c) **telefones** (só depois de (a) e (b) aprovados). Sem as
-três não se publica. Instruções originais, para referência:
+25 $ pagos. Verificações da página inicial da Play Console:
+(a) **identidade** — documentos carregados a 2026-09-06, em análise pela
+Google (dias; responde por email); (b) **site da organização** — **FEITO
+2026-09-07** ("Website verified": `https://app.marble.pt`, provado na Search
+Console com a propriedade Domain `marble.pt`); (c) **telefones** — só
+depois de (a) aprovada. Sem as três não se publica.
+
+Nota sobre a Search Console: o marble.pt tem **dois donos**, cada um com o
+seu registo TXT `google-site-verification=...` no DNS (cPanel da PTisp):
+o primeiro foi feito por engano com outra conta Google do Fábio, o segundo
+com a `v.godric@gmail.com` (a dona da Play Console). Não apagar nenhum dos
+dois TXT, senão a conta correspondente perde a verificação.
+Instruções originais, para referência:
 
 - https://play.google.com/console/signup com uma conta Google da empresa
   (podes usar a `v.godric@gmail.com` que já é dona do Firebase, mas o ideal
