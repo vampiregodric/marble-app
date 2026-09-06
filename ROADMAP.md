@@ -1081,9 +1081,9 @@ e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
 (`workServices`) — `models.ts` é copiado tal e qual para o backoffice, que
 não tem `tx()`; guarda-se sempre o id. Os sistemas de epóxi são nomes da
 Xtreme e ficam iguais nos dois idiomas.
-**Em aberto (pequeno, quando fizer falta):** ligar as páginas de
-departamento ao Portfólio já filtrado por serviço (um `service` nos params
-de `Portfolio`); um seletor de marca no Portfólio (hoje só o serviço filtra).
+**Em aberto (pequeno, quando fizer falta):** um seletor de marca no
+Portfólio (hoje só o serviço filtra). As páginas de departamento já abrem o
+Portfólio filtrado por serviço — Secção 14.
 **Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
 de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
 sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);
@@ -1109,6 +1109,58 @@ se as regras validarem campos (a Secção 8 mexe no bloco `vehicles`). Não
 toca em ProfileScreen, vehicles, `functions/`, `app.json`, `eas.json`,
 `assets/`, `docs/`. Pré-visualização web: `marble-app-web-8082` (a 8082
 ficou livre com a 7); backoffice: `marble-backoffice-web` (5180).
+
+### Secção 14 — Portfólio filtrado por serviço a partir dos departamentos
+**Estado:** Feito (2026-09-06), verificado na app web (8084, dados do dev)
+em PT e EN: Automotive mostra "Ver trabalhos" em Vinil, Detailing e
+Proteção cerâmica (os serviços com trabalhos publicados) e não em PPF nem
+Tetos estrelados; tocar em "Vinil e mudança de cor" abre
+`portfolio?category=Automotive&service=vinyl` só com os dois vinis; Epoxy
+em EN liga "Metallic epoxy" e "Flake systems"; URLs à mão
+(`?service=metallic-epoxy` sem categoria, serviço de outra categoria,
+categoria desconhecida) caem no sítio certo. `npm run typecheck` limpo.
+Falta o teste no telemóvel (Expo Go).
+**Decisões do Fábio (escolha múltipla, 2026-09-06):** (a) correspondência
+cartão → serviço tal como proposta (14 cartões; "Preparação e reparação da
+base", os produtos da Xtreme e as páginas AI/Ads não ligam); (b) o cartão
+inteiro é tocável, com a linha dourada "Ver trabalhos" por baixo, e só
+quando há pelo menos um trabalho publicado com esse serviço — sem
+trabalhos fica como era (nunca abre um Portfólio vazio); (c) o "Ver
+portfólio" dos trabalhos recentes continua a abrir a categoria inteira.
+**O que ficou feito:** `types.ts` (`Portfolio: { category?, service? }`);
+`PortfolioScreen` aplica `service` junto com `category` no `useEffect`,
+valida os dois (categoria desconhecida ignorada; serviço só se for da
+categoria; só `service` dá a categoria dele) e continua a limpar o serviço
+ao mudar de categoria; `departmentContent.ts` — `DepartmentBlock.service?`
+nos 14 cartões, em PT e EN, com aviso em dev se divergirem;
+`DepartmentScreen` — cartão `Pressable` com "Ver trabalhos" quando há
+trabalhos, escuta de `works` uma só vez no ecrã (alimenta cartões e
+trabalhos recentes); `T.department.seeWorks` em pt/en. `RootNavigator`
+não precisou de nada: a query string já vira params. Detalhes em
+`DEVELOPMENT.md`, "Páginas de departamento" e "Tags nos trabalhos".
+**Depende de:** Secção 9 — Conteúdo estático: AI Business & Marble Ads
+(páginas de departamento) e Secção 13 — Tags nos trabalhos: marca e
+sistema/serviço (`works.services`, filtro secundário no Portfólio).
+**Objetivo:** Fechar o "Em aberto" da Secção 13. Hoje, numa página de
+departamento, "Ver portfólio" abre a categoria inteira e o cliente tem de
+escolher o serviço à mão na segunda fila de chips. Passa a haver um
+`service?: WorkServiceId` nos params de `Portfolio` (aplicado junto com
+`category`, e limpo ao mudar de categoria, como já acontece), e os cartões
+de "O que fazemos" dos departamentos com portfólio (Automotive, Epoxy
+Floors, Graphic) abrem o Portfólio já com categoria **e** serviço — só os
+cartões que correspondem a um `WorkServiceId` ("PPF" → `ppf`, "Metallic
+epoxy" → `metallic-epoxy`, …); os outros ("Preparação e reparação da
+base") ficam como estão. A Xtreme tem `category` só para os trabalhos
+recentes e os cartões dela são produtos, não serviços. Sem ícones
+decorativos. Toca só em `src/navigation/types.ts`,
+`src/screens/PortfolioScreen.tsx`, `src/screens/DepartmentScreen.tsx`,
+`src/data/departmentContent.ts` (campo `service?` nos cartões) e
+`src/i18n/pt.ts` + `en.ts`; `RootNavigator.tsx` só se o parâmetro
+precisar de configuração no URL web. Não toca em `functions/`,
+`src/auth`, ProfileScreen, RequestQuoteScreen, `app.json`, `eas.json`,
+`assets/`, `docs/` nem no backoffice. Corre em paralelo com a Secção 12b
+(alertas automáticos em inglês) e a Secção 11 parte 2 (builds, App Check).
+Pré-visualização web: `marble-app-web-8084`.
 
 ---
 

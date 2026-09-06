@@ -691,6 +691,24 @@ dentro da página. Regras:
   A Xtreme tem `category: 'Epoxy Floors'` só para isto (os pavimentos
   feitos com os produtos dela); a cópia da lista no backoffice
   (`src/utils/departments.ts`) não precisa do campo, que só a app usa.
+- **Portfólio filtrado por serviço (Secção 14):** um cartão de "O que
+  fazemos" pode levar `service?: WorkServiceId` (id de `WORK_SERVICES`;
+  o mesmo em PT e EN — em dev há um `console.warn` se divergirem). Nos
+  departamentos com `category`, e só quando há pelo menos um trabalho
+  publicado dessa categoria com esse serviço, o cartão passa a
+  `Pressable` com a linha dourada "Ver trabalhos" (`T.department.seeWorks`)
+  e abre `Tabs > Portfolio { category, service }`; sem trabalhos fica
+  como era, só texto — nunca abre um Portfólio vazio. Os 14 cartões
+  ligados: Automotive (PPF → `ppf`, Vinil → `vinyl`, Detailing →
+  `detailing`, Proteção cerâmica → `ceramic`, Tetos estrelados →
+  `starlight`), Epoxy (Metallic → `metallic-epoxy`, Flake →
+  `flake-epoxy`, Cores sólidas → `solid-colour-epoxy`, Quartzo →
+  `quartz-epoxy`), Graphic (`brand-identity`, `vehicle-graphics`,
+  `signage`, `print`, `social-media`). "Preparação e reparação da base",
+  os produtos da Xtreme e as páginas AI/Ads não ligam (decisão do Fábio,
+  2026-09-06). O "Ver portfólio" dos trabalhos recentes continua a abrir a
+  categoria inteira. A escuta de `works` subiu para o ecrã (uma só, que
+  alimenta os cartões e os trabalhos recentes).
 - **`RequestQuote`** é o formulário da Secção 7 (ver "Pedidos de
   orçamento" acima): `cta.kind === 'quote'` abre-o com `{ department }` e
   o formulário desse departamento vem de `src/data/requestForms.ts` —
@@ -725,7 +743,11 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
   `hasService()` serve o Portfólio, que dentro de uma categoria mostra uma
   segunda fila de chips com os serviços que têm trabalhos publicados (tocar
   outra vez desliga; em "Todos" não há segunda fila; mudar de categoria
-  limpa o serviço).
+  limpa o serviço). A página de departamento pode mandar `service` nos
+  params do Portfólio (Secção 14; ver "Páginas de departamento"): o ecrã
+  aplica-o com a categoria e só se pertencer a ela. Na web chega pela query
+  string — `portfolio?category=Automotive&service=vinyl`; só `?service=…`
+  também serve (dá a categoria dele); categoria desconhecida é ignorada.
 - **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
   escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
   cair os que não pertencem), marcas com Enter/vírgula e sugestões

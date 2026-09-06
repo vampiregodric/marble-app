@@ -11,8 +11,8 @@ import { BackIcon } from '../components/Icons';
 import { DEPARTMENTS } from '../data/departments';
 import { departmentContent, hasDepartmentContent, DepartmentCta, DepartmentLink } from '../data/departmentContent';
 import { useHomeSettings } from '../data/settings';
-import { usePublishedWorks } from '../data/works';
-import { DepartmentId, WorkCategory } from '../firebase/models';
+import { hasService, usePublishedWorks } from '../data/works';
+import { DepartmentId, Work, WorkCategory, WorkServiceId } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -26,7 +26,10 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 // src/data/departmentContent.ts e a foto do topo de settings/home (a mesma
 // que o cartão usa, escolhida pela equipa no backoffice; sem foto, o
 // gradiente). Departamentos com portfólio mostram ainda os trabalhos
-// recentes da categoria, com fotos reais, e ligam ao Portfólio filtrado.
+// recentes da categoria, com fotos reais, e ligam ao Portfólio filtrado:
+// "Ver portfólio" abre a categoria inteira; um cartão de "O que fazemos"
+// com `service` abre categoria + serviço (Secção 14), mas só quando há
+// trabalhos publicados com esse serviço — sem eles o cartão é só texto.
 // Sem ícones decorativos (regra 5 do CLAUDE.md): os números dos passos
 // são informação, e as únicas imagens são fotos.
 export default function DepartmentScreen() {
@@ -36,6 +39,9 @@ export default function DepartmentScreen() {
   const content = department ? departmentContent(department.id) : undefined;
   const { data: home } = useHomeSettings();
   const cover = home?.departmentCovers?.[params.id];
+  // Uma escuta só (a mesma do Portfólio) para os trabalhos recentes e para
+  // saber que cartões de serviço têm trabalhos.
+  const { data: works, loading: worksLoading } = usePublishedWorks();
   const screenW = useAppWidth();
   const heroW = screenW - 36;
   // 4:3 como o Detalhe, para a foto respirar.
@@ -62,7 +68,17 @@ export default function DepartmentScreen() {
     else navigation.navigate('RequestQuote', { department: department.id });
   };
 
-  const openPortfolio = (category: WorkCategory) => navigation.navigate('Tabs', { screen: 'Portfolio', params: { category } });
+  const openPortfolio = (category: WorkCategory, service?: WorkServiceId) =>
+    navigation.navigate('Tabs', { screen: 'Portfolio', params: service ? { category, service } : { category } });
+
+  // Serviço de um cartão de "O que fazemos" que tem trabalhos publicados na
+  // categoria do departamento (Secção 14); sem categoria ou sem trabalhos,
+  // nada — o cartão fica como estava.
+  const linkedService = (service?: WorkServiceId): WorkServiceId | undefined => {
+    const category = department.category;
+    if (!category || !service) return undefined;
+    return works.some((w) => w.category === category && hasService(w, service)) ? service : undefined;
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -93,12 +109,31 @@ export default function DepartmentScreen() {
 
         <SectionLabel text={content.labels?.services ?? T.department.whatWeDo} />
         <View style={styles.blocks}>
-          {content.services.map((s) => (
-            <View key={s.title} style={styles.block}>
-              <Text style={styles.blockTitle}>{s.title}</Text>
-              <Text style={styles.blockText}>{s.text}</Text>
-            </View>
-          ))}
+          {content.services.map((s) => {
+            const service = linkedService(s.service);
+            if (!service) {
+              return (
+                <View key={s.title} style={styles.block}>
+                  <Text style={styles.blockTitle}>{s.title}</Text>
+                  <Text style={styles.blockText}>{s.text}</Text>
+                </View>
+              );
+            }
+            return (
+              <Pressable
+                key={s.title}
+                style={({ pressed }) => [styles.block, styles.serviceCard, pressed && styles.relatedPressed]}
+                onPress={() => openPortfolio(department.category!, service)}
+                accessibilityRole="button"
+                accessibilityLabel={s.title}
+                accessibilityHint={T.department.seeWorks}
+              >
+                <Text style={styles.blockTitle}>{s.title}</Text>
+                <Text style={styles.blockText}>{s.text}</Text>
+                <Text style={styles.serviceLink}>{T.department.seeWorks}</Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <SectionLabel text={content.labels?.steps ?? T.department.howItWorks} />
@@ -125,6 +160,8 @@ export default function DepartmentScreen() {
         {department.category ? (
           <RecentWorks
             category={department.category}
+            works={works}
+            loading={worksLoading}
             onOpen={(workId) => navigation.navigate('WorkDetail', { workId })}
             onSeeAll={() => openPortfolio(department.category!)}
           />
@@ -176,10 +213,21 @@ function SectionLabel({ text, action, onAction }: { text: string; action?: strin
 }
 
 // Trabalhos publicados mais recentes da categoria do departamento — fotos
-// reais em vez de ilustrações. Reutiliza a escuta do Portfólio (uma query,
-// sem índice novo) e filtra em memória.
-function RecentWorks({ category, onOpen, onSeeAll }: { category: WorkCategory; onOpen: (workId: string) => void; onSeeAll: () => void }) {
-  const { data: works, loading } = usePublishedWorks();
+// reais em vez de ilustrações. A lista vem do ecrã (a escuta do Portfólio,
+// uma query, sem índice novo) e filtra-se em memória.
+function RecentWorks({
+  category,
+  works,
+  loading,
+  onOpen,
+  onSeeAll,
+}: {
+  category: WorkCategory;
+  works: Work[];
+  loading: boolean;
+  onOpen: (workId: string) => void;
+  onSeeAll: () => void;
+}) {
   const recent = useMemo(() => works.filter((w) => w.category === category).slice(0, 6), [works, category]);
   const T = useT();
   if (loading) return null;
@@ -252,6 +300,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   relatedCard: { borderColor: colors.hairlineStrong },
   relatedPressed: { opacity: 0.8 },
+  // Cartão de "O que fazemos" que abre o Portfólio filtrado (Secção 14): o
+  // contorno mais forte e a linha dourada "Ver trabalhos" dizem que se toca.
+  serviceCard: { borderColor: colors.hairlineStrong },
+  serviceLink: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase', marginTop: 10 },
   relatedEyebrow: { fontFamily: fonts.eyebrow, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.inkMuted, marginBottom: 6 },
   relatedTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.goldBright, marginBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, minHeight: 42 },
