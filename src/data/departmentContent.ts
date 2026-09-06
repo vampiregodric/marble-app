@@ -1,4 +1,4 @@
-import { DepartmentId } from '../firebase/models';
+import { DepartmentId, WorkServiceId } from '../firebase/models';
 import { locale as appLocale } from '../i18n';
 
 // Conteúdo estático das páginas de departamento (Secção 9). É texto de
@@ -22,6 +22,12 @@ import { locale as appLocale } from '../i18n';
 // cai para o português se a tradução de um departamento faltar. Ao mudar um
 // texto em PT, muda o equivalente em EN — não há verificação automática de
 // que os dois dizem o mesmo, só de que a estrutura é igual.
+//
+// Portfólio filtrado (Secção 14): um cartão de "O que fazemos" pode levar
+// `service` (id de WORK_SERVICES). Nos departamentos com `category`, e
+// havendo trabalhos publicados com esse serviço, o cartão abre o Portfólio
+// já com categoria + serviço. É o mesmo id em PT e EN — o aviso no fim
+// deste ficheiro apanha (em dev) um cartão em que os dois divergem.
 
 export type DepartmentLocale = 'pt' | 'en';
 export const DEFAULT_LOCALE: DepartmentLocale = 'pt';
@@ -35,6 +41,11 @@ export type DepartmentCta = { kind: 'quote'; label: string } | { kind: 'link'; l
 export interface DepartmentBlock {
   title: string;
   text: string;
+  // Só nos cartões de "O que fazemos" que correspondem a um sistema/serviço
+  // do Portfólio (Secção 14). Sem correspondência ("Preparação e reparação
+  // da base", os produtos da Xtreme, AI Business, Marble Ads) fica de fora
+  // e o cartão é só texto.
+  service?: WorkServiceId;
 }
 
 // "Ver também" (Secção 10): cartão que abre a página de outro departamento
@@ -78,22 +89,27 @@ const PT: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'PPF — Paint Protection Film',
+        service: 'ppf',
         text: 'Película transparente ou colorida que protege a pintura de riscos, gravilha e raios UV. Autorregenerável e praticamente invisível.',
       },
       {
         title: 'Vinil e mudança de cor',
+        service: 'vinyl',
         text: 'Muda a cor do carro sem pintar: vinil de alta qualidade, com acabamento brilhante, mate ou acetinado. Totalmente reversível.',
       },
       {
         title: 'Detailing e correção de pintura',
+        service: 'detailing',
         text: 'Polimento por fases, remoção de riscos e limpeza profunda do interior e do exterior. O carro volta a parecer novo.',
       },
       {
         title: 'Proteção cerâmica',
+        service: 'ceramic',
         text: 'Camada cerâmica que mantém o brilho, repele água e sujidade e torna cada lavagem mais fácil.',
       },
       {
         title: 'Tetos estrelados e personalização',
+        service: 'starlight',
         text: 'Iluminação em fibra ótica no teto e outros acabamentos à medida, para um interior único.',
       },
     ],
@@ -114,18 +130,22 @@ const PT: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'Metallic epoxy',
+        service: 'metallic-epoxy',
         text: 'Efeito marmoreado tridimensional, único em cada aplicação. Ideal para showrooms, lojas e espaços de destaque.',
       },
       {
         title: 'Flake systems',
+        service: 'flake-epoxy',
         text: 'Flocos decorativos sobre base epóxi, com acabamento antiderrapante. A escolha certa para garagens e oficinas.',
       },
       {
         title: 'Cores sólidas',
+        service: 'solid-colour-epoxy',
         text: 'Pavimento contínuo, sem juntas, numa cor à escolha. Limpo, resistente e fácil de manter.',
       },
       {
         title: 'Quartzo, comercial e industrial',
+        service: 'quartz-epoxy',
         text: 'Sistemas de quartzo e de alta resistência química e mecânica para armazéns, fábricas, cozinhas profissionais e zonas húmidas.',
       },
       {
@@ -212,22 +232,27 @@ const PT: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'Identidade visual',
+        service: 'brand-identity',
         text: 'Logótipo, cores, tipografia e manual de marca. A base de tudo o resto.',
       },
       {
         title: 'Decoração de viaturas',
+        service: 'vehicle-graphics',
         text: 'Vinil e lettering para carros e carrinhas comerciais, com design e aplicação feitos por nós.',
       },
       {
         title: 'Montras e sinalética',
+        service: 'signage',
         text: 'Vinil para montras, placas, letras recortadas e sinalética interior e exterior.',
       },
       {
         title: 'Impressão',
+        service: 'print',
         text: 'Cartões, flyers, catálogos, roll-ups e lonas, com acabamento profissional.',
       },
       {
         title: 'Conteúdo para redes sociais',
+        service: 'social-media',
         text: 'Posts, stories e anúncios alinhados com a marca, prontos a publicar.',
       },
     ],
@@ -374,22 +399,27 @@ const EN: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'PPF — Paint Protection Film',
+        service: 'ppf',
         text: 'Clear or coloured film that shields the paint from scratches, stone chips and UV. Self-healing and practically invisible.',
       },
       {
         title: 'Vinyl and colour change',
+        service: 'vinyl',
         text: 'Change the colour of your car without painting: high-quality vinyl in gloss, matte or satin finish. Fully reversible.',
       },
       {
         title: 'Detailing and paint correction',
+        service: 'detailing',
         text: 'Multi-stage polishing, scratch removal and deep cleaning inside and out. The car looks new again.',
       },
       {
         title: 'Ceramic coating',
+        service: 'ceramic',
         text: 'A ceramic layer that keeps the shine, repels water and dirt and makes every wash easier.',
       },
       {
         title: 'Starlight headliners and customisation',
+        service: 'starlight',
         text: 'Fibre-optic lighting in the headliner and other bespoke finishes, for a one-of-a-kind interior.',
       },
     ],
@@ -410,18 +440,22 @@ const EN: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'Metallic epoxy',
+        service: 'metallic-epoxy',
         text: 'A three-dimensional marbled effect, unique in every installation. Ideal for showrooms, shops and statement spaces.',
       },
       {
         title: 'Flake systems',
+        service: 'flake-epoxy',
         text: 'Decorative flakes over an epoxy base, with an anti-slip finish. The right choice for garages and workshops.',
       },
       {
         title: 'Solid colours',
+        service: 'solid-colour-epoxy',
         text: 'A seamless floor in the colour of your choice. Clean, tough and easy to maintain.',
       },
       {
         title: 'Quartz, commercial and industrial',
+        service: 'quartz-epoxy',
         text: 'Quartz systems and high chemical and mechanical resistance for warehouses, factories, professional kitchens and wet areas.',
       },
       {
@@ -497,22 +531,27 @@ const EN: Partial<Record<DepartmentId, DepartmentContent>> = {
     services: [
       {
         title: 'Visual identity',
+        service: 'brand-identity',
         text: 'Logo, colours, typography and brand guidelines. The foundation for everything else.',
       },
       {
         title: 'Vehicle graphics',
+        service: 'vehicle-graphics',
         text: 'Vinyl and lettering for cars and commercial vans, designed and applied by us.',
       },
       {
         title: 'Shopfronts and signage',
+        service: 'signage',
         text: 'Shopfront vinyl, plaques, cut letters and indoor and outdoor signage.',
       },
       {
         title: 'Print',
+        service: 'print',
         text: 'Business cards, flyers, catalogues, roll-ups and banners, with a professional finish.',
       },
       {
         title: 'Content for social media',
+        service: 'social-media',
         text: 'Posts, stories and ads aligned with your brand, ready to publish.',
       },
     ],
@@ -610,4 +649,19 @@ export function departmentContent(id: DepartmentId, locale: DepartmentLocale = a
 // cartão fica inerte (é o caso da Xtreme até à Secção 10).
 export function hasDepartmentContent(id: DepartmentId): boolean {
   return departmentContent(id) !== undefined;
+}
+
+// Secção 14: o `service` de cada cartão de "O que fazemos" tem de ser o
+// mesmo em PT e EN (a estrutura é igual, mas o tipo não obriga a isso).
+// Só avisa em dev — em produção o pior caso é um cartão sem ligação num
+// dos idiomas.
+if (__DEV__) {
+  for (const id of Object.keys(PT) as DepartmentId[]) {
+    const pt = PT[id]?.services ?? [];
+    const en = EN[id]?.services;
+    if (!en) continue;
+    pt.forEach((card, i) => {
+      if (en[i]?.service !== card.service) console.warn(`departmentContent: "${id}", cartão ${i + 1}: service diferente em PT (${card.service}) e EN (${en[i]?.service})`);
+    });
+  }
 }
