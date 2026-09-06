@@ -376,7 +376,12 @@ inatividade; `new_work` só a quem tem categoria e consentimento).
   push a sério é preciso a **development build** (ver abaixo); no Expo Go e
   no web `pushSupported` é false e o cartão não aparece. Sem
   `extra.eas.projectId` no `app.json` também não (é o que
-  `getExpoPushTokenAsync` exige).
+  `getExpoPushTokenAsync` exige). **Desde 2026-09-06 o `expo-notifications`
+  carrega-se só quando é preciso** (`notifications()` em
+  `src/push/push.native.ts`): no Expo Go (Android, SDK 53+) o simples
+  import do módulo rebentava no arranque com "[runtime not ready]: Android
+  Push notifications … removed from Expo Go", e a app não abria de todo no
+  Expo Go. Agora abre, só sem push.
 - Ícone da barra de notificações (Android exige silhueta branca com
   transparência): `assets/notification-icon.png`, gerado a partir do
   logótipo real (`assets/logo.png`) — não é um sino genérico. Cor de
