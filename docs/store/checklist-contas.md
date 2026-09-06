@@ -10,7 +10,15 @@ Começa **hoje** pelo passo 1: é o que mais demora e destrava as duas lojas.
 A Apple é o caminho crítico (2 a 4 semanas no pior caso); o Play aprova em
 dias; o resto são minutos.
 
-### 1. Número D-U-N-S da Cacto Elegante, Lda. — grátis, 0 a 3 semanas
+### 1. Número D-U-N-S da Cacto Elegante, Lda. — FEITO (2026-09-06)
+
+**D-U-N-S: 348571438** (já existia na D&B; a Apple enviou-o por email a
+2026-09-06). Serve para a Apple e para o Google Play. Atenção: o registo
+da D&B tem a morada como "Rua Quinta das Rosas, 12H" e os textos legais da
+app dizem "12A" — confirmar na certidão permanente qual é o certo e alinhar
+o outro lado.
+
+Instruções originais, para referência:
 
 As duas lojas exigem-no para contas de **organização** (Apple sempre; Google
 Play desde 2023). Empresas registadas em Portugal costumam já ter um,
