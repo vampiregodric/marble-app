@@ -534,8 +534,9 @@ e os textos (`requestKind`) já distinguem o tipo; a página Pedidos mostra
 em paralelo e o fluxo decidido pelo Fábio (disponibilidade da equipa,
 aprovação, proposta de outro dia, confirmação do cliente) não cabe em
 recebido → em contacto → fechado. O pedido de checkup vive em
-`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` ficou sem
-uso e pode sair na Secção 7b.
+`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` (e o
+`vehicleId` de `ServiceRequest`) ficaram sem uso e saíram na Secção 7b
+(2026-09-06: modelo, `functions/src/types.ts`, `texts.ts`, regras).
 **Para as Secções 9 e 10:** `navigation.navigate('RequestQuote', { department: 'ai' | 'ads' | 'xps' })`
 — os três formulários já existem em `requestForms.ts`.
 **Para a Secção 11:** `RESEND_API_KEY` no prod, `BACKOFFICE_URL` do prod em
@@ -618,12 +619,20 @@ disponibilidade inicial seg–sex manhã e tarde (seed) mantida.
 `vehicle-example`): propor → "Proposta de checkup" no cliente; aprovar →
 "Checkup agendado"; marcar em dia; cancelar (Admin SDK) → `declined` em
 todo o lado; "Por fechar"; guardar/repor disponibilidade (confirmado com
-`checkup:admin availability`); estados repostos no fim. **Para a
-Function (app, pequeno):** quando a equipa aprova uma proposta,
-`handleVehicleUpdated` vê `proposed → approved` e cria também o alerta
-interno "confirmou o checkup" como se fosse o cliente — distinguir por
-`decidedAt` (mudou = equipa) vs `confirmedAt` (cliente). Detalhe no
+`checkup:admin availability`); estados repostos no fim. Detalhe no
 README do backoffice, "Checkups (Secção 7b)".
+**Remate na app (2026-09-06, worktree `seccao-7b-function-fix`):**
+`handleVehicleUpdated` distingue quem passou a proposta a `approved` — o
+cliente (só `status` + `confirmedAt`) gera o alerta interno "confirmou o
+checkup"; a equipa ("Aprovar na mesma", mexe em `decidedAt`) já não; a
+nota da proposta continua fora do "Checkup agendado" nos dois casos.
+`'checkup'` saiu de `RequestType` e `vehicleId` de `ServiceRequest`
+(modelo, `functions/src/types.ts`, `texts.ts` só "pedido de orçamento",
+`firestore.rules`). Function `onVehicleUpdated` e regras publicadas no
+dev; verificado com propor → aprovar pela equipa (sem alerta "confirmou")
+e estados repostos. **Fica:** copiar `models.ts` para o backoffice
+(`src/firebase/models.ts`) quando a Secção 13 sair do checkout — só
+comentários e o tipo, nada muda no que o backoffice faz.
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
@@ -1061,7 +1070,8 @@ dourado, marca em texto normal), Portfólio (segunda fila), i18n
 `models.ts` sincronizado, cartão "Tags" no formulário do trabalho (chips
 de escolha múltipla do sistema/serviço da categoria; marcas com Enter e
 sugestões das já usadas; aviso com o texto antigo; `products` apagado ao
-guardar; **publicar exige pelo menos um serviço**, rascunho não), lista de
+guardar; publicar sem serviço **só avisa** — decisão do Fábio a 2026-09-06,
+depois de a primeira versão bloquear), lista de
 trabalhos com a linha das tags, selo "Sem tags" nos publicados sem serviço
 e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
 `works` já eram só da equipa, sem validação de campos). Detalhes em

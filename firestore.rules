@@ -61,11 +61,11 @@ service cloud.firestore {
     // limitado; o conteúdo é texto que a equipa lê no backoffice.
     function validNewRequest(d) {
       return d.keys().hasOnly(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
-          'workId', 'workTitle', 'vehicleId', 'services', 'fields', 'message', 'photos', 'platform', 'createdAt', 'updatedAt'])
+          'workId', 'workTitle', 'services', 'fields', 'message', 'photos', 'platform', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
           'services', 'fields', 'message', 'createdAt', 'updatedAt'])
         && d.clientId == request.auth.uid
-        && d.type in ['quote', 'checkup']
+        && d.type == 'quote'
         && d.status == 'new'
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
         && isStr(d.email, 120)
@@ -78,7 +78,6 @@ service cloud.firestore {
         && (!('photos' in d) || (d.photos is list && d.photos.size() <= 5))
         && (!('workId' in d) || isStr(d.workId, 100))
         && (!('workTitle' in d) || isStr(d.workTitle, 200))
-        && (!('vehicleId' in d) || isStr(d.vehicleId, 100))
         && (!('platform' in d) || d.platform in ['android', 'ios', 'web'])
         && d.createdAt == request.time
         && d.updatedAt == request.time;

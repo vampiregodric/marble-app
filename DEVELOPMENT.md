@@ -638,11 +638,12 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   `decideCheckupRequest`, `proposeCheckupDay`, `markCheckupDone`,
   `saveCheckupAvailability`) são as do `checkup-admin.mjs`; `models.ts`
   copiado. Detalhe no README do backoffice, "Checkups (Secção 7b)".
-  **Por corrigir aqui (Function, pequeno):** quando a equipa aprova uma
-  proposta ("Aprovar na mesma"), `handleVehicleUpdated` vê
-  `proposed → approved` e cria o alerta interno "confirmou o checkup" como
-  se fosse o cliente — distinguir por `decidedAt` (mudou = equipa) vs
-  `confirmedAt` (cliente).
+  **Function (2026-09-06):** `handleVehicleUpdated` distingue quem passou
+  a proposta a `approved` — o cliente (só `status` + `confirmedAt`) gera o
+  alerta interno "confirmou o checkup"; a equipa ("Aprovar na mesma",
+  mexe em `decidedAt`) não. `'checkup'` saiu de `RequestType` e
+  `vehicleId` de `ServiceRequest` (modelo, `functions/src/types.ts`,
+  `texts.ts`, regras): pedidos são só orçamentos.
 
 ## Páginas de departamento (Secção 9)
 
@@ -723,8 +724,9 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
 - **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
   escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
   cair os que não pertencem), marcas com Enter/vírgula e sugestões
-  (`datalist`) das fixas + já usadas noutros trabalhos. **Publicar exige
-  pelo menos um serviço**; um rascunho pode ficar sem. Trabalhos antigos:
+  (`datalist`) das fixas + já usadas noutros trabalhos. Publicar sem
+  serviço **só avisa** (toast; decisão do Fábio, 2026-09-06): o trabalho sai
+  na app, mas fica fora do filtro por serviço. Trabalhos antigos:
   marcas pré-preenchidas a partir de `products`, aviso com o texto antigo,
   `products` apagado ao guardar. A lista mostra a linha das tags, o selo
   "Sem tags" nos publicados sem serviço, e a pesquisa apanha tags.

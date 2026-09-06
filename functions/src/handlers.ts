@@ -116,7 +116,8 @@ async function confirmFollowUps(db: Firestore, vehicleId: string, now: Date, log
 //   aprovar ou propor outro dia; acompanhamento confirmado.
 // - → proposed (equipa propôs outro dia): `message` ao cliente.
 // - → approved (equipa aprovou, ou cliente confirmou a proposta): `message`
-//   "Checkup agendado" ao cliente; se foi o cliente a confirmar, alerta
+//   "Checkup agendado" ao cliente; se foi o cliente a confirmar (a equipa
+//   mexe em `decidedAt`, o cliente só em `confirmedAt`), alerta
 //   interno também; acompanhamento confirmado.
 // - → cancelled (cliente): alerta interno; o carro/chão passa a
 //   `checkupStatus: 'declined'` (sai dos checkups pendentes); acompanhamento
@@ -164,8 +165,15 @@ export async function handleVehicleUpdated(db: Firestore, before: Vehicle | null
     await toClient(TEXTS.checkupProposed(after, req));
     log(`proposta da equipa → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);
   } else if (req.status === 'approved' && (statusChanged || decisionChanged || slotChanged)) {
-    const clientConfirmed = prev?.status === 'proposed';
-    await toClient(TEXTS.checkupScheduled(after, req, !clientConfirmed));
+    // Uma proposta passa a `approved` de duas maneiras: o cliente confirma
+    // na app (só `status` e `confirmedAt` mudam) ou a equipa aprova-a no
+    // backoffice ("Aprovar na mesma" — mexe em `decidedAt`). Só a primeira
+    // merece o alerta interno "confirmou o checkup".
+    const fromProposal = prev?.status === 'proposed';
+    const clientConfirmed = fromProposal && !decisionChanged;
+    // A nota da equipa só vai quando foi escrita ao aprovar um pedido; se
+    // vinha de uma proposta, era a pergunta da proposta e já foi lida.
+    await toClient(TEXTS.checkupScheduled(after, req, !fromProposal));
     if (clientConfirmed && client && hasAppAccount(client)) await team(TEXTS.checkupProposalConfirmed(client, after, req));
     summary.confirmedWorks = await confirmFollowUps(db, after.id, now, log);
     log(`checkup agendado → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);

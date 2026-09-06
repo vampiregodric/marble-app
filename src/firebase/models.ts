@@ -10,8 +10,8 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   // Definições escolhidas pela equipa (por agora só `settings/home`).
   settings: 'settings',
-  // Pedidos feitos pelo cliente na app (Secção 7: orçamentos; Secção 8:
-  // checkups). Ver ServiceRequest.
+  // Pedidos de orçamento feitos pelo cliente na app (Secção 7). Ver
+  // ServiceRequest. Os checkups (Secção 8) vivem em `vehicles.checkupRequest`.
   requests: 'requests',
 } as const;
 
@@ -381,7 +381,7 @@ export interface Work {
   // Tags (Secção 13): o sistema/serviço (ids de WORK_SERVICES da mesma
   // `category`) e as marcas usadas (texto). Chips no Detalhe pela ordem
   // serviço → marcas (pedido do Fábio); filtro secundário no Portfólio.
-  // O backoffice exige pelo menos um serviço para publicar.
+  // Publicar sem serviço só avisa no backoffice (fica fora do filtro).
   services?: WorkServiceId[];
   brands?: string[];
   // Legado: "produtos usados" de antes da Secção 13. O backoffice apaga-o
@@ -476,10 +476,10 @@ export interface NotificationPush {
 
 // ---------- Pedidos (Secção 7) ----------
 
-// 'quote' = pedido de orçamento (Secção 7). 'checkup' fica reservado à
-// Secção 8 (agendar o checkup a partir do Perfil): o mesmo doc, a mesma
-// página "Pedidos" do backoffice, a mesma Cloud Function.
-export type RequestType = 'quote' | 'checkup';
+// 'quote' = pedido de orçamento (Secção 7). O agendamento de checkup
+// (Secção 8) não passa por aqui — vive em `Vehicle.checkupRequest`; o
+// valor 'checkup' que estava reservado saiu na Secção 7b (2026-09-06).
+export type RequestType = 'quote';
 
 // Fluxo da equipa: recebido → em contacto → fechado. Só o backoffice muda
 // o estado (o cliente cria o pedido e lê os seus; nunca o altera).
@@ -527,8 +527,6 @@ export interface ServiceRequest {
   // altura (o trabalho pode ser despublicado depois).
   workId?: string;
   workTitle?: string;
-  // Secção 8: o carro/chão do checkup.
-  vehicleId?: string;
   // Opções escolhidas (etiquetas, ex: "PPF", "Detailing").
   services: string[];
   fields: RequestField[];

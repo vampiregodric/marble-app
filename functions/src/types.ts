@@ -167,7 +167,8 @@ export const DEPARTMENT_NAME: Record<DepartmentId, string> = {
   xps: 'Xtreme Polishing Systems',
 };
 
-export type RequestType = 'quote' | 'checkup';
+// Só orçamentos: o agendamento de checkup vive em `Vehicle.checkupRequest`.
+export type RequestType = 'quote';
 export type RequestStatus = 'new' | 'contacted' | 'closed';
 export type ContactPreference = 'call' | 'whatsapp' | 'email';
 
@@ -201,7 +202,6 @@ export interface ServiceRequest {
   department: DepartmentId;
   workId?: string;
   workTitle?: string;
-  vehicleId?: string;
   services: string[];
   fields: RequestField[];
   message: string;
