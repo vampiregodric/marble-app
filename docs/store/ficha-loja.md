@@ -14,7 +14,7 @@ entra em **português (Portugal)**, como idioma predefinido, e em **inglês
 |---|---|
 | Nome da app (30) | **Marble Studios** — plano B se estiver ocupado na App Store: **Marble Studios App** |
 | Subtítulo Apple (30) | PT: `Detailing, PPF e pisos epóxi` · EN: `Detailing, PPF & epoxy floors` |
-| Vendedor / programador | Apple mostra sempre o nome legal: **Cacto Elegante, Lda.** · Play: nome de programador livre → **Marble Studios** |
+| Vendedor / programador | Apple mostra sempre o nome legal: **Cacto Elegante, Lda.** · Play: nome de programador **Marble Studios Portugal** ("Marble Studios" já estava registado por outra conta; decidido 2026-09-06) |
 | Pacote / bundle | `pt.marble.app` (Android e iOS) |
 | Versão inicial | 1.0.0 (`version` no app.json; `versionCode`/`buildNumber` geridos pelo EAS) |
 | Preço | Grátis, sem compras integradas, sem anúncios |

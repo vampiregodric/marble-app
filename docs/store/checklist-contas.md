@@ -62,7 +62,16 @@ app@marble.pt). Instruções originais, para referência:
 - Depois de aprovado: nada mais para já. O EAS cria as certificações de
   assinatura e a chave de push (APNs) sozinho na parte 2, com o teu login.
 
-### 4. Google Play Console, como organização — 25 $ único, 1 a 7 dias
+### 4. Google Play Console, como organização — CRIADA (2026-09-06), verificações pendentes
+
+Conta **Marble Studios Portugal** (organização, Account ID
+6700585085532729198), dona: `v.godric@gmail.com`, contacto app@marble.pt,
+25 $ pagos. Faltam as três verificações da página inicial da Play Console:
+(a) **identidade** (documento de identificação do Fábio, "Get started";
+dias), (b) **site da organização** (`https://app.marble.pt`, via Search
+Console: registo TXT no DNS do marble.pt ou ficheiro HTML que o Claude põe
+em `docs/`), (c) **telefones** (só depois de (a) e (b) aprovados). Sem as
+três não se publica. Instruções originais, para referência:
 
 - https://play.google.com/console/signup com uma conta Google da empresa
   (podes usar a `v.godric@gmail.com` que já é dona do Firebase, mas o ideal
@@ -71,7 +80,8 @@ app@marble.pt). Instruções originais, para referência:
 - Pedem: tipo de conta **Organização**, D-U-N-S, nome legal e morada, email
   de contacto (recebes um código), telefone (código por SMS), perfil de
   pagamentos (cartão para os 25 $), e o **nome de programador** que aparece
-  na loja — põe **Marble Studios**.
+  na loja — **Marble Studios Portugal** ("Marble Studios" já estava
+  registado por outra conta no Play; decidido 2026-09-06).
 - Requisitos oficiais: https://support.google.com/googleplay/android-developer/answer/6112435
 - Vantagem de ser organização: as contas pessoais novas são obrigadas a um
   teste fechado com 12 testadores durante 14 dias antes de publicar; as de
