@@ -16,7 +16,7 @@ que o pedido de orçamento e o agendamento de checkup acabarem por enviar.
 |---|---|
 | A app recolhe ou partilha algum dos tipos de dados exigidos? | **Sim** |
 | Todos os dados do utilizador são encriptados em trânsito? | **Sim** (HTTPS em tudo: Firebase, Expo, Cloudinary) |
-| A app permite pedir a eliminação dos dados? | **Sim** — na app (Perfil → Apagar conta) e em https://marble-studios-app.web.app/legal/apagar-conta.html |
+| A app permite pedir a eliminação dos dados? | **Sim** — na app (Perfil → Apagar conta) e em https://app.marble.pt/legal/apagar-conta.html |
 | Revisão de segurança independente (MASA)? | Não |
 | A app cumpre a política de Families? | Não aplicável (público 18+) |
 

@@ -1055,9 +1055,13 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
   pede confirmação ao Fábio).
 - GitHub Pages ficou de fora: o repositório é privado e o Pages em
   repositórios privados exige GitHub Pro.
-- Domínio próprio (ex. `app.marble.pt`): consola Firebase → Hosting → site
-  `marble-studios-app` → Add custom domain (dois registos DNS, SSL
-  automático). Trocar depois os URLs na ficha das lojas.
+- **Domínio próprio `app.marble.pt`** ligado a 2026-09-06 (consola Firebase
+  → Hosting → site `marble-studios-app` → Add custom domain, "Quick setup":
+  um só CNAME `app` → `marble-studios-app.web.app`, criado no cPanel da
+  PTisp/dominios.pt, Zone Editor; certificado automático). É o URL das
+  lojas (`docs/store/ficha-loja.md`) e o "site da organização" que a Apple
+  pede na inscrição. O DNS do marble.pt (e o email) está na PTisp:
+  área de cliente dominios.pt → "Entrar no cPanel" → Zone Editor.
 
 ### Estado do prod (2026-09-05)
 
