@@ -65,6 +65,14 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
+  // Idioma da app no telemóvel do cliente (Secção 12b): 'pt' ou 'en', o
+  // mesmo `locale` de src/i18n. A app grava-o ao criar o doc e volta a
+  // gravá-lo em cada arranque em que for diferente (o cliente mudou o
+  // idioma do telemóvel). As Cloud Functions escrevem os alertas
+  // AUTOMÁTICOS ao cliente neste idioma; ausente (contas anteriores à 12b,
+  // fichas criadas pela equipa) = PT. Os alertas manuais da equipa não
+  // mudam — o backoffice mostra "EN" na ficha para a equipa saber.
+  locale?: 'pt' | 'en';
   // Foto de perfil escolhida pelo cliente na app (Secção 5b): URL de
   // entrega do Cloudinary já recortado em quadrado (src/media/cloudinary.ts).
   // Vazio ou ausente = sem foto (a app mostra as iniciais). É o único

@@ -4,7 +4,7 @@ import { canReceive, hasAppAccount } from './consent';
 import { followUpFinished } from './jobs/followUps';
 import { createNotification, notificationDoc } from './notify';
 import { anonymizeClientRequests } from './requests';
-import { TEXTS } from './texts';
+import { clientLocale, forLocales, TEXTS } from './texts';
 import { CheckupRequest, Client, Vehicle, Work, WorkFollowUp } from './types';
 
 // Lógica dos triggers do Firestore, separada do "wiring" (index.ts) para
@@ -14,8 +14,9 @@ export type Log = (msg: string) => void;
 
 // works/{id} criado ou alterado.
 // 1. Passou a publicado → alerta `new_work` a quem tem "Ofertas e
-//    novidades" ligado E a categoria ligada. Uma vez por trabalho
-//    (`newWorkNotifiedAt`): despublicar e voltar a publicar não repete.
+//    novidades" ligado E a categoria ligada, no idioma de cada cliente
+//    (Secção 12b). Uma vez por trabalho (`newWorkNotifiedAt`):
+//    despublicar e voltar a publicar não repete.
 // 2. Tem carro/chão ligado → a "última visita" do carro/chão passa a ser a
 //    data de conclusão, se for mais recente (o Perfil mostra-a).
 export async function handleWorkWritten(db: Firestore, before: Work | null, after: Work | null, now: Date, log: Log = () => {}): Promise<void> {
@@ -26,11 +27,11 @@ export async function handleWorkWritten(db: Firestore, before: Work | null, afte
   if (justPublished && !after.newWorkNotifiedAt) {
     const clients = (await db.collection('clients').get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Client);
     const recipients = clients.filter((c) => canReceive(c, 'new_work', after.category).ok);
-    const text = TEXTS.newWork(after);
+    const text = forLocales((l) => TEXTS.newWork(l, after));
     for (let i = 0; i < recipients.length; i += 450) {
       const batch = db.batch();
       for (const c of recipients.slice(i, i + 450)) {
-        batch.set(db.collection('notifications').doc(), notificationDoc({ clientId: c.id, type: 'new_work', ...text, photoUrl: after.photoUrl, relatedWorkId: after.id }, now));
+        batch.set(db.collection('notifications').doc(), notificationDoc({ clientId: c.id, type: 'new_work', ...text[clientLocale(c)], photoUrl: after.photoUrl, relatedWorkId: after.id }, now));
       }
       await batch.commit();
     }
@@ -119,6 +120,8 @@ async function confirmFollowUps(db: Firestore, vehicleId: string, now: Date, log
 //   "Checkup agendado" ao cliente; se foi o cliente a confirmar (a equipa
 //   mexe em `decidedAt`, o cliente só em `confirmedAt`), alerta
 //   interno também; acompanhamento confirmado.
+// Os `message` ao cliente saem no idioma dele (`clients.locale`, Secção
+// 12b); os alertas internos são sempre em PT.
 // - → cancelled (cliente): alerta interno; o carro/chão passa a
 //   `checkupStatus: 'declined'` (sai dos checkups pendentes); acompanhamento
 //   confirmado para o job não mandar ligar.
@@ -136,7 +139,8 @@ export async function handleVehicleUpdated(db: Firestore, before: Vehicle | null
 
   const clientSnap = await db.collection('clients').doc(after.clientId).get();
   const client = clientSnap.exists ? ({ id: clientSnap.id, ...clientSnap.data() } as Client) : null;
-  const clientLabel = client?.email || after.clientId;
+  const locale = clientLocale(client);
+  const clientLabel = `${client?.email || after.clientId}${locale === 'en' ? ' (en)' : ''}`;
   const team = async (t: { title: string; description: string }) => {
     await createNotification(db, { clientId: after.clientId, type: 'team_alert', ...t, relatedVehicleId: after.id }, now);
     summary.teamAlerts++;
@@ -162,7 +166,7 @@ export async function handleVehicleUpdated(db: Firestore, before: Vehicle | null
     summary.confirmedWorks = await confirmFollowUps(db, after.id, now, log);
     log(`checkup ${changed ? 'alterado' : 'pedido'} → alerta interno · ${clientLabel} · ${after.name} · ${req.day} ${req.period}`);
   } else if (req.status === 'proposed' && (statusChanged || decisionChanged || slotChanged)) {
-    await toClient(TEXTS.checkupProposed(after, req));
+    await toClient(TEXTS.checkupProposed(locale, after, req));
     log(`proposta da equipa → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);
   } else if (req.status === 'approved' && (statusChanged || decisionChanged || slotChanged)) {
     // Uma proposta passa a `approved` de duas maneiras: o cliente confirma
@@ -173,7 +177,7 @@ export async function handleVehicleUpdated(db: Firestore, before: Vehicle | null
     const clientConfirmed = fromProposal && !decisionChanged;
     // A nota da equipa só vai quando foi escrita ao aprovar um pedido; se
     // vinha de uma proposta, era a pergunta da proposta e já foi lida.
-    await toClient(TEXTS.checkupScheduled(after, req, !fromProposal));
+    await toClient(TEXTS.checkupScheduled(locale, after, req, !fromProposal));
     if (clientConfirmed && client && hasAppAccount(client)) await team(TEXTS.checkupProposalConfirmed(client, after, req));
     summary.confirmedWorks = await confirmFollowUps(db, after.id, now, log);
     log(`checkup agendado → message · ${clientLabel} · ${after.name} · ${req.day} ${req.period}${req.time ? ` ${req.time}` : ''}`);

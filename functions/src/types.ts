@@ -7,6 +7,10 @@ import type { Timestamp } from 'firebase-admin/firestore';
 
 export type WorkCategory = 'Automotive' | 'Epoxy Floors' | 'Graphic';
 export type VehicleType = 'car' | 'floor';
+// Idioma da app no telemóvel do cliente (Secção 12b): `clients.locale`,
+// gravado pela app; ausente = PT. As Functions escrevem os alertas
+// automáticos ao cliente neste idioma (texts.ts → clientLocale).
+export type Locale = 'pt' | 'en';
 // 'declined' (Secção 8): o cliente cancelou o pedido de checkup na app.
 export type CheckupStatus = 'pending' | 'ok' | 'declined';
 
@@ -63,6 +67,7 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
+  locale?: Locale;
   avatarUrl?: string;
   clientSince?: Timestamp;
   createdByTeam?: boolean;

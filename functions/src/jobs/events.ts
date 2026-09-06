@@ -1,15 +1,16 @@
 import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { canReceive } from '../consent';
 import { notificationDoc } from '../notify';
-import { TEXTS } from '../texts';
+import { clientLocale, forLocales, TEXTS } from '../texts';
 import { addDays, lisbonDay } from '../time';
 import { Client, MarbleEvent } from '../types';
 import { JobLog } from './followUps';
 
 // Lembrete "Amanhã: <evento>" a quem ligou "Ofertas e novidades" (é
-// marketing). Corre às 10:00 de Lisboa e apanha os eventos cujo dia, no
-// calendário de Lisboa, é amanhã. Um evento só lembra uma vez
-// (`reminderSentAt`), mesmo que a equipa lhe mexa depois.
+// marketing), no idioma de cada cliente (Secção 12b). Corre às 10:00 de
+// Lisboa e apanha os eventos cujo dia, no calendário de Lisboa, é amanhã.
+// Um evento só lembra uma vez (`reminderSentAt`), mesmo que a equipa lhe
+// mexa depois.
 
 export type EventsSummary = { events: number; notifications: number };
 
@@ -37,14 +38,14 @@ export async function runEventReminders(db: Firestore, now: Date, log: JobLog = 
 
   for (const event of events) {
     summary.events++;
-    const text = TEXTS.eventReminder(event);
+    const text = forLocales((l) => TEXTS.eventReminder(l, event));
     // Lotes de 500 (limite do Firestore). O push de cada doc vem do trigger.
     for (let i = 0; i < recipients.length; i += 450) {
       const batch = db.batch();
       for (const c of recipients.slice(i, i + 450)) {
         batch.set(
           db.collection('notifications').doc(),
-          notificationDoc({ clientId: c.id, type: 'event_reminder', ...text, photoUrl: event.photoUrl, relatedEventId: event.id }, now)
+          notificationDoc({ clientId: c.id, type: 'event_reminder', ...text[clientLocale(c)], photoUrl: event.photoUrl, relatedEventId: event.id }, now)
         );
       }
       await batch.commit();

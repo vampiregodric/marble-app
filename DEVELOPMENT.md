@@ -261,6 +261,13 @@ backoffice (`marble-backoffice/src/data/writes.ts` → `sendNotification`).
 | `onVehicleUpdated` (Secção 8) | `vehicles/{id}` alterado | só reage a `checkupRequest`: pedido/alteração do cliente → `team_alert` com dia, nota e telemóvel + `followUp.checkupConfirmedAt` no trabalho; proposta da equipa → `message` ao cliente; aprovado/confirmado → `message` "Checkup agendado" (+ `team_alert` se foi o cliente a confirmar); cancelado → `team_alert` + `checkupStatus: 'declined'`; voltar a pedir → `'pending'`. Ver "Agendamento de checkup". |
 | `dailyJobs` | todos os dias às **10:00 de Lisboa** | recibos de push de ontem; acompanhamento pós-serviço; lembrete de eventos ("Amanhã: …", só com consentimento de marketing); retenção de contas (aviso aos 3 anos − 30 dias, anonimização + Auth + Cloudinary aos 3 anos; abrir a app cancela). |
 
+**Idioma (Secção 12b, 2026-09-06):** tudo o que é dirigido ao cliente
+(`checkup_reminder`, `offer`, `new_work`, `event_reminder`, os `message`
+do checkup, dos pedidos e da retenção, e o email de confirmação do pedido)
+sai em PT ou EN conforme `clients.locale`, que a app grava pelo idioma do
+telemóvel (ausente = PT). Alertas internos e email à equipa: sempre PT.
+Ver "Idiomas (Secção 12)" → "Alertas".
+
 Consentimento (RGPD, Secção 3) aplicado em `functions/src/consent.ts`
 com as mesmas regras do backoffice: sem conta na app → nada;
 `offer`/`new_work`/`event_reminder` só com `consent.marketing`; `new_work`
@@ -355,7 +362,10 @@ agendamento de checkup — Secção 8 — a partir do estado atual de
 senão adivinha-se o plausível). Foi assim que a
 Secção 6 verificou o fluxo inteiro (checkup → alerta interno → oferta
 recusada por falta de consentimento; aviso e anonimização por
-inatividade; `new_work` só a quem tem categoria e consentimento).
+inatividade; `new_work` só a quem tem categoria e consentimento). Para
+ver os textos em EN (Secção 12b), põe `locale: 'en'` no cliente de teste
+antes — abrir a app web com `?lang=en` faz isso — e os logs marcam
+"(en)" ao lado do email do cliente.
 
 ### Push no telemóvel (app)
 
@@ -643,7 +653,9 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   alerta interno "confirmou o checkup"; a equipa ("Aprovar na mesma",
   mexe em `decidedAt`) não. `'checkup'` saiu de `RequestType` e
   `vehicleId` de `ServiceRequest` (modelo, `functions/src/types.ts`,
-  `texts.ts`, regras): pedidos são só orçamentos.
+  `texts.ts`, regras): pedidos são só orçamentos. Os `message` ao cliente
+  ("Proposta de checkup" / "Checkup proposal", "Checkup agendado" /
+  "Checkup scheduled") saem no idioma dele desde a Secção 12b.
 
 ## Páginas de departamento (Secção 9)
 
@@ -886,12 +898,23 @@ propósito. Nunca escrevas texto solto num ecrã.
 - `src/firebase/models.ts` — `REQUEST_STATUS_LABEL` e
   `CONTACT_PREFERENCE_LABEL` ficam em PT (o ficheiro é copiado para o
   backoffice); a app usa `S.requestStatus` / `S.contactPreference`.
-- **Alertas** (`notifications`): os escritos pela equipa no backoffice e
-  pelas Cloud Functions (`functions/src/texts.ts`) são em PT e assim
-  ficam (decisão do Fábio). Se um dia os automáticos tiverem de sair em EN:
-  gravar o idioma em `clients/{uid}.locale` (app, no `touchLastActive`),
-  `texts.ts` bilingue e `models.ts` do backoffice sincronizado — é uma
-  mini-secção própria.
+- **Alertas** (`notifications`): os **automáticos** das Cloud Functions
+  (`functions/src/texts.ts`) saem no idioma do cliente desde a Secção 12b
+  (2026-09-06): a app grava `clients/{uid}.locale` ('pt' | 'en') ao criar
+  o doc e em `touchLastActive` sempre que o guardado for outro (mudou o
+  idioma do telemóvel; conta anterior à 12b); as Functions leem-no com
+  `clientLocale(client)` (ausente = PT) e cada texto ao cliente tem PT e
+  EN lado a lado, com as datas iguais às da app (`formatCheckupSlot`,
+  `formatDay` por idioma). Os alertas internos (`team_alert`) e o email à
+  equipa ficam em PT; o email de confirmação em EN não lista as opções
+  escolhidas (guardam-se em PT). O que a equipa escreve (nota da proposta,
+  nome/modelo do trabalho, nome do evento) sai como está. Os **manuais**
+  do backoffice ("Enviar alerta") são como a equipa os escreve — a lista e
+  a ficha do cliente mostram o selo "EN" e o modal avisa, para a equipa
+  escrever em inglês a esses clientes. Para testar em EN: abrir a app web
+  com `?lang=en` na conta de teste (grava `locale: 'en'`) e correr os
+  jobs (`npm run functions:jobs`, ver "Testar sem deploy"); no fim abrir
+  com `?lang=pt` para repor.
 
 **Datas:** `utils/dates.ts` e `data/checkups.ts` usam as tabelas de meses e
 dias de `S.dates` (não `Intl`, que varia entre iOS/Android/web e o Hermes

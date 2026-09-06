@@ -632,7 +632,8 @@ nota da proposta continua fora do "Checkup agendado" nos dois casos.
 dev; verificado com propor → aprovar pela equipa (sem alerta "confirmou")
 e estados repostos. **Fica:** copiar `models.ts` para o backoffice
 (`src/firebase/models.ts`) quando a Secção 13 sair do checkout — só
-comentários e o tipo, nada muda no que o backoffice faz.
+comentários e o tipo, nada muda no que o backoffice faz. → Feito na
+Secção 12b (2026-09-06), junto com o campo `locale`.
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
@@ -1034,9 +1035,70 @@ backoffice não mudar. **Para a Secção 11 (parte 2):** a nova dev build e
 as builds de produção já levam os dois idiomas; os textos das lojas
 (`docs/store/ficha-loja.md`) já eram PT/EN; os alertas automáticos e os
 templates de email do Firebase Auth continuam em PT (decisão 3).
-**Em aberto:** os alertas automáticos em EN ("12b", só se o Fábio quiser);
-o pequeno acerto na Function `handleVehicleUpdated` anotado pela Secção 7b
-(aprovação de uma proposta pela equipa vista como confirmação do cliente).
+**Fechado depois:** os alertas automáticos em EN ficaram feitos na
+Secção 12b (a seguir); o acerto na Function `handleVehicleUpdated` já
+tinha entrado com o remate da Secção 7b (2026-09-06).
+
+### Secção 12b — Alertas automáticos em inglês
+**Estado:** Feito (2026-09-06), verificado no dev (runner local, app web
+em EN na 8082, backoffice na 5180) e Functions publicadas no dev. Ver
+"Decisões" e "Nota" no fim desta secção.
+**Depende de:** Secção 12 — Inglês e Secção 7b no master. Correu em
+paralelo com a parte 2 da Secção 11 (não toca em `app.json`, `eas.json`,
+`docs/store` nem no prod) e com a Secção 14.
+**Objetivo:** Os alertas AUTOMÁTICOS das Cloud Functions saem em inglês
+para os clientes cujo telemóvel está em inglês; os alertas manuais da
+equipa (backoffice) continuam como a equipa os escreve. A Secção 12 tinha
+deixado tudo em PT (decisão 3) e anotado este "12b" como opcional; o
+Fábio decidiu fazê-lo a 2026-09-06.
+- **A app grava o idioma:** `clients/{uid}.locale: 'pt' | 'en'` (campo
+  novo em `Client`, `src/firebase/models.ts`), ao criar o doc
+  (`createClientDoc`) e em `touchLastActive` sempre que o guardado for
+  outro — o cliente pode mudar o idioma do telemóvel; as contas
+  anteriores ficam sem o campo (= PT) até abrirem a app. As regras já
+  deixavam o dono escrever o doc inteiro — nada a publicar.
+- **Functions bilingues:** `functions/src/texts.ts` — cada texto ao
+  cliente (`checkupReminder`, `offerFreeWash`, `newWork`,
+  `eventReminder`, `checkupScheduled`, `checkupProposed`,
+  `requestConfirmation`, `requestClientEmail`, `retentionWarning`)
+  recebe o `locale` em primeiro e tem PT e EN lado a lado;
+  `clientLocale(client)` (ausente = PT) e `forLocales()` para os alertas
+  em lote (novo trabalho, evento: texto nos dois idiomas, escolhido por
+  cliente). Datas iguais às da app: "seg, 7 set às 10:30" / "Mon, 7 Sep
+  at 10:30", "seg, 7 set, de manhã" / "Mon, 7 Sep, in the morning",
+  "12 set, 10:00" / "12 Sep, 10:00"; "within 1 business day" =
+  `S.request.responsePromise`. Os `team_alert` e o email à equipa
+  (`requestTeamEmail`) ficam em PT. `Client.locale` em
+  `functions/src/types.ts`.
+- **Backoffice:** `models.ts` copiado inteiro (fecha o pendente da 7b:
+  `RequestType` só `'quote'`, sem `vehicleId` em `ServiceRequest`, mais
+  `locale`); selo **EN** na lista de clientes e "App em inglês" na ficha;
+  "Enviar alerta" avisa quando o cliente usa a app em inglês. README do
+  backoffice ("Como se liga à app" → `clients`).
+**Decisões (2026-09-06, Fábio):** (1) o email de confirmação ao cliente em
+EN não lista as opções escolhidas (guardam-se em PT — Secção 12 — e
+sairiam misturadas); (2) o backoffice mostra o idioma do cliente para a
+equipa escrever os alertas manuais em inglês; (3) `models.ts` do
+backoffice copiado inteiro; (4) os alertas de teste em EN ficam na conta
+do Fábio para ele os ver no telemóvel.
+**Nota (2026-09-06):** o acerto em `handleVehicleUpdated` que a Secção 12
+tinha "em aberto" já estava feito pelo remate da 7b (commit "Secção 7b
+(remate na app)") — confirmado aqui com quatro cenários (proposta;
+"Aprovar na mesma" pela equipa, sem alerta interno; confirmação do
+cliente, com alerta interno; aprovação de um pedido com nota). Verificado
+no dev: a app web (`?lang=en` + `npm run dev-token`) gravou
+`locale: 'en'` na conta do Fábio; `functions:jobs` (`--only followUps`,
+`--only events`, `--work`, `--request`) e um simulador do trigger do
+checkup criaram os alertas em EN ("Free checkup for your car", "Tomorrow:
+Auto Expo Lisboa 2026", "New project: …", "We got your request", "Checkup
+proposal: Wed, 16 Sep at 09:00", "Checkup scheduled: …"), com os alertas
+internos em PT; Functions publicadas no dev e o fluxo real (propor no
+backoffice → alerta EN → confirmar na app → "Checkup scheduled" EN +
+alerta interno PT) confirmado; estados repostos no fim (`locale` do
+Fábio de volta a PT, acompanhamento do trabalho desligado, pedido de
+checkup limpo). O que a equipa escreve (nota da proposta, modelo/descrição
+e nome do trabalho, nome do evento) sai como está, seja qual for o idioma.
+Ver DEVELOPMENT.md, "Idiomas (Secção 12)" → "Alertas".
 
 ### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
 **Estado:** Feito (2026-09-05), verificado no dev: backoffice (formulário e

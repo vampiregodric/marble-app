@@ -3,7 +3,7 @@ import { CloudinaryConfig, deleteFilesByTag } from './cloudinary';
 import { hasAppAccount } from './consent';
 import { EmailConfig, sendEmail } from './email';
 import { createNotification } from './notify';
-import { TEXTS } from './texts';
+import { clientLocale, TEXTS } from './texts';
 import { addDays } from './time';
 import { Client, ServiceRequest, Work } from './types';
 
@@ -12,7 +12,8 @@ import { Client, ServiceRequest, Work } from './types';
 // - criado → anti-spam (3 pedidos/24 h por cliente marca `flagged`), alerta
 //   interno no Painel do backoffice, alerta "Recebemos o teu pedido" ao
 //   cliente (push pela onNotificationCreated), email à equipa
-//   (quotes@marble.pt) e ao cliente pelo Resend, quando ligado;
+//   (quotes@marble.pt) e ao cliente pelo Resend, quando ligado — o alerta
+//   e o email ao cliente no idioma dele (`clients.locale`, Secção 12b);
 // - fotos removidas (anonimização) ou pedido apagado → ficheiros fora do
 //   Cloudinary pela tag `request_<id>`.
 // E o job diário: 12 meses depois de fechado, o pedido perde os dados
@@ -100,6 +101,7 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   const client = clientSnap.exists ? ({ id: clientSnap.id, ...clientSnap.data() } as Client) : null;
   const work = workSnap?.exists ? ({ id: workSnap.id, ...workSnap.data() } as Work) : null;
   const photoUrl = work?.photoUrl || req.photos?.[0]?.thumbnailUrl;
+  const locale = clientLocale(client);
 
   // 2. Alerta interno (Painel do backoffice) e confirmação ao cliente.
   const teamAlertId = await createNotification(
@@ -111,7 +113,7 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   if (hasAppAccount(client)) {
     confirmationId = await createNotification(
       db,
-      { clientId: req.clientId, type: 'message', ...TEXTS.requestConfirmation(req), relatedRequestId: req.id, relatedWorkId: req.workId, photoUrl },
+      { clientId: req.clientId, type: 'message', ...TEXTS.requestConfirmation(locale, req), relatedRequestId: req.id, relatedWorkId: req.workId, photoUrl },
       now
     );
   }
@@ -122,7 +124,7 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
     try {
       const url = `${deps.email.backofficeUrl.replace(/\/$/, '')}/pedidos/${req.id}`;
       await sendEmail(deps.email, { to: deps.email.to, replyTo: req.email || undefined, ...TEXTS.requestTeamEmail(req, url) });
-      if (req.email) await sendEmail(deps.email, { to: req.email, replyTo: deps.email.to, ...TEXTS.requestClientEmail(req) });
+      if (req.email) await sendEmail(deps.email, { to: req.email, replyTo: deps.email.to, ...TEXTS.requestClientEmail(locale, req) });
       patch.emailSentAt = ts;
     } catch (err) {
       patch.emailError = err instanceof Error ? err.message : String(err);
@@ -132,7 +134,7 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
     log(`pedido ${req.id}: email desligado (QUOTE_EMAIL=off) — só alerta interno e alerta na app`);
   }
   await ref.update(clean(patch));
-  log(`pedido ${req.id} (${req.department}, ${req.name}): alerta interno ${teamAlertId}${confirmationId ? `, confirmação ${confirmationId}` : ' (cliente sem app)'}`);
+  log(`pedido ${req.id} (${req.department}, ${req.name}): alerta interno ${teamAlertId}${confirmationId ? `, confirmação ${confirmationId}${locale === 'en' ? ' (en)' : ''}` : ' (cliente sem app)'}`);
 }
 
 // Tira os dados pessoais de um pedido: contactos, texto, campos, fotos e
