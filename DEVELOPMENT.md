@@ -298,9 +298,13 @@ formulário mostra as datas calculadas antes e "Enviado a …" depois.
 ### Deploy, segredos e logs
 
 Só o **dev** a partir do Claude (autorizado em `.claude/settings.json`);
-prod na Secção 11. Exige o plano **Blaze** no projeto (cartão associado;
-custo ~0 a este volume — as Functions v2 têm 2 M invocações/mês grátis e
-o job diário faz umas dezenas de leituras).
+prod com confirmação do Fábio na conversa (feito pela primeira vez na
+Secção 11, 2026-09-06). Exige o plano **Blaze** no projeto (cartão
+associado; custo ~0 a este volume — as Functions v2 têm 2 M invocações/mês
+grátis e o job diário faz umas dezenas de leituras). Os parâmetros que
+diferem entre projetos vivem em `functions/.env.<projectId>`
+(`functions/.env.marble-studios-prod`), que a CLI lê por cima do
+`functions/.env`.
 
 ```bash
 npx.cmd firebase-tools deploy --project dev --only functions
@@ -639,11 +643,12 @@ Fábio em SPEC.md ("Decidido … Secção 8").
   `decideCheckupRequest`, `proposeCheckupDay`, `markCheckupDone`,
   `saveCheckupAvailability`) são as do `checkup-admin.mjs`; `models.ts`
   copiado. Detalhe no README do backoffice, "Checkups (Secção 7b)".
-  **Por corrigir aqui (Function, pequeno):** quando a equipa aprova uma
-  proposta ("Aprovar na mesma"), `handleVehicleUpdated` vê
-  `proposed → approved` e cria o alerta interno "confirmou o checkup" como
-  se fosse o cliente — distinguir por `decidedAt` (mudou = equipa) vs
-  `confirmedAt` (cliente).
+  **Function (2026-09-06):** `handleVehicleUpdated` distingue quem passou
+  a proposta a `approved` — o cliente (só `status` + `confirmedAt`) gera o
+  alerta interno "confirmou o checkup"; a equipa ("Aprovar na mesma",
+  mexe em `decidedAt`) não. `'checkup'` saiu de `RequestType` e
+  `vehicleId` de `ServiceRequest` (modelo, `functions/src/types.ts`,
+  `texts.ts`, regras): pedidos são só orçamentos.
 
 ## Páginas de departamento (Secção 9)
 
@@ -1039,9 +1044,10 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
 | Regras e índices do Firestore | publicados (versão do master de 2026-09-05, já com as Secções 7 e 8; republicar na parte 2 se mudarem entretanto) |
 | App Android `pt.marble.app` | registada; `google-services.prod.json` no EAS |
 | Hosting `marble-studios-app` | publicado (4 páginas) |
-| Blaze | **por fazer (Fábio)** — ligar o projeto à "My Billing Account" |
-| Segredos do Cloudinary e do Resend | **por fazer (Fábio)** — `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY` |
-| Cloud Functions | **por publicar** (depois do Blaze): `deploy --only functions --project prod`; depois dos segredos, `CLOUDINARY_CLEANUP=on`, `QUOTE_EMAIL=on` e `BACKOFFICE_URL` do prod em `functions/.env` |
+| Blaze | feito (2026-09-06) pela consola do Firebase — a página "Change billing" do Google Cloud dizia "No available billing accounts"; o Upgrade no Firebase com a "My Billing Account" funcionou |
+| Segredos do Cloudinary e do Resend | feitos (2026-09-06, Fábio): `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY` no Secret Manager do prod. **Rodar antes do lançamento** (ficaram colados na conversa — checklist 6d) |
+| Parâmetros por projeto | `functions/.env.marble-studios-prod` sobrepõe-se ao `functions/.env` só no prod (a CLI lê `.env.<projectId>`): `CLOUDINARY_CLEANUP=on`; `QUOTE_EMAIL=off` até o domínio marble.pt estar verificado no Resend (checklist 6c), depois `on` + `BACKOFFICE_URL` do backoffice de produção |
+| Cloud Functions | **publicadas (2026-09-06)**: `onNotificationCreated`, `onWorkWritten`, `onClientUpdated`, `onRequestWritten`, `onVehicleUpdated`, `dailyJobs` em `europe-west1`, com a versão do master desse dia (Secções 6, 7, 8 e 13). O primeiro deploy falhou duas vezes (bucket de sources e permissões do Eventarc), a terceira, 4 minutos depois, passou — igual ao dev. Republicar quando `functions/src` mudar ou quando `QUOTE_EMAIL` passar a `on` |
 | Chave FCM V1 do prod no EAS | **por fazer (Fábio)** |
 | App Check (pedidos de orçamento) | **por fazer** (parte 2, precisa das apps nas lojas) |
 | Auth | Email/Password ativo; templates de email por defeito em inglês — traduzir em Authentication → Templates (o "Password reset" é também o "define a tua password" das contas criadas por um pedido de orçamento) |

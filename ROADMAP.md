@@ -534,8 +534,9 @@ e os textos (`requestKind`) já distinguem o tipo; a página Pedidos mostra
 em paralelo e o fluxo decidido pelo Fábio (disponibilidade da equipa,
 aprovação, proposta de outro dia, confirmação do cliente) não cabe em
 recebido → em contacto → fechado. O pedido de checkup vive em
-`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` ficou sem
-uso e pode sair na Secção 7b.
+`vehicles/{id}.checkupRequest`; `'checkup'` em `RequestType` (e o
+`vehicleId` de `ServiceRequest`) ficaram sem uso e saíram na Secção 7b
+(2026-09-06: modelo, `functions/src/types.ts`, `texts.ts`, regras).
 **Para as Secções 9 e 10:** `navigation.navigate('RequestQuote', { department: 'ai' | 'ads' | 'xps' })`
 — os três formulários já existem em `requestForms.ts`.
 **Para a Secção 11:** `RESEND_API_KEY` no prod, `BACKOFFICE_URL` do prod em
@@ -618,12 +619,20 @@ disponibilidade inicial seg–sex manhã e tarde (seed) mantida.
 `vehicle-example`): propor → "Proposta de checkup" no cliente; aprovar →
 "Checkup agendado"; marcar em dia; cancelar (Admin SDK) → `declined` em
 todo o lado; "Por fechar"; guardar/repor disponibilidade (confirmado com
-`checkup:admin availability`); estados repostos no fim. **Para a
-Function (app, pequeno):** quando a equipa aprova uma proposta,
-`handleVehicleUpdated` vê `proposed → approved` e cria também o alerta
-interno "confirmou o checkup" como se fosse o cliente — distinguir por
-`decidedAt` (mudou = equipa) vs `confirmedAt` (cliente). Detalhe no
+`checkup:admin availability`); estados repostos no fim. Detalhe no
 README do backoffice, "Checkups (Secção 7b)".
+**Remate na app (2026-09-06, worktree `seccao-7b-function-fix`):**
+`handleVehicleUpdated` distingue quem passou a proposta a `approved` — o
+cliente (só `status` + `confirmedAt`) gera o alerta interno "confirmou o
+checkup"; a equipa ("Aprovar na mesma", mexe em `decidedAt`) já não; a
+nota da proposta continua fora do "Checkup agendado" nos dois casos.
+`'checkup'` saiu de `RequestType` e `vehicleId` de `ServiceRequest`
+(modelo, `functions/src/types.ts`, `texts.ts` só "pedido de orçamento",
+`firestore.rules`). Function `onVehicleUpdated` e regras publicadas no
+dev; verificado com propor → aprovar pela equipa (sem alerta "confirmou")
+e estados repostos. **Fica:** copiar `models.ts` para o backoffice
+(`src/firebase/models.ts`) quando a Secção 13 sair do checkout — só
+comentários e o tipo, nada muda no que o backoffice faz.
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
@@ -919,8 +928,14 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   Apple ID da empresa → Apple Developer Program (organização, 99 €/ano) →
   Google Play Console (organização, 25 $) → Blaze no prod ("My Billing
   Account") → segredos do Cloudinary no prod → chave FCM V1 do prod no EAS
-  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
-  criada ainda; Blaze, segredos e FCM por fazer.
+  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-06: nenhuma conta
+  de programador criada ainda; **Blaze no prod, os três segredos
+  (Cloudinary + Resend) e o deploy das seis Functions no prod feitos** a
+  2026-09-06 (`functions/.env.marble-studios-prod`: limpeza do Cloudinary
+  ligada, emails de orçamento desligados até o domínio marble.pt estar
+  verificado no Resend); falta a chave FCM do prod no
+  EAS, o domínio marble.pt no Resend (DNS) e rodar as duas chaves que
+  ficaram na conversa antes do lançamento (checklist 6c e 6d).
 - *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
   índices no prod se tiverem mudado; deploy das Functions no prod
   (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
