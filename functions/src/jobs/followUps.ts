@@ -1,7 +1,7 @@
 import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { canReceive, hasAppAccount } from '../consent';
 import { createNotification } from '../notify';
-import { TEXTS } from '../texts';
+import { clientLocale, TEXTS } from '../texts';
 import { addDays, daysBetween } from '../time';
 import { Client, Vehicle, Work, WorkFollowUp } from '../types';
 
@@ -61,14 +61,14 @@ export async function runFollowUps(db: Firestore, now: Date, log: JobLog = () =>
     if (hasStep(fu.checkupDays) && !fu.checkupSentAt && addDays(completed, fu.checkupDays) <= now) {
       if (client && vehicle) {
         if (hasAppAccount(client)) {
-          const t = TEXTS.checkupReminder(work, vehicle);
+          const t = TEXTS.checkupReminder(clientLocale(client), work, vehicle);
           await createNotification(
             db,
             { clientId: client.id, type: 'checkup_reminder', ...t, photoUrl: vehicle.photoUrl || work.photoUrl, relatedVehicleId: vehicle.id, relatedWorkId: work.id },
             now
           );
           summary.checkups++;
-          log(`checkup → ${client.email || client.id} · ${vehicle.name} · ${work.title}`);
+          log(`checkup → ${client.email || client.id}${clientLocale(client) === 'en' ? ' (en)' : ''} · ${vehicle.name} · ${work.title}`);
         } else {
           const t = TEXTS.teamAlertNoAccount(client, work, vehicle);
           await createNotification(db, { clientId: client.id, type: 'team_alert', ...t, relatedVehicleId: vehicle.id, relatedWorkId: work.id }, now);
@@ -117,7 +117,7 @@ export async function runFollowUps(db: Firestore, now: Date, log: JobLog = () =>
     if (hasStep(fu.offerDays) && !fu.offerSentAt && !fu.offerSkipped && addDays(completed, fu.offerDays) <= now) {
       const allowed = canReceive(client, 'offer');
       if (allowed.ok && client && vehicle) {
-        const t = TEXTS.offerFreeWash(client, work, vehicle);
+        const t = TEXTS.offerFreeWash(clientLocale(client), client, work, vehicle);
         await createNotification(
           db,
           { clientId: client.id, type: 'offer', ...t, photoUrl: vehicle.photoUrl || work.photoUrl, relatedVehicleId: vehicle.id, relatedWorkId: work.id },
@@ -126,7 +126,7 @@ export async function runFollowUps(db: Firestore, now: Date, log: JobLog = () =>
         patch['followUp.offerSentAt'] = ts;
         next.offerSentAt = ts;
         summary.offers++;
-        log(`oferta → ${client.email || client.id} · ${vehicle.name}`);
+        log(`oferta → ${client.email || client.id}${clientLocale(client) === 'en' ? ' (en)' : ''} · ${vehicle.name}`);
       } else {
         const reason = !allowed.ok && allowed.reason === 'no_consent' ? 'no_consent' : 'no_account';
         patch['followUp.offerSkipped'] = reason;

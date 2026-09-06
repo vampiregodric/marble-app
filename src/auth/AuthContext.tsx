@@ -17,7 +17,8 @@ import { COLLECTIONS, Client } from '../firebase/models';
 import { LEGAL_VERSION } from '../legal/texts';
 import { forgetPushToken, syncPushToken } from '../push/push';
 import { signInWithDevTokenFromUrl } from './devToken';
-import { languageTag, S } from '../i18n';
+import { languageTag, locale, S } from '../i18n';
+import type { Locale } from '../i18n';
 
 export type SignUpInput = {
   name: string;
@@ -69,14 +70,19 @@ function clientRef(uid: string) {
 
 // Grava clients/{uid}.lastActiveAt no máximo uma vez por dia (e uma vez por
 // sessão da app). É a "atividade" que o job de retenção da Secção 6 usa:
-// contas sem atividade há 3 anos são apagadas (src/legal/texts.ts).
+// contas sem atividade há 3 anos são apagadas (src/legal/texts.ts). Na
+// mesma escrita vai `locale` sempre que o guardado for outro (o cliente
+// mudou o idioma do telemóvel, ou a conta é anterior à Secção 12b): é o
+// idioma em que as Cloud Functions escrevem os alertas automáticos.
 const lastActiveTouched = new Set<string>();
 function touchLastActive(uid: string, data: Omit<Client, 'id'>) {
   if (data.deletedAt || lastActiveTouched.has(uid)) return;
   lastActiveTouched.add(uid);
+  const patch: { lastActiveAt?: ReturnType<typeof serverTimestamp>; locale?: Locale } = {};
   const last = data.lastActiveAt?.toMillis?.() ?? 0;
-  if (Date.now() - last < 24 * 60 * 60 * 1000) return;
-  updateDoc(clientRef(uid), { lastActiveAt: serverTimestamp() }).catch(() => {});
+  if (Date.now() - last >= 24 * 60 * 60 * 1000) patch.lastActiveAt = serverTimestamp();
+  if (data.locale !== locale) patch.locale = locale;
+  if (Object.keys(patch).length) updateDoc(clientRef(uid), patch).catch(() => {});
 }
 
 // Password aleatória para a conta criada a partir de um pedido de orçamento
@@ -98,6 +104,8 @@ async function createClientDoc(user: User, extra: { name: string; phone?: string
     name: extra.name,
     email: user.email ?? '',
     phone: extra.phone ?? '',
+    // Idioma do telemóvel (Secção 12b) — os alertas automáticos saem nele.
+    locale,
     notificationPrefs: DEFAULT_PREFS,
     // Sem aceitação registada (doc recriado após falha), o Perfil pede-a.
     ...(extra.acceptedTerms && {

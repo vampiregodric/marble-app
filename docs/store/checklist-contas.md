@@ -161,11 +161,13 @@ pergunta `Enter a value for …`, nunca na conversa.
    a chave que lá está (é a do dev, carregada na Secção 6) por esta do prod.
    Desde a Secção 11, `pt.marble.app` é só produção.
 3. A chave do dev (`serviceAccountKey.dev.json`) volta a ser carregada, no
-   mesmo sítio, mas em **pt.marble.app.dev** — esse identificador só aparece
-   no EAS depois da primeira build de desenvolvimento com o pacote novo
-   (`npx.cmd eas-cli build --profile development --platform android`, quando
-   quiseres; a dev build atual continua a funcionar até lá, mas sem push
-   depois do passo 2).
+   mesmo sítio, mas em **pt.marble.app.dev**. A primeira build de
+   desenvolvimento com o pacote novo foi lançada a 2026-09-06
+   (https://expo.dev/accounts/marble-studios/projects/marble-studios/builds/419b6df0-fb60-4cf6-b610-81d5f8f69a82),
+   por isso o identificador já aparece nas credenciais do EAS. Instala o
+   APK dessa build no telemóvel ("Marble Dev", fica ao lado da app antiga)
+   e carrega lá a chave; a dev build antiga (`pt.marble.app`) deixa de
+   receber push depois do passo 2.
 
 ### 8. Deploy das Functions no prod — 5 min, depois dos passos 5 e 6
 
@@ -178,7 +180,12 @@ npx.cmd firebase-tools deploy --only functions --project prod
 Falha 2 a 3 vezes na primeira vez por propagação de APIs — repetir resolve
 (ver DEVELOPMENT.md, "Blaze no dev").
 
-## Parte 2 (só depois das Secções 7, 8, 10 e 12 no master)
+## Parte 2 — o que fica à espera das contas
+
+As Secções 7, 8, 10, 12 e 13 já estão no master e o que não dependia das
+contas ficou feito a 2026-09-06 (regras no prod, dev build nova, emails do
+Auth no dev, tecto diário de pedidos, docs das lojas revistos). A ordem do
+que falta está no ROADMAP, Secção 11, "Bloqueado nas contas". Do teu lado:
 
 - **Conta de serviço do Google Play para o `eas submit`** (15 min): Play
   Console → Setup → API access → criar conta de serviço no Google Cloud →
@@ -199,14 +206,49 @@ Falha 2 a 3 vezes na primeira vez por propagação de APIs — repetir resolve
   confirmar com o dono; e **revisão por advogado** dos dois textos. Se
   mudarem: subir `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
 - **iPhone** para testar a build iOS no TestFlight antes de submeter.
-- **Emails do Firebase Auth em português** (10 min, nos dois projetos):
-  consola Firebase → Authentication → Templates. O template "Password
-  reset" é também o email "define a tua password" das contas criadas a
-  partir de um pedido de orçamento (Secção 7), por isso vale mesmo a pena
-  traduzi-lo antes do lançamento.
-- **App Check** (anti-spam a sério nos pedidos de orçamento): o Claude
-  configura na parte 2 (Play Integrity no Android, App Attest/DeviceCheck no
-  iOS, reCAPTCHA na web); precisa das apps registadas nas lojas.
+- **Emails do Firebase Auth no prod** (5 min). Decisão de 2026-09-06: os
+  templates ficam **por defeito** — a app diz ao Firebase o idioma do
+  telemóvel e o email "repor password" (que é também o "define a tua
+  password" das contas criadas por um pedido de orçamento) sai em PT ou EN
+  sozinho; um template personalizado ficaria só numa língua. Muda-se só o
+  idioma de reserva do projeto para português e o nome do remetente para
+  "Marble Studios". No dev já está. No prod, uma de duas:
+  - com a chave do prod do passo 7.1 na pasta do projeto, pede ao Claude
+    `npm run auth:emails -- ./serviceAccountKey.prod.json --apply` (mostra
+    o estado antes e depois e confirma que nenhum template ficou
+    personalizado);
+  - ou na consola: https://console.firebase.google.com/project/marble-studios-prod/authentication/emails
+    → lápis ao lado de "Idioma do modelo" (Template language) → Português;
+    e em cada template, só o campo **Nome do remetente** → `Marble Studios`
+    (não toques no assunto nem na mensagem).
+  Opcional, precisa do DNS: no mesmo ecrã, "Personalizar domínio" põe o
+  remetente em `noreply@marble.pt` em vez de `noreply@marble-studios-prod.firebaseapp.com`
+  (registos DNS como no Resend).
+
+## Depois das lojas — Secção 11c, App Check (anti-spam a sério)
+
+Só faz sentido quando as duas contas existirem, e a app usa o SDK JS do
+Firebase, por isso é uma mini-secção própria (o Claude faz o código; tu
+destravas três coisas):
+
+1. **Play Console → App integrity → Play Integrity API → Link Cloud
+   project** → escolhe `marble-studios-prod` (e `marble-studios-dev`, se
+   quiseres testar a sério no dev). Sem isto o Android não recebe tokens.
+2. **Apple Developer → Certificates, Identifiers & Profiles → Keys → +** →
+   ativa **DeviceCheck** → descarrega o `.p8` (uma vez só; guarda-o) e
+   anota o **Key ID** e o **Team ID**. É o que a consola do Firebase pede ao
+   registar a app iOS no App Check.
+3. Dá ao Claude luz verde para a build nova: entra o módulo nativo
+   `@react-native-firebase/app-check` (Play Integrity + App Attest com
+   DeviceCheck de reserva, debug tokens nas dev builds), a ponte para o SDK
+   JS, o registo das apps no App Check (SHA-256 do keystore do EAS, chave
+   DeviceCheck, reCAPTCHA para a app web), e a criação do pedido de
+   orçamento passa para uma Cloud Function callable com `enforceAppCheck`
+   — assim só os pedidos ficam protegidos e o backoffice não muda. Primeiro
+   em modo "só regista" (métricas na consola), depois obrigatório.
+
+Até lá, a defesa do lado do servidor é o tecto diário de pedidos
+(`REQUEST_DAILY_CAP` em `functions/.env`, ver DEVELOPMENT.md).
 
 ## O que o Claude já fez / faz sozinho (sem contas)
 
@@ -215,8 +257,13 @@ Falha 2 a 3 vezes na primeira vez por propagação de APIs — repetir resolve
 - `app.json` / `app.config.js` / `eas.json` prontos para a build de
   produção; `.env.production` no git; `google-services.json` do dev na raiz
   (pacote `pt.marble.app.dev`) e o do prod no EAS.
-- Regras e índices do Firestore publicados no prod; app Android registada no
-  Firebase prod; páginas legais e de suporte publicadas em
-  https://marble-studios-app.web.app/.
-- Parte 2: build de produção, screenshots, `eas submit`, deploy das Functions
-  no prod (com a tua confirmação).
+- Regras e índices do Firestore publicados no prod (republicados a
+  2026-09-06); app Android registada no Firebase prod; páginas legais e de
+  suporte publicadas em https://marble-studios-app.web.app/.
+- 2026-09-06: dev build "Marble Dev" (`pt.marble.app.dev`) lançada no EAS;
+  emails do Auth no dev (idioma de reserva PT, remetente "Marble Studios");
+  tecto diário de pedidos nas Functions; `data-safety.md`, `app-privacy.md`
+  e `ficha-loja.md` revistos contra a app atual (prontos a copiar).
+- Falta (com a tua confirmação em cada passo): deploy das Functions no prod
+  depois da Secção 12b, builds de produção, screenshots, `eas submit`, conta
+  de demonstração no prod.

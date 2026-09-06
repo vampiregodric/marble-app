@@ -3,7 +3,7 @@ import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { CloudinaryConfig, deleteAvatarFiles } from '../cloudinary';
 import { hasAppAccount } from '../consent';
 import { createNotification } from '../notify';
-import { TEXTS } from '../texts';
+import { clientLocale, TEXTS } from '../texts';
 import { addDays } from '../time';
 import { Client } from '../types';
 import { JobLog } from './followUps';
@@ -115,7 +115,7 @@ export async function runRetention(db: Firestore, deps: RetentionDeps, now: Date
     }
     if (!client.retentionWarnedAt) {
       const deleteOn = addDays(now, WARNING_DAYS);
-      await createNotification(db, { clientId: client.id, type: 'message', ...TEXTS.retentionWarning(deleteOn) }, now);
+      await createNotification(db, { clientId: client.id, type: 'message', ...TEXTS.retentionWarning(clientLocale(client), deleteOn) }, now);
       await db.collection('clients').doc(client.id).update({ retentionWarnedAt: Timestamp.fromDate(now) });
       summary.warned++;
       log(`aviso de eliminação → ${client.email || client.id} (inativo desde ${activity.toISOString().slice(0, 10)})`);
