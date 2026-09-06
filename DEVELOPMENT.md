@@ -719,8 +719,9 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
 - **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
   escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
   cair os que não pertencem), marcas com Enter/vírgula e sugestões
-  (`datalist`) das fixas + já usadas noutros trabalhos. **Publicar exige
-  pelo menos um serviço**; um rascunho pode ficar sem. Trabalhos antigos:
+  (`datalist`) das fixas + já usadas noutros trabalhos. Publicar sem
+  serviço **só avisa** (toast; decisão do Fábio, 2026-09-06): o trabalho sai
+  na app, mas fica fora do filtro por serviço. Trabalhos antigos:
   marcas pré-preenchidas a partir de `products`, aviso com o texto antigo,
   `products` apagado ao guardar. A lista mostra a linha das tags, o selo
   "Sem tags" nos publicados sem serviço, e a pesquisa apanha tags.
