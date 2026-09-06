@@ -1297,6 +1297,41 @@ precisar de configuração no URL web. Não toca em `functions/`,
 (alertas automáticos em inglês) e a Secção 11 parte 2 (builds, App Check).
 Pré-visualização web: `marble-app-web-8084`.
 
+### Secção 15 — Notificações logo a seguir ao registo
+**Estado:** Por fazer
+**Depende de:** Secções 2, 3, 6 e 12 no master (feito). Só app (`src/`);
+não toca no backoffice, nas regras nem nas Functions. Pode correr em
+paralelo com a parte 2 da Secção 11 (que não toca em `src/`).
+**Objetivo (pedido do Fábio, 2026-09-07, ao instalar a "Marble Dev"):**
+"as pessoas quando criam conta deviam ter tudo ativo". Não pode ser
+literalmente isso — na UE o consentimento de marketing tem de ser um gesto
+da pessoa (nada pré-marcado; decisão da Secção 3), e os lembretes
+operacionais já vão sempre. O que se faz é **perguntar no momento certo**:
+logo a seguir a criar conta (e no primeiro login de uma conta sem push
+ativo), um passo único "Recebe os alertas no telemóvel":
+- Botão **Ativar notificações** → `enablePush()` (o pedido do sistema, iOS
+  e Android). Recusado → o mesmo tratamento do ecrã Alertas ("Abrir
+  definições"). No web e no Expo Go (`pushSupported` false) o botão não
+  aparece.
+- Interruptor **Ofertas e novidades** mesmo ao lado, **desligado** por
+  defeito, um toque para ligar (`setMarketingConsent(true)`, que já grava
+  `consent.marketing` + `marketingUpdatedAt`); as categorias ficam como
+  hoje no Perfil.
+- Ligação **Agora não** → segue para os tabs; o cartão do ecrã Alertas
+  continua a existir para quem saltou.
+- Texto curto a explicar a diferença (lembretes de checkup vão sempre;
+  ofertas só se quiseres), em PT e EN (`src/i18n/`).
+- Onde: ecrã novo `NotificationsOnboardingScreen` empilhado no
+  `RootNavigator` depois do `signUp` com sucesso (e no login quando
+  `pushSupported && !pushEnabled && !client.onboardingSeenAt`); gravar
+  `clients/{uid}.onboardingSeenAt` (o dono já pode escrever no seu doc —
+  sem mudar regras) para não repetir. Sem ícones decorativos.
+**Critério de conclusão:** criar conta na Marble Dev → aparece o passo →
+"Ativar notificações" pede a permissão do Android → token em
+`clients.pushTokens` → um alerta enviado pelo backoffice chega como push;
+"Ofertas e novidades" ligado no passo aparece ligado no Perfil; no web o
+passo mostra só o interruptor; `npm run typecheck` limpo; PT e EN.
+
 ---
 
 ## Notas para quem pega numa secção
