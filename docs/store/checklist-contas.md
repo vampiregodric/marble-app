@@ -134,9 +134,20 @@ npx.cmd firebase-tools functions:secrets:set RESEND_API_KEY --project prod
 (a chave está em https://resend.com → API Keys; a mesma do dev serve). Sem a
 chave o pedido chega na mesma ao Painel e à app; só o email fica por enviar.
 
-### 6c. Domínio marble.pt no Resend — 15 min, precisa do acesso ao DNS
+### 6c. Domínio marble.pt no Resend — FEITO (2026-09-07)
 
-A conta do Resend ainda não tem domínio. Sem ele o Resend só envia do
+Domínio `marble.pt` verificado no Resend (região Irlanda, eu-west-1) com
+quatro registos no cPanel da PTisp: TXT `resend._domainkey` (DKIM), CNAME
+`rsend` e `send` (SPF/return-path do Resend), TXT `_dmarc` (`v=DMARC1;
+p=none;`). "Enable Receiving" ficou desligado de propósito (mudaria o MX e
+o email atual deixava de chegar). Logo a seguir o Claude pôs
+`QUOTE_EMAIL=on` e `BACKOFFICE_URL=https://marble-studios-backoffice.web.app`
+em `functions/.env.marble-studios-prod` e republicou as Functions no prod:
+os pedidos de orçamento em produção passam a enviar email à equipa
+(quotes@marble.pt, caixa confirmada) e a confirmação ao cliente, ambos de
+app@marble.pt. Instruções originais, para referência:
+
+A conta do Resend não tinha domínio. Sem ele o Resend só envia do
 endereço de teste dele, e os emails "de app@marble.pt" são recusados.
 
 - https://resend.com/domains → **Add domain** → `marble.pt` → o Resend
