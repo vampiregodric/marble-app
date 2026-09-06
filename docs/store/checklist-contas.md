@@ -178,7 +178,15 @@ antes do lançamento convém rodá-los:
 Regra para o futuro: as chaves colam-se só na janela do PowerShell, na
 pergunta `Enter a value for …`, nunca na conversa.
 
-### 7. Chave de push (FCM V1) do prod no EAS — 10 min
+### 7. Chave de push (FCM V1) do prod no EAS — FEITO (2026-09-07)
+
+`serviceAccountKey.prod.json` (gerada na consola do Firebase prod, guardada
+na pasta do projeto, fora do git) carregada no EAS em `pt.marble.app`; a
+do dev (`serviceAccountKey.dev.json`) em `pt.marble.app.dev`. O painel do
+Expo deu "Entity not found: AndroidAppCredentialsEntity" ao tentar
+substituir a chave antiga (referência a um registo apagado); resolveu-se
+apagando a chave antiga, recarregando a página e adicionando de novo.
+Instruções originais, para referência:
 
 1. https://console.firebase.google.com/project/marble-studios-prod/settings/serviceaccounts/adminsdk
    → **Generate new private key** → guarda como `serviceAccountKey.prod.json`
