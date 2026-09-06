@@ -535,7 +535,19 @@ Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
   dá o erro "Upload preset not found" do Cloudinary e o pedido não sai.
 - **Anti-spam na app:** `REQUEST_LIMITS.perDayMax` (3) pedidos por
   dispositivo em 24 h, em AsyncStorage (`src/data/requests.ts`). Não é
-  segurança — a Function marca do lado dela. App Check fica para a Secção 11.
+  segurança — a Function marca do lado dela.
+- **Anti-spam na Function (duas camadas):** (1) o mesmo cliente com 3+
+  pedidos em 24 h → `flagged: 'rate_limit'`; (2) **tecto diário** (Secção
+  11, 2026-09-06): `REQUEST_DAILY_CAP` em `functions/.env` (20; 0 =
+  desligado) — mais do que isso em 24 h no projeto inteiro, venham de que
+  contas vierem, → `flagged: 'daily_cap'`, sem alerta interno, confirmação
+  nem email, e **um** `team_alert` por dia ("Possível spam: N pedidos…";
+  `system/requestGuard` guarda quando foi e quantos ficaram marcados desde
+  então). A contagem é uma agregação `count()` em `createdAt` (índice
+  simples, sem índice composto). Um pedido marcado aparece na mesma na
+  página Pedidos com o aviso "possível spam" — a equipa responde-lhe se for
+  real. **App Check** (a defesa a sério) ficou para depois das lojas — ver
+  "Lançamento nas lojas", "App Check".
 - **RGPD:** política de privacidade com os pedidos (dados, base legal =
   diligências pré-contratuais, fotos, Resend como subcontratante, prazo) e
   `LEGAL_VERSION` 2026-09-05 (todas as contas veem uma vez o cartão
@@ -555,7 +567,13 @@ Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
   No browser (8082): o Firebase guarda a sessão por origem — se o tab já
   esteve com sessão, o formulário aparece na versão "com conta"; termina
   sessão no Perfil para ver a criação de conta. `npm run functions:jobs --
-  <chave> --request <id>` simula o trigger sem deploy. Contas de teste
+  <chave> --request <id>` simula o trigger sem deploy (`--daily-cap N` liga
+  o tecto diário nessa simulação; sem a flag lê `REQUEST_DAILY_CAP` do
+  ambiente, senão fica desligado). Para testar o tecto sem deploy e sem
+  disputar com a Function publicada: criar o pedido de teste já com
+  `processedAt` (a Function publicada ignora-o), tirar o `processedAt` com
+  um update (um update sem fotos não faz nada) e só então correr o handler
+  local — foi assim que se verificou a 2026-09-06. Contas de teste
   criadas nesta secção no dev: `teste.seccao7@example.com` (pedido AI
   Business, criada pelo próprio formulário).
 
@@ -902,8 +920,11 @@ escrevem nos alertas ("seg, 7 set às 10:30"); em EN "Mon, 7 Sep at 10:30".
 no arranque — os templates **por defeito** do Firebase (repor password,
 que é também o "define a tua password" das contas criadas por um pedido de
 orçamento) saem em PT ou EN conforme o telemóvel. Um template
-personalizado na consola é só numa língua; se o Fábio o traduzir na
-Secção 11, é ele que manda.
+personalizado na consola é só numa língua — por isso (decisão do Fábio,
+Secção 11 parte 2, 2026-09-06) os templates **ficam por defeito**; muda-se
+só o idioma de reserva do projeto (PT) e o nome do remetente ("Marble
+Studios") com `npm run auth:emails -- <chave> --apply`
+(`scripts/auth-email-config.mjs`). Ver "Lançamento nas lojas".
 
 **Builds (só contam na parte 2 da Secção 11):** o plugin
 `expo-localization` no `app.json` leva `supportedLocales: ["pt", "en"]`
@@ -921,12 +942,16 @@ não o renomeia (limitação do Android, cosmético).
 
 ## Lançamento nas lojas (Secção 11)
 
-Parte 1 feita a 2026-09-05 — **sem builds nem submissão**, que são a parte
-2 (depois das Secções 7, 8, 10 e 12 estarem no master). O que só o Fábio
-pode fazer (contas Apple/Google, D-U-N-S, Blaze no prod, segredos, chave
-FCM do prod), com links e prazos, está em `docs/store/checklist-contas.md`;
-a ficha das lojas (PT/EN) e os formulários "Data safety" / "App Privacy"
-em `docs/store/ficha-loja.md`, `data-safety.md` e `app-privacy.md`.
+Parte 1 feita a 2026-09-05; parte 2 começada a 2026-09-06 com tudo o que
+não depende das contas das lojas (regras no prod, dev build nova, App
+Check decidido, tecto diário de pedidos, emails do Auth, docs revistos —
+ver "Parte 2" abaixo). O que só o Fábio pode fazer (contas Apple/Google,
+D-U-N-S, chave FCM do prod, Play Integrity/DeviceCheck), com links e
+prazos, está em `docs/store/checklist-contas.md`; a ficha das lojas (PT/EN)
+e os formulários "Data safety" / "App Privacy" em
+`docs/store/ficha-loja.md`, `data-safety.md` e `app-privacy.md` — revistos
+contra a app atual, prontos a copiar. A ordem do que falta está no
+ROADMAP, Secção 11, "Bloqueado nas contas".
 
 ### Ícones, ícone adaptativo e splash
 
@@ -1032,20 +1057,62 @@ atual continua a funcionar, mas fica sem push a partir dessa troca.
   `marble-studios-app` → Add custom domain (dois registos DNS, SSL
   automático). Trocar depois os URLs na ficha das lojas.
 
-### Estado do prod (2026-09-05)
+### Parte 2 (2026-09-06): dev build, App Check, emails do Auth
+
+- **Dev build "Marble Dev"** (`pt.marble.app.dev`, perfil `development`):
+  https://expo.dev/accounts/marble-studios/projects/marble-studios/builds/419b6df0-fb60-4cf6-b610-81d5f8f69a82
+  — lançada com `npx.cmd eas-cli build --profile development --platform
+  android --non-interactive --no-wait` (funciona sem interação: sem
+  `keytool` local, o EAS gera o keystore na nuvem). Traz PT+EN, ícones,
+  splash e `locales/` novos. O EAS avisa que o perfil tem `channel` sem o
+  pacote `expo-updates` — não há OTA, é inofensivo (para calar o aviso:
+  tirar `channel` do `eas.json` ou instalar `expo-updates`). Depois de
+  instalar: `pt.marble.app.dev` aparece nas credenciais do EAS e leva a
+  chave FCM V1 do dev (checklist 7.3). Builds novas só quando mudam
+  módulos nativos ou o `app.json`.
+- **App Check — adiado (decisão do Fábio, 2026-09-06).** Factos que
+  contam: (1) a app usa o SDK JS do Firebase em todas as plataformas (app
+  "web" no Firebase); o SDK JS não tem Play Integrity nem
+  DeviceCheck/App Attest — só `CustomProvider`; a atestação real exige
+  `@react-native-firebase/app-check` (módulo nativo, config plugin, build
+  nova, `GoogleService-Info.plist` no iOS) e uma ponte `CustomProvider →
+  getToken()` nativo para o SDK JS; (2) as Functions de Firestore
+  (`onDocumentWritten`) não veem tokens de App Check — só callables
+  (`onCall({ enforceAppCheck: true })`); (3) a imposição é por serviço e
+  para o projeto inteiro (Firestore, Auth): bloquearia o backoffice e a app
+  web até terem reCAPTCHA; (4) Play Integrity exige ligar o projeto Cloud
+  no Play Console; DeviceCheck/App Attest exige uma chave `.p8` da conta
+  Apple Developer. Plano (Secção 11c, depois das lojas): módulo nativo +
+  ponte; registar as apps no App Check (SHA-256 do keystore do EAS, chave
+  DeviceCheck, reCAPTCHA na web); criar o pedido por uma callable
+  `createQuoteRequest` com `enforceAppCheck` (só os pedidos ficam
+  protegidos; regras de `requests` passam a `create: false` para clientes);
+  primeiro em modo métricas, depois obrigatório. Até lá: tecto diário de
+  pedidos (`REQUEST_DAILY_CAP`, ver "Pedidos de orçamento").
+- **Emails do Firebase Auth:** templates por defeito (localizados pela app
+  — `auth.languageCode`); `npm run auth:emails -- <chave> [--apply]`
+  (`scripts/auth-email-config.mjs`, API `identitytoolkit …/admin/v2/…/config`
+  com a chave de service account) mostra o idioma de reserva, o remetente e
+  se algum template está `customized`, e com `--apply` põe o idioma de
+  reserva em `pt` e o remetente "Marble Studios" sem tocar em assunto nem
+  texto. Feito no dev; no prod quando houver `serviceAccountKey.prod.json`
+  (ou pela consola — checklist). O remetente continua
+  `noreply@<projeto>.firebaseapp.com`; um domínio próprio é DNS do Fábio.
+
+### Estado do prod (2026-09-06)
 
 | | Estado |
 |---|---|
-| Regras e índices do Firestore | publicados (versão do master de 2026-09-05, já com as Secções 7 e 8; republicar na parte 2 se mudarem entretanto) |
+| Regras e índices do Firestore | publicados (versão do master de 2026-09-06, com a Secção 7b — republicados a 2026-09-06; republicar se mudarem: `npx.cmd firebase-tools deploy --only firestore --project prod`, com confirmação do Fábio) |
 | App Android `pt.marble.app` | registada; `google-services.prod.json` no EAS |
 | Hosting `marble-studios-app` | publicado (4 páginas) |
 | Blaze | feito (2026-09-06) pela consola do Firebase — a página "Change billing" do Google Cloud dizia "No available billing accounts"; o Upgrade no Firebase com a "My Billing Account" funcionou |
 | Segredos do Cloudinary e do Resend | feitos (2026-09-06, Fábio): `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY` no Secret Manager do prod. **Rodar antes do lançamento** (ficaram colados na conversa — checklist 6d) |
 | Parâmetros por projeto | `functions/.env.marble-studios-prod` sobrepõe-se ao `functions/.env` só no prod (a CLI lê `.env.<projectId>`): `CLOUDINARY_CLEANUP=on`; `QUOTE_EMAIL=off` até o domínio marble.pt estar verificado no Resend (checklist 6c), depois `on` + `BACKOFFICE_URL` do backoffice de produção |
-| Cloud Functions | **publicadas (2026-09-06)**: `onNotificationCreated`, `onWorkWritten`, `onClientUpdated`, `onRequestWritten`, `onVehicleUpdated`, `dailyJobs` em `europe-west1`, com a versão do master desse dia (Secções 6, 7, 8 e 13). O primeiro deploy falhou duas vezes (bucket de sources e permissões do Eventarc), a terceira, 4 minutos depois, passou — igual ao dev. Republicar quando `functions/src` mudar ou quando `QUOTE_EMAIL` passar a `on` |
-| Chave FCM V1 do prod no EAS | **por fazer (Fábio)** |
-| App Check (pedidos de orçamento) | **por fazer** (parte 2, precisa das apps nas lojas) |
-| Auth | Email/Password ativo; templates de email por defeito em inglês — traduzir em Authentication → Templates (o "Password reset" é também o "define a tua password" das contas criadas por um pedido de orçamento) |
+| Cloud Functions | **publicadas (2026-09-06)**: `onNotificationCreated`, `onWorkWritten`, `onClientUpdated`, `onRequestWritten`, `onVehicleUpdated`, `dailyJobs` em `europe-west1`, com a versão do master desse dia (Secções 6, 7, 8 e 13). O primeiro deploy falhou duas vezes (bucket de sources e permissões do Eventarc), a terceira, 4 minutos depois, passou — igual ao dev. **A versão publicada não tem ainda o tecto diário (`REQUEST_DAILY_CAP`) nem a Secção 12b** — próximo deploy depois da 12b entrar no master (e quando `QUOTE_EMAIL` passar a `on`) |
+| Chave FCM V1 do prod no EAS | **por fazer (Fábio)** — e a do dev em `pt.marble.app.dev`, agora que a dev build nova existe |
+| App Check (pedidos de orçamento) | **adiado para depois das lojas** (Secção 11c) — ver "Parte 2" acima; entretanto `REQUEST_DAILY_CAP` |
+| Auth | Email/Password ativo; templates de email **por defeito** (localizados pela app: PT/EN). Falta no prod: idioma de reserva PT + remetente "Marble Studios" (`npm run auth:emails -- ./serviceAccountKey.prod.json --apply` quando a chave existir, ou consola) |
 | Dados | vazio (o seed recusa chaves do prod, de propósito) |
 
 ## Onde vive o projeto (e porquê)

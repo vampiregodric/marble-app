@@ -538,9 +538,11 @@ export interface ServiceRequest {
   contactedAt?: Timestamp;
   closedAt?: Timestamp;
   // --- Cloud Function onRequestWritten ---
-  // Marcado quando o mesmo cliente já fez 3 pedidos nas últimas 24 h: fica
-  // na página Pedidos com aviso, sem alerta interno nem email.
-  flagged?: 'rate_limit';
+  // Marcado quando o mesmo cliente já fez 3 pedidos nas últimas 24 h
+  // ('rate_limit') ou quando o projeto inteiro passou o tecto diário de
+  // pedidos ('daily_cap', REQUEST_DAILY_CAP em functions/.env — Secção 11):
+  // fica na página Pedidos com aviso, sem alerta interno nem email.
+  flagged?: 'rate_limit' | 'daily_cap';
   processedAt?: Timestamp;
   teamAlertId?: string;
   confirmationId?: string;
