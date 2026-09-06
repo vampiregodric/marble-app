@@ -33,11 +33,11 @@ atribuído pela Informa D&B — por isso primeiro procura, só depois pedes.
   a Apple/Google só o veem até 14 dias depois. Não pagues serviços
   "expresso" da D&B — não são precisos.
 
-### 2. Apple ID da empresa com verificação em dois passos — 15 min
+### 2. Apple ID da empresa com verificação em dois passos — FEITO (2026-09-06)
 
-- https://account.apple.com — usa **app@marble.pt** (a caixa existe e é
-  lida) em vez de um email pessoal: a conta de developer fica ligada à
-  empresa, não a uma pessoa. Liga a verificação em dois passos (obrigatória).
+- Apple ID **app@marble.pt**, com verificação em dois passos; foi o usado
+  na procura do D-U-N-S e na inscrição do passo 3. A conta de developer
+  fica ligada à empresa, não a uma pessoa.
 
 ### 3. Apple Developer Program, como organização — SUBMETIDO (2026-09-06), à espera da Apple
 
@@ -169,9 +169,12 @@ pergunta `Enter a value for …`, nunca na conversa.
    e carrega lá a chave; a dev build antiga (`pt.marble.app`) deixa de
    receber push depois do passo 2.
 
-### 8. Deploy das Functions no prod — 5 min, depois dos passos 5 e 6
+### 8. Deploy das Functions no prod — FEITO (2026-09-06)
 
-Pede ao Claude (ou corre tu):
+As seis Functions estão no prod (`functions:list --project prod`), com
+`functions/.env.marble-studios-prod` (limpeza do Cloudinary ligada; emails
+dos orçamentos desligados até ao passo 6c). Para republicar, pede ao Claude
+(ou corre tu):
 
 ```
 npx.cmd firebase-tools deploy --only functions --project prod
