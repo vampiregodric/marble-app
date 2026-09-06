@@ -381,7 +381,7 @@ export interface Work {
   // Tags (Secção 13): o sistema/serviço (ids de WORK_SERVICES da mesma
   // `category`) e as marcas usadas (texto). Chips no Detalhe pela ordem
   // serviço → marcas (pedido do Fábio); filtro secundário no Portfólio.
-  // O backoffice exige pelo menos um serviço para publicar.
+  // Publicar sem serviço só avisa no backoffice (fica fora do filtro).
   services?: WorkServiceId[];
   brands?: string[];
   // Legado: "produtos usados" de antes da Secção 13. O backoffice apaga-o

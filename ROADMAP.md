@@ -1064,7 +1064,8 @@ dourado, marca em texto normal), Portfólio (segunda fila), i18n
 `models.ts` sincronizado, cartão "Tags" no formulário do trabalho (chips
 de escolha múltipla do sistema/serviço da categoria; marcas com Enter e
 sugestões das já usadas; aviso com o texto antigo; `products` apagado ao
-guardar; **publicar exige pelo menos um serviço**, rascunho não), lista de
+guardar; publicar sem serviço **só avisa** — decisão do Fábio a 2026-09-06,
+depois de a primeira versão bloquear), lista de
 trabalhos com a linha das tags, selo "Sem tags" nos publicados sem serviço
 e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
 `works` já eram só da equipa, sem validação de campos). Detalhes em
