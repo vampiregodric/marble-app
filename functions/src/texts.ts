@@ -63,10 +63,6 @@ function requestSummary(r: ServiceRequest): string {
   return parts.join(' · ') || r.message.trim().slice(0, 80);
 }
 
-function requestKind(r: ServiceRequest): string {
-  return r.type === 'checkup' ? 'pedido de checkup' : 'pedido de orçamento';
-}
-
 export const TEXTS = {
   checkupReminder(work: Work, vehicle: Vehicle) {
     return {
@@ -156,7 +152,7 @@ export const TEXTS = {
   requestTeamAlert(r: ServiceRequest) {
     const what = requestSummary(r);
     return {
-      title: `Novo ${requestKind(r)}: ${DEPARTMENT_NAME[r.department] ?? r.department}`,
+      title: `Novo pedido de orçamento: ${DEPARTMENT_NAME[r.department] ?? r.department}`,
       description: `${r.name || 'Cliente'} · ${r.phone || 'sem telemóvel'} (${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference})${what ? ` · ${what}` : ''}${r.workTitle ? ` · semelhante a "${r.workTitle}"` : ''}. Ver em Pedidos.`,
     };
   },
@@ -164,14 +160,14 @@ export const TEXTS = {
   requestConfirmation(r: ServiceRequest) {
     return {
       title: 'Recebemos o teu pedido',
-      description: `${firstName(r)}, obrigado pelo ${requestKind(r)} (${DEPARTMENT_NAME[r.department] ?? r.department}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
+      description: `${firstName(r)}, obrigado pelo pedido de orçamento (${DEPARTMENT_NAME[r.department] ?? r.department}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
     };
   },
   // Email à equipa (quotes@marble.pt) com tudo o que o cliente escreveu.
   requestTeamEmail(r: ServiceRequest, backofficeUrl: string) {
     const dept = DEPARTMENT_NAME[r.department] ?? r.department;
     const lines = [
-      `Novo ${requestKind(r)} — ${dept}`,
+      `Novo pedido de orçamento — ${dept}`,
       '',
       `Cliente: ${r.name || '—'}`,
       `Telemóvel: ${r.phone || '—'}`,
@@ -199,7 +195,7 @@ export const TEXTS = {
     const text = [
       `Olá ${firstName(r)},`,
       '',
-      `Recebemos o teu ${requestKind(r)} (${dept}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
+      `Recebemos o teu pedido de orçamento (${dept}). A equipa da Marble Studios responde ${RESPONSE_PROMISE}, por ${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference}.`,
       '',
       r.services.length ? `Pediste: ${r.services.join(', ')}.` : '',
       '',
