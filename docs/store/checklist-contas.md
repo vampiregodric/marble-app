@@ -62,16 +62,15 @@ atribuído pela Informa D&B — por isso primeiro procura, só depois pedes.
   teste fechado com 12 testadores durante 14 dias antes de publicar; as de
   organização não.
 
-### 5. Plano Blaze no projeto de produção — 5 min, sem cartão novo
+### 5. Plano Blaze no projeto de produção — FEITO (2026-09-06)
 
-- https://console.cloud.google.com/billing/projects → `marble-studios-prod`
-  → ⋮ → **Change billing** → escolhe **My Billing Account**
-  (`013056-591FBF-81EA13`, a mesma do dev). Não voltes a criar conta de
-  faturação nem a usar o Visa Electron (ver DEVELOPMENT.md, "Blaze no dev").
-- Sem isto não há Cloud Functions no prod: nem push, nem lembretes de
+- Feito pela consola do Firebase (Usage and billing → Upgrade → My Billing
+  Account). A página do Google Cloud "Change billing" dizia "No available
+  billing accounts" e não deixou; o caminho pelo Firebase funcionou.
+- Sem isto não havia Cloud Functions no prod: nem push, nem lembretes de
   checkup, nem limpeza no Cloudinary.
 
-### 6. Segredos do Cloudinary no prod — 5 min, depois do passo 5
+### 6. Segredos do Cloudinary no prod — FEITO (2026-09-06)
 
 No teu PowerShell, na pasta do projeto (os valores estão em Cloudinary →
 Settings → API Keys; o Claude nunca os vê):
@@ -90,7 +89,7 @@ O preset unsigned `marble-requests` (fotos dos pedidos de orçamento, Secção
 7) vive na mesma conta Cloudinary que o dev, por isso já serve o prod — só
 confirma na consola do Cloudinary que existe.
 
-### 6b. Chave do Resend no prod (emails dos pedidos de orçamento) — 5 min, depois do passo 5
+### 6b. Chave do Resend no prod (emails dos pedidos de orçamento) — FEITO (2026-09-06)
 
 A Secção 7 envia por email cada pedido de orçamento (à equipa e a
 confirmação ao cliente) através do Resend, com o domínio marble.pt
@@ -100,10 +99,41 @@ verificado lá. No prod é preciso o mesmo segredo:
 npx.cmd firebase-tools functions:secrets:set RESEND_API_KEY --project prod
 ```
 
-(a chave está em https://resend.com → API Keys; a mesma do dev serve). Só
-depois disto o Claude muda `QUOTE_EMAIL=off` → `on` e `BACKOFFICE_URL` para
-o site do backoffice de produção em `functions/.env` (parte 2). Sem a chave
-o pedido chega na mesma ao Painel e à app; só o email fica por enviar.
+(a chave está em https://resend.com → API Keys; a mesma do dev serve). Sem a
+chave o pedido chega na mesma ao Painel e à app; só o email fica por enviar.
+
+### 6c. Domínio marble.pt no Resend — 15 min, precisa do acesso ao DNS
+
+A conta do Resend ainda não tem domínio. Sem ele o Resend só envia do
+endereço de teste dele, e os emails "de app@marble.pt" são recusados.
+
+- https://resend.com/domains → **Add domain** → `marble.pt` → o Resend
+  mostra 2 ou 3 registos DNS (TXT/MX/CNAME) para copiar para o painel onde
+  o domínio marble.pt está registado (o registrar ou o alojamento). A
+  verificação demora de minutos a algumas horas.
+- Quando estiver "Verified", diz ao Claude: ele muda `QUOTE_EMAIL=off` →
+  `on` e põe o `BACKOFFICE_URL` do backoffice de produção em
+  `functions/.env.marble-studios-prod` e faz novo deploy das Functions no
+  prod. Até lá os pedidos de orçamento chegam ao Painel e à app, sem email.
+
+### 6d. Trocar as chaves que ficaram na conversa — 10 min, antes do lançamento
+
+A chave do Resend e o API secret do Cloudinary foram colados por engano no
+chat com o Claude a 2026-09-06. Não é grave (a conversa é privada), mas
+antes do lançamento convém rodá-los:
+
+- Resend: https://resend.com/api-keys → apagar a chave atual, **Create API
+  Key** → correr outra vez `npx.cmd firebase-tools functions:secrets:set
+  RESEND_API_KEY --project prod` (e `--project dev`) com a nova.
+- Cloudinary: **Settings → API Keys → Generate New API Key**, desativar a
+  "Root" antiga → correr outra vez os dois comandos `CLOUDINARY_API_KEY` e
+  `CLOUDINARY_API_SECRET` (prod e dev) com o par novo. O cloud name não muda.
+- Depois de cada troca, pedir ao Claude um novo deploy das Functions
+  (`deploy --only functions --project prod`), para as funções passarem a
+  ler a versão nova do segredo.
+
+Regra para o futuro: as chaves colam-se só na janela do PowerShell, na
+pergunta `Enter a value for …`, nunca na conversa.
 
 ### 7. Chave de push (FCM V1) do prod no EAS — 10 min
 

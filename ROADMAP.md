@@ -919,8 +919,14 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   Apple ID da empresa → Apple Developer Program (organização, 99 €/ano) →
   Google Play Console (organização, 25 $) → Blaze no prod ("My Billing
   Account") → segredos do Cloudinary no prod → chave FCM V1 do prod no EAS
-  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-05: nenhuma conta
-  criada ainda; Blaze, segredos e FCM por fazer.
+  (e a do dev em `pt.marble.app.dev`). Estado a 2026-09-06: nenhuma conta
+  de programador criada ainda; **Blaze no prod, os três segredos
+  (Cloudinary + Resend) e o deploy das seis Functions no prod feitos** a
+  2026-09-06 (`functions/.env.marble-studios-prod`: limpeza do Cloudinary
+  ligada, emails de orçamento desligados até o domínio marble.pt estar
+  verificado no Resend); falta a chave FCM do prod no
+  EAS, o domínio marble.pt no Resend (DNS) e rodar as duas chaves que
+  ficaram na conversa antes do lançamento (checklist 6c e 6d).
 - *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
   índices no prod se tiverem mudado; deploy das Functions no prod
   (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
