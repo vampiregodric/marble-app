@@ -39,7 +39,14 @@ atribuído pela Informa D&B — por isso primeiro procura, só depois pedes.
   lida) em vez de um email pessoal: a conta de developer fica ligada à
   empresa, não a uma pessoa. Liga a verificação em dois passos (obrigatória).
 
-### 3. Apple Developer Program, como organização — 99 €/ano, 2 a 7 dias depois do D-U-N-S
+### 3. Apple Developer Program, como organização — SUBMETIDO (2026-09-06), à espera da Apple
+
+**Enrollment ID: KM69M55CW8**, Apple ID `app@marble.pt`, entidade
+"Company / Organization", site `https://app.marble.pt`, autoridade
+"owner/founder". A Apple verifica a autoridade de assinatura (email e/ou
+chamada) e envia depois um email com o link para pagar os 99 € e concluir.
+Estado a acompanhar em https://developer.apple.com/enroll/ (entrar com o
+app@marble.pt). Instruções originais, para referência:
 
 - https://developer.apple.com/programs/enroll/ (entra com o Apple ID do
   passo 2; podes inscrever-te pela app "Apple Developer" no iPhone ou no
