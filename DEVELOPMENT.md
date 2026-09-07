@@ -1189,6 +1189,18 @@ erro no código: para o servidor (Ctrl+C) e arranca com a cache limpa:
 npx.cmd expo start --clear
 ```
 
+## Página de progresso
+
+`npm run progress` lê as linhas `**Estado:**` de cada `### Secção` do
+`ROADMAP.md` (e do `ROADMAP.md` do backoffice, se existir ao lado) e o
+histórico git dos dois repositórios, e escreve `scripts/out/progress.html`
+(ignorado pelo git). Essa página é publicada como Artifact privado em
+https://claude.ai/code/artifact/3add05c8-643f-437f-bd09-34fb57c82c85 — é o
+último passo de cada conversa de secção (passos exatos no `CLAUDE.md`).
+Estados reconhecidos, pela primeira palavra: "Feito", "Parte N feita" /
+"em curso" / "bloqueada", "Por fazer", "Ideia"; a percentagem não conta as
+ideias.
+
 ## GitHub: cópia de segurança e trabalhar noutro computador
 
 O repositório está em **https://github.com/vampiregodric/marble-app**

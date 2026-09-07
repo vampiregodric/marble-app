@@ -50,6 +50,7 @@
     "works:migrate-tags": "node scripts/migrate-work-tags.mjs",
     "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
     "build:icons": "node scripts/build-icons.mjs",
+    "progress": "node scripts/build-progress.mjs",
     "dev-token": "node scripts/dev-token.mjs",
     "auth:emails": "node scripts/auth-email-config.mjs",
     "functions:build": "npm --prefix functions run build",

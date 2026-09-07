@@ -71,3 +71,7 @@ credentials.json
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
+
+# Página de progresso gerada por `npm run progress` (publica-se como Artifact,
+# não se versiona — ver CLAUDE.md, "Página de progresso")
+scripts/out/

@@ -50,6 +50,23 @@ próprio. É assim que as secções têm arrancado, cada uma no seu worktree.
   como `Marble Studios — Secção N — Nome da secção`, para ser identificável
   na barra lateral quando houver várias secções em curso.
 
+## Página de progresso (último passo de cada secção)
+
+O Fábio acompanha o projeto numa página privada com o estado de todas as
+secções: **https://claude.ai/code/artifact/3add05c8-643f-437f-bd09-34fb57c82c85**.
+Ela é gerada a partir das linhas `**Estado:**` do `ROADMAP.md`, por isso só
+está certa se cada secção a atualizar ao terminar. Depois do commit e push:
+
+1. `npm run progress` — reescreve `scripts/out/progress.html` (não vai para
+   o git).
+2. Ferramenta `Artifact`, `action: "read"`, `url` = o link acima (obrigatório
+   antes de publicar a partir de uma conversa que nunca o publicou).
+3. Ferramenta `Artifact`, publicar `file_path: scripts/out/progress.html`
+   com `url` = o mesmo link (sem `url` cria-se uma página nova — errado).
+
+Secções que só tocam no backoffice (ex: 12c) também precisam de uma entrada
+curta no `ROADMAP.md` da app — é dele que a página lê.
+
 ## Outras
 
 - No fim da tua secção, atualiza o estado dela no `ROADMAP.md`, faz commit
