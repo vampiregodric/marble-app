@@ -1174,6 +1174,21 @@ Fábio de volta a PT, acompanhamento do trabalho desligado, pedido de
 checkup limpo). O que a equipa escreve (nota da proposta, modelo/descrição
 e nome do trabalho, nome do evento) sai como está, seja qual for o idioma.
 Ver DEVELOPMENT.md, "Idiomas (Secção 12)" → "Alertas".
+**Seguimento (2026-09-07): modelos EN no "Enviar alerta"** — feito no
+backoffice (repositório marble.backoffice, "Secção 12c"; verificado no dev
+na 5181 com a conta de teste em `locale: 'en'`, reposta no fim). O modal
+"Enviar alerta" pré-preenche o título e a mensagem em inglês para os
+clientes com `locale: 'en'` — "Free checkup for your car/floor", "Free
+wash for your …", "Message from Marble Studios", no tom de
+`functions/src/texts.ts` — com um campo "Idioma do texto modelo" (PT/EN)
+que a equipa pode trocar (ex.: estrangeiro com conta anterior à 12b, ainda
+sem `locale`) e que volta ao idioma do cliente quando se troca de cliente;
+como o tipo e o carro, o idioma só muda o texto enquanto a equipa não o
+editar. Os textos PT ficam como estavam. Decisões do Fábio (2026-09-07):
+pré-preencher em EN em vez de só avisar; seletor além do automático;
+títulos EN a variar com o carro/chão como nas Functions. Nada muda na app
+nem nas Functions (o alerta manual continua a ser texto livre em
+`notifications`).
 
 ### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
 **Estado:** Feito (2026-09-05), verificado no dev: backoffice (formulário e

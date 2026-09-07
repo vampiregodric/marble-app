@@ -23,6 +23,23 @@ código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
 5. **Sem ícones decorativos na UI.** Um ícone só entra se transmitir
    informação (categoria, estado). Preferir sempre uma foto/miniatura real a
    um símbolo genérico — ele lê ícones de enfeite como "feito por IA".
+6. **Não mudes um fluxo que está a funcionar sem perguntar.** Se um hábito já
+   está estabelecido (como se abrem as secções novas, como se faz commit e
+   push, como se perguntam as coisas), segue-o. Se achares que há uma forma
+   melhor, propõe-na em escolha múltipla — nunca a troques por tua conta,
+   nem anuncies "a partir de agora faço assim" sem ele decidir.
+   (Dito por ele a 2026-09-07, depois de eu ter voltado a pedir-lhe para
+   colar texto à mão quando as outras conversas já abriam a secção seguinte
+   com um botão.)
+
+## Como se abre a secção seguinte
+
+Quando uma secção fica pronta a arrancar, **não** peças ao Fábio para colar
+um prompt: usa a ferramenta `spawn_task` com o título
+`Secção N — Nome da secção` e um prompt completo (caminho do projeto, ler
+`ROADMAP.md` e atacar a secção pelo nome completo, regras acima, commit +
+push no fim). Aparece-lhe um botão; um clique abre a conversa num worktree
+próprio. É assim que as secções têm arrancado, cada uma no seu worktree.
 
 ## Nomes das secções e das conversas
 
@@ -32,6 +49,23 @@ código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
   título da sessão (ferramenta `set_session_title`, `session_id: "self"`)
   como `Marble Studios — Secção N — Nome da secção`, para ser identificável
   na barra lateral quando houver várias secções em curso.
+
+## Página de progresso (último passo de cada secção)
+
+O Fábio acompanha o projeto numa página privada com o estado de todas as
+secções: **https://claude.ai/code/artifact/3add05c8-643f-437f-bd09-34fb57c82c85**.
+Ela é gerada a partir das linhas `**Estado:**` do `ROADMAP.md`, por isso só
+está certa se cada secção a atualizar ao terminar. Depois do commit e push:
+
+1. `npm run progress` — reescreve `scripts/out/progress.html` (não vai para
+   o git).
+2. Ferramenta `Artifact`, `action: "read"`, `url` = o link acima (obrigatório
+   antes de publicar a partir de uma conversa que nunca o publicou).
+3. Ferramenta `Artifact`, publicar `file_path: scripts/out/progress.html`
+   com `url` = o mesmo link (sem `url` cria-se uma página nova — errado).
+
+Secções que só tocam no backoffice (ex: 12c) também precisam de uma entrada
+curta no `ROADMAP.md` da app — é dele que a página lê.
 
 ## Outras
 

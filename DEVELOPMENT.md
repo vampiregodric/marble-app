@@ -987,8 +987,10 @@ propósito. Nunca escrevas texto solto num ecrã.
   escolhidas (guardam-se em PT). O que a equipa escreve (nota da proposta,
   nome/modelo do trabalho, nome do evento) sai como está. Os **manuais**
   do backoffice ("Enviar alerta") são como a equipa os escreve — a lista e
-  a ficha do cliente mostram o selo "EN" e o modal avisa, para a equipa
-  escrever em inglês a esses clientes. Para testar em EN: abrir a app web
+  a ficha do cliente mostram o selo "EN" e, desde 2026-09-07 (seguimento da
+  12b), o modal pré-preenche o texto modelo em inglês a esses clientes, com
+  um campo "Idioma do texto modelo" para a equipa trocar (ver o README do
+  backoffice). Para testar em EN: abrir a app web
   com `?lang=en` na conta de teste (grava `locale: 'en'`) e correr os
   jobs (`npm run functions:jobs`, ver "Testar sem deploy"); no fim abrir
   com `?lang=pt` para repor.
@@ -1220,6 +1222,18 @@ erro no código: para o servidor (Ctrl+C) e arranca com a cache limpa:
 ```bash
 npx.cmd expo start --clear
 ```
+
+## Página de progresso
+
+`npm run progress` lê as linhas `**Estado:**` de cada `### Secção` do
+`ROADMAP.md` (e do `ROADMAP.md` do backoffice, se existir ao lado) e o
+histórico git dos dois repositórios, e escreve `scripts/out/progress.html`
+(ignorado pelo git). Essa página é publicada como Artifact privado em
+https://claude.ai/code/artifact/3add05c8-643f-437f-bd09-34fb57c82c85 — é o
+último passo de cada conversa de secção (passos exatos no `CLAUDE.md`).
+Estados reconhecidos, pela primeira palavra: "Feito", "Parte N feita" /
+"em curso" / "bloqueada", "Por fazer", "Ideia"; a percentagem não conta as
+ideias.
 
 ## GitHub: cópia de segurança e trabalhar noutro computador
 
