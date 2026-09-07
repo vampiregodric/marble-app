@@ -1179,8 +1179,8 @@ Ver DEVELOPMENT.md, "Idiomas (Secção 12)" → "Alertas".
 **Estado:** Feito (2026-09-07), só backoffice (repositório
 marble.backoffice: commit 76f1def, mais `models.ts` sincronizado com o
 `onboardingSeenAt` da Secção 15 em fb7139e); verificado no dev na 5181
-com a conta de teste em `locale: 'en'`, reposta no fim. Falta o
-`npm run deploy:dev` do backoffice, pelo Fábio.
+com a conta de teste em `locale: 'en'`, reposta no fim. Publicado no dev
+(https://marble-studios-backoffice-dev.web.app) pelo Fábio a 2026-09-08.
 **Depende de:** Secção 12b — Alertas automáticos em inglês no master. Não
 toca na app nem nas Functions (o alerta manual continua a ser texto livre
 em `notifications`).
