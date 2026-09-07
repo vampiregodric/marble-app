@@ -11,7 +11,8 @@
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --avatar <uid>       # simula a limpeza no Cloudinary (precisa das variáveis
 //                                                                          #   CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no ambiente)
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --request <id>       # simula o trigger de um pedido de orçamento acabado de criar
-//                                                                          #   (alerta interno, confirmação; email só com RESEND_API_KEY no ambiente)
+//                                                                          #   (alerta interno, confirmação; email só com RESEND_API_KEY no ambiente;
+//                                                                          #   --daily-cap N liga o tecto global de N pedidos/24 h, como REQUEST_DAILY_CAP)
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --vehicle <id>       # simula o trigger de agendamento de checkup (Secção 8) a
 //                                                                          #   partir do estado atual de vehicles/{id}.checkupRequest;
 //                                                                          #   --before none|pending|proposed|approved força o estado anterior
@@ -96,8 +97,10 @@ async function main(): Promise<void> {
     const snap = await db.collection('requests').doc(requestId).get();
     if (!snap.exists) throw new Error(`requests/${requestId} não existe`);
     // Como o trigger: se já foi processado, não repete (apaga `processedAt` no doc para forçar).
-    await handleRequestWritten(db, null, { id: snap.id, ...snap.data() } as ServiceRequest, { email, cloudinary }, now, log);
+    const dailyCap = Number(flag('daily-cap') ?? process.env.REQUEST_DAILY_CAP ?? 0) || 0;
+    await handleRequestWritten(db, null, { id: snap.id, ...snap.data() } as ServiceRequest, { email, cloudinary, dailyCap }, now, log);
     console.log(email ? 'email: Resend ligado (RESEND_API_KEY no ambiente)' : 'email: desligado (sem RESEND_API_KEY no ambiente)');
+    console.log(dailyCap ? `tecto diário: ${dailyCap} pedidos/24 h` : 'tecto diário: desligado (--daily-cap N ou REQUEST_DAILY_CAP)');
     return;
   }
 

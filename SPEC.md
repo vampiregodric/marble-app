@@ -85,7 +85,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   `src/legal/texts.ts`. Entidade legal: Cacto Elegante, Lda., NIF
   519355849, Rua Quinta das Rosas 12A, 2840-131 Paio Pires; email de
   privacidade app@marble.pt.
-- **Idioma:** Português + Inglês — a app é construída em português; o inglês entrou de uma vez na Secção 12 do ROADMAP (decidido 2026-09-04, feito 2026-09-05). **Decisões da Secção 12 (Fábio):** o idioma é o do telemóvel (português → PT, qualquer outro → EN), sem seletor na app; os alertas escritos pela equipa e pelas Cloud Functions ficam em português; os textos legais existem só em português (em inglês a app avisa "This document is available in Portuguese only"); os formulários de orçamento mostram as opções no idioma do cliente mas guardam sempre o texto em português, para a equipa ler sempre a mesma coisa.
+- **Idioma:** Português + Inglês — a app é construída em português; o inglês entrou de uma vez na Secção 12 do ROADMAP (decidido 2026-09-04, feito 2026-09-05). **Decisões da Secção 12 (Fábio):** o idioma é o do telemóvel (português → PT, qualquer outro → EN), sem seletor na app; os alertas manuais da equipa (backoffice) ficam como a equipa os escreve — o backoffice mostra "EN" na ficha do cliente para a equipa saber; **os alertas automáticos das Cloud Functions saem no idioma do telemóvel do cliente desde a Secção 12b** (decidido 2026-09-06: `clients.locale`, ausente = PT; o email de confirmação de pedido em EN não lista as opções escolhidas, que se guardam em PT); os textos legais existem só em português (em inglês a app avisa "This document is available in Portuguese only"); os formulários de orçamento mostram as opções no idioma do cliente mas guardam sempre o texto em português, para a equipa ler sempre a mesma coisa.
 - **Pagamentos:** Não incluídos na fase inicial — marcações/pedidos ficam registados na app, pagamento tratado à parte. Pode ser adicionado numa fase 2.
 
 ## Ecrã de Portfólio (protótipo desenhado)
@@ -134,3 +134,14 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Logótipo final (ficheiro isolado, ainda não enviado)
 - Informação de contacto/negócio (morada, horário, telefone, redes sociais) para secção "sobre"/rodapé
 - Conteúdo/navegação secundária: precisa de bottom nav bar? Que secções (Início, Portfólio, Perfil/Conta, Alertas)?
+
+## Ideias para depois do lançamento
+
+- **Simulador "como ficaria" (pedido do Fábio, 2026-09-07):** o cliente
+  fotografa o seu chão (sala, garagem, loja) ou o seu carro e vê, na app,
+  como ficaria com um sistema/cor de epóxi ou com uma cor/acabamento de
+  vinil/PPF da Marble — escolhendo a partir de um trabalho do portfólio ou
+  de **amostras** que a equipa carrega no backoffice (texturas de metallic,
+  flake, cores sólidas; cores de vinil). Serve para vender: o cliente
+  experimenta em casa e pede orçamento com a simulação anexada. Detalhes
+  técnicos e decisões em aberto no ROADMAP, Secção 16.

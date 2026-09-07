@@ -632,7 +632,8 @@ nota da proposta continua fora do "Checkup agendado" nos dois casos.
 dev; verificado com propor → aprovar pela equipa (sem alerta "confirmou")
 e estados repostos. **Fica:** copiar `models.ts` para o backoffice
 (`src/firebase/models.ts`) quando a Secção 13 sair do checkout — só
-comentários e o tipo, nada muda no que o backoffice faz.
+comentários e o tipo, nada muda no que o backoffice faz. → Feito na
+Secção 12b (2026-09-06), junto com o campo `locale`.
 
 ### Secção 8 — Fluxo de agendamento de checkup
 **Estado:** Feito na app, regras e Cloud Functions (2026-09-04) e
@@ -847,8 +848,9 @@ entrou no master, o backoffice está livre).
 dev/prod, perfil de produção do EAS, regras + app Android no Firebase prod,
 páginas legais e de suporte publicadas em https://marble-studios-app.web.app/,
 ficha das lojas e formulários de privacidade em `docs/store/`. **Parte 2
-por fazer** (build, screenshots, submissão) e a checklist do Fábio em curso
-— ver "Nota (2026-09-05)" no fim.
+em curso:** a 2026-09-06 ficou feito tudo o que não depende das contas das
+lojas (ver "Nota (2026-09-06, parte 2)"); o que falta está bloqueado nas
+contas, pela ordem em "Bloqueado nas contas — ordem", no fim.
 **Depende de:** praticamente todas as outras, incluindo a Secção 3
 (RGPD) e o projeto Firebase de produção da Secção 1
 **Objetivo:** Conta de developer Apple (99$/ano) e Google Play (25$
@@ -936,22 +938,15 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   verificado no Resend); falta a chave FCM do prod no
   EAS, o domínio marble.pt no Resend (DNS) e rodar as duas chaves que
   ficaram na conversa antes do lançamento (checklist 6c e 6d).
-- *Do Claude, depois de 12 (e 13, 7b) no master:* republicar regras e
-  índices no prod se tiverem mudado; deploy das Functions no prod
-  (`CLOUDINARY_CLEANUP=on` quando os segredos existirem; da Secção 7:
-  `RESEND_API_KEY` no Secret Manager do prod, depois `QUOTE_EMAIL=on` e
-  `BACKOFFICE_URL` do backoffice de produção em `functions/.env` — declarar
-  o segredo sem valor faz o deploy falhar, daí os interruptores); App Check
-  nos pedidos de orçamento (anotado pela Secção 7); traduzir os templates
-  de email do Firebase Auth nos dois projetos (o "Password reset" é também
-  o "define a tua password" das contas criadas por um pedido); nova dev build ("Marble Dev"); build de
-  produção Android (AAB) e iOS; screenshots (telemóvel; sem iPad);
-  `eas submit`; conta de demonstração no prod para os revisores; rever as
-  linhas **[Secção 7/8]** de `data-safety.md`/`app-privacy.md` (o que os
-  formulários de orçamento e checkup enviam); confirmar o nome "Marble
-  Studios" na App Store (plano B: "Marble Studios App"); admins da equipa
-  no prod e Hosting do backoffice de produção (repositório do backoffice);
-  domínio próprio `app.marble.pt` se o Fábio quiser (DNS dele).
+- *Do Claude, depois de 12 (e 13, 7b) no master — feito a 2026-09-06, ver
+  a nota abaixo:* regras e índices republicados; App Check decidido
+  (adiado, com desenho); templates de email do Auth (por defeito, idioma de
+  reserva PT); nova dev build; docs das lojas revistos. *Fica bloqueado nas
+  contas:* deploy das Functions no prod (depois da 12b), builds de
+  produção, screenshots, `eas submit`, conta de demonstração, admins da
+  equipa no prod e Hosting do backoffice de produção, domínio próprio
+  `app.marble.pt` se o Fábio quiser (DNS dele), confirmar o nome "Marble
+  Studios" na App Store (plano B: "Marble Studios App").
 - *Em aberto (da Secção 3):* cláusula 5 dos termos (fotos dos trabalhos no
   portfólio/redes sem identificar o dono, matrícula ocultada, salvo pedido
   em contrário) — confirmar com o dono; revisão dos textos por advogado; e
@@ -959,9 +954,88 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   agente do utilizador que o Firebase Authentication guarda por segurança
   (já declarado nos formulários das lojas). Se algum texto mudar: subir
   `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
-- *Para a Secção 12:* os textos de permissão iOS no `app.json` (plugin
-  `expo-image-picker`) estão só em PT; se a app ganhar inglês, decidir aí
-  se os localizas (`locales` no `app.json`).
+- *Para a Secção 12 — feito lá:* os textos de permissão iOS estão em
+  `locales/pt.json` e `locales/en.json` (`locales` no `app.json`).
+**Nota (2026-09-06, parte 2 — o que não depende das contas):**
+- **App Check: adiado para depois das lojas, com o desenho fechado
+  (decisão do Fábio).** O que se descobriu: a app usa o **SDK JS** do
+  Firebase (app "web" nos dois projetos) em Android, iOS e web, e esse SDK
+  não tem Play Integrity nem DeviceCheck/App Attest — exige o módulo
+  nativo `@react-native-firebase/app-check` (build nova,
+  `GoogleService-Info.plist` no iOS) com uma ponte `CustomProvider` para o
+  SDK JS. As Functions de Firestore **não veem** tokens de App Check (só as
+  callables verificam); obrigá-lo no Firestore é por serviço e para o
+  projeto inteiro — bloqueava o backoffice e a app web até terem reCAPTCHA
+  —, por isso a forma de o obrigar só nos pedidos é mover a criação do
+  pedido para uma callable `createQuoteRequest` com `enforceAppCheck`. E
+  os fornecedores reais dependem das contas: o Play Integrity exige ligar
+  o projeto Cloud no Play Console e o DeviceCheck uma chave privada da
+  conta Apple Developer. Passos do Fábio na checklist ("Depois das lojas —
+  Secção 11c"); o código fica para essa mini-secção.
+- **Tecto diário de pedidos (a defesa até lá):** `REQUEST_DAILY_CAP` em
+  `functions/.env` (20 por 24 h no projeto inteiro; 0 = desligado). Acima
+  disso, `onRequestWritten` marca os pedidos novos com
+  `flagged: 'daily_cap'` (página Pedidos com aviso "possível spam", sem
+  alerta interno, confirmação nem email) e cria **um** `team_alert` por dia
+  ("Possível spam: N pedidos de orçamento em 24 h"; estado em
+  `system/requestGuard`, coleção sem regras de cliente). Contagem por
+  agregação no índice simples de `createdAt`. Complementa o limite de 3
+  por cliente — apanha inundações feitas com contas novas. Testado no dev
+  sem deploy (3 pedidos de teste: normal / marcado + alerta / marcado sem
+  alerta novo; tudo apagado). `models.ts` da app: `flagged` passou a
+  `'rate_limit' | 'daily_cap'`. **Depois da 12b:** alargar o mesmo tipo em
+  `functions/src/types.ts` e no `models.ts` do backoffice, e dar ao
+  `daily_cap` um rótulo na página Pedidos (hoje mostra "possível spam ·
+  daily_cap"). Entra no prod no próximo deploy das Functions.
+- **Regras e índices republicados no prod** (2026-09-06, com a Secção 7b:
+  `type` só `quote`, sem `vehicleId`; os índices não mudaram).
+- **Dev build "Marble Dev"** lançada no EAS (build `419b6df0`, pacote
+  `pt.marble.app.dev`, keystore novo gerado na nuvem, PT+EN, ícones e
+  splash novos). Instalar pelo link da build; `pt.marble.app.dev` passa a
+  aparecer nas credenciais do EAS → chave FCM V1 do dev lá (checklist 7.3,
+  Fábio). O EAS avisa que o perfil tem `channel` sem `expo-updates` — não
+  há OTA, é inofensivo.
+- **Emails do Firebase Auth (decisão do Fábio):** templates **por defeito**
+  — a app já define `auth.languageCode` e o "repor password" (= "define a
+  tua password" das contas criadas por um pedido) sai em PT/EN pelo
+  telemóvel; personalizar fixaria uma língua. Muda-se só o idioma de
+  reserva do projeto (PT) e o nome do remetente ("Marble Studios"):
+  `scripts/auth-email-config.mjs` (`npm run auth:emails -- <chave>
+  [--apply]`, API do Identity Toolkit; mostra `customized` para provar que
+  o texto continua o por defeito). Feito no dev; prod quando existir
+  `serviceAccountKey.prod.json` (checklist 7.1) ou pela consola.
+- **Docs das lojas revistos** contra a app atual: `data-safety.md` e
+  `app-privacy.md` sem linhas [Secção 7/8] — declaram o que os formulários
+  enviam (campos por departamento, mensagem livre como "conteúdo gerado
+  pelo utilizador" e não "mensagens", fotos dos pedidos, dia/período/nota
+  do checkup), idioma (12 e 12b), tags (13), `platform` e App Check;
+  `ficha-loja.md` com PT+EN nas duas lojas, tags e checkups na descrição,
+  nota de revisão em inglês, screenshots em PT e EN depois da Secção 14.
+- Verificado: `npm run typecheck` e `npm run functions:build` limpos;
+  nada de UI mudou (só um tipo em `models.ts`).
+**Bloqueado nas contas — ordem** (o que só o Fábio destrava está em
+`docs/store/checklist-contas.md`; o Claude faz o resto com confirmação):
+1. **Contas** (Fábio, em curso): D-U-N-S → Apple ID da empresa → Apple
+   Developer Program (organização) → Google Play Console (organização).
+2. **Blaze no prod** — feito 2026-09-06. **Segredos** (Cloudinary, Resend) —
+   feitos; faltam o domínio marble.pt no Resend (checklist 6c) e rodar as
+   duas chaves (6d).
+3. **Deploy das Functions no prod** — só depois da **Secção 12b** no
+   master: leva a 12b, o tecto diário e, quando 6c estiver, `QUOTE_EMAIL=on`
+   + `BACKOFFICE_URL` de produção em `functions/.env.marble-studios-prod`.
+4. **Chave FCM V1** do prod no EAS em `pt.marble.app`, e a do dev em
+   `pt.marble.app.dev` (checklist 7, Fábio).
+5. **Builds de produção**: `npx.cmd eas-cli build --profile production
+   --platform android` (AAB) e `--platform ios` (pede o Apple ID da conta
+   de organização).
+6. **Screenshots**: telemóvel, sem iPad, em PT e EN, com os dados de
+   exemplo do dev — depois da Secção 14.
+7. **`eas submit`**: Android com `serviceAccountKey.play.json` (conta de
+   serviço do Play, checklist parte 2); iOS interativo, pelo Fábio.
+8. **Conta de demonstração no prod** para os revisores, admins da equipa no
+   prod e Hosting do backoffice de produção (repositório do backoffice).
+9. **Depois do lançamento: Secção 11c — App Check** (checklist, "Depois das
+   lojas").
 
 ### Secção 12 — Inglês
 **Estado:** Feito (2026-09-05). Toda a interface da app em PT + EN,
@@ -1034,9 +1108,70 @@ backoffice não mudar. **Para a Secção 11 (parte 2):** a nova dev build e
 as builds de produção já levam os dois idiomas; os textos das lojas
 (`docs/store/ficha-loja.md`) já eram PT/EN; os alertas automáticos e os
 templates de email do Firebase Auth continuam em PT (decisão 3).
-**Em aberto:** os alertas automáticos em EN ("12b", só se o Fábio quiser);
-o pequeno acerto na Function `handleVehicleUpdated` anotado pela Secção 7b
-(aprovação de uma proposta pela equipa vista como confirmação do cliente).
+**Fechado depois:** os alertas automáticos em EN ficaram feitos na
+Secção 12b (a seguir); o acerto na Function `handleVehicleUpdated` já
+tinha entrado com o remate da Secção 7b (2026-09-06).
+
+### Secção 12b — Alertas automáticos em inglês
+**Estado:** Feito (2026-09-06), verificado no dev (runner local, app web
+em EN na 8082, backoffice na 5180) e Functions publicadas no dev. Ver
+"Decisões" e "Nota" no fim desta secção.
+**Depende de:** Secção 12 — Inglês e Secção 7b no master. Correu em
+paralelo com a parte 2 da Secção 11 (não toca em `app.json`, `eas.json`,
+`docs/store` nem no prod) e com a Secção 14.
+**Objetivo:** Os alertas AUTOMÁTICOS das Cloud Functions saem em inglês
+para os clientes cujo telemóvel está em inglês; os alertas manuais da
+equipa (backoffice) continuam como a equipa os escreve. A Secção 12 tinha
+deixado tudo em PT (decisão 3) e anotado este "12b" como opcional; o
+Fábio decidiu fazê-lo a 2026-09-06.
+- **A app grava o idioma:** `clients/{uid}.locale: 'pt' | 'en'` (campo
+  novo em `Client`, `src/firebase/models.ts`), ao criar o doc
+  (`createClientDoc`) e em `touchLastActive` sempre que o guardado for
+  outro — o cliente pode mudar o idioma do telemóvel; as contas
+  anteriores ficam sem o campo (= PT) até abrirem a app. As regras já
+  deixavam o dono escrever o doc inteiro — nada a publicar.
+- **Functions bilingues:** `functions/src/texts.ts` — cada texto ao
+  cliente (`checkupReminder`, `offerFreeWash`, `newWork`,
+  `eventReminder`, `checkupScheduled`, `checkupProposed`,
+  `requestConfirmation`, `requestClientEmail`, `retentionWarning`)
+  recebe o `locale` em primeiro e tem PT e EN lado a lado;
+  `clientLocale(client)` (ausente = PT) e `forLocales()` para os alertas
+  em lote (novo trabalho, evento: texto nos dois idiomas, escolhido por
+  cliente). Datas iguais às da app: "seg, 7 set às 10:30" / "Mon, 7 Sep
+  at 10:30", "seg, 7 set, de manhã" / "Mon, 7 Sep, in the morning",
+  "12 set, 10:00" / "12 Sep, 10:00"; "within 1 business day" =
+  `S.request.responsePromise`. Os `team_alert` e o email à equipa
+  (`requestTeamEmail`) ficam em PT. `Client.locale` em
+  `functions/src/types.ts`.
+- **Backoffice:** `models.ts` copiado inteiro (fecha o pendente da 7b:
+  `RequestType` só `'quote'`, sem `vehicleId` em `ServiceRequest`, mais
+  `locale`); selo **EN** na lista de clientes e "App em inglês" na ficha;
+  "Enviar alerta" avisa quando o cliente usa a app em inglês. README do
+  backoffice ("Como se liga à app" → `clients`).
+**Decisões (2026-09-06, Fábio):** (1) o email de confirmação ao cliente em
+EN não lista as opções escolhidas (guardam-se em PT — Secção 12 — e
+sairiam misturadas); (2) o backoffice mostra o idioma do cliente para a
+equipa escrever os alertas manuais em inglês; (3) `models.ts` do
+backoffice copiado inteiro; (4) os alertas de teste em EN ficam na conta
+do Fábio para ele os ver no telemóvel.
+**Nota (2026-09-06):** o acerto em `handleVehicleUpdated` que a Secção 12
+tinha "em aberto" já estava feito pelo remate da 7b (commit "Secção 7b
+(remate na app)") — confirmado aqui com quatro cenários (proposta;
+"Aprovar na mesma" pela equipa, sem alerta interno; confirmação do
+cliente, com alerta interno; aprovação de um pedido com nota). Verificado
+no dev: a app web (`?lang=en` + `npm run dev-token`) gravou
+`locale: 'en'` na conta do Fábio; `functions:jobs` (`--only followUps`,
+`--only events`, `--work`, `--request`) e um simulador do trigger do
+checkup criaram os alertas em EN ("Free checkup for your car", "Tomorrow:
+Auto Expo Lisboa 2026", "New project: …", "We got your request", "Checkup
+proposal: Wed, 16 Sep at 09:00", "Checkup scheduled: …"), com os alertas
+internos em PT; Functions publicadas no dev e o fluxo real (propor no
+backoffice → alerta EN → confirmar na app → "Checkup scheduled" EN +
+alerta interno PT) confirmado; estados repostos no fim (`locale` do
+Fábio de volta a PT, acompanhamento do trabalho desligado, pedido de
+checkup limpo). O que a equipa escreve (nota da proposta, modelo/descrição
+e nome do trabalho, nome do evento) sai como está, seja qual for o idioma.
+Ver DEVELOPMENT.md, "Idiomas (Secção 12)" → "Alertas".
 
 ### Secção 13 — Tags nos trabalhos: marca e sistema/serviço
 **Estado:** Feito (2026-09-05), verificado no dev: backoffice (formulário e
@@ -1163,6 +1298,84 @@ precisar de configuração no URL web. Não toca em `functions/`,
 `assets/`, `docs/` nem no backoffice. Corre em paralelo com a Secção 12b
 (alertas automáticos em inglês) e a Secção 11 parte 2 (builds, App Check).
 Pré-visualização web: `marble-app-web-8084`.
+
+### Secção 15 — Notificações logo a seguir ao registo
+**Estado:** Por fazer
+**Depende de:** Secções 2, 3, 6 e 12 no master (feito). Só app (`src/`);
+não toca no backoffice, nas regras nem nas Functions. Pode correr em
+paralelo com a parte 2 da Secção 11 (que não toca em `src/`).
+**Objetivo (pedido do Fábio, 2026-09-07, ao instalar a "Marble Dev"):**
+"as pessoas quando criam conta deviam ter tudo ativo". Não pode ser
+literalmente isso — na UE o consentimento de marketing tem de ser um gesto
+da pessoa (nada pré-marcado; decisão da Secção 3), e os lembretes
+operacionais já vão sempre. O que se faz é **perguntar no momento certo**:
+logo a seguir a criar conta (e no primeiro login de uma conta sem push
+ativo), um passo único "Recebe os alertas no telemóvel":
+- Botão **Ativar notificações** → `enablePush()` (o pedido do sistema, iOS
+  e Android). Recusado → o mesmo tratamento do ecrã Alertas ("Abrir
+  definições"). No web e no Expo Go (`pushSupported` false) o botão não
+  aparece.
+- Interruptor **Ofertas e novidades** mesmo ao lado, **desligado** por
+  defeito, um toque para ligar (`setMarketingConsent(true)`, que já grava
+  `consent.marketing` + `marketingUpdatedAt`); as categorias ficam como
+  hoje no Perfil.
+- Ligação **Agora não** → segue para os tabs; o cartão do ecrã Alertas
+  continua a existir para quem saltou.
+- Texto curto a explicar a diferença (lembretes de checkup vão sempre;
+  ofertas só se quiseres), em PT e EN (`src/i18n/`).
+- Onde: ecrã novo `NotificationsOnboardingScreen` empilhado no
+  `RootNavigator` depois do `signUp` com sucesso (e no login quando
+  `pushSupported && !pushEnabled && !client.onboardingSeenAt`); gravar
+  `clients/{uid}.onboardingSeenAt` (o dono já pode escrever no seu doc —
+  sem mudar regras) para não repetir. Sem ícones decorativos.
+**Critério de conclusão:** criar conta na Marble Dev → aparece o passo →
+"Ativar notificações" pede a permissão do Android → token em
+`clients.pushTokens` → um alerta enviado pelo backoffice chega como push;
+"Ofertas e novidades" ligado no passo aparece ligado no Perfil; no web o
+passo mostra só o interruptor; `npm run typecheck` limpo; PT e EN.
+
+### Secção 16 — Simulador "como ficaria" (foto do cliente + amostras)
+**Estado:** Ideia registada (2026-09-07, Fábio), por desenhar. **Depois do
+lançamento** — não entra na versão 1.0.
+**Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
+existe no pedido de orçamento — Secção 7), 13 (tags: sistema/serviço e
+marcas), backoffice para gerir amostras.
+**Objetivo:** O cliente fotografa o seu chão (sala, garagem, loja) ou o seu
+carro e vê como ficaria com um sistema/cor de epóxi ou uma cor/acabamento
+de vinil/PPF da Marble, escolhendo a partir de um trabalho do portfólio ou
+de **amostras** carregadas pela equipa. Depois pode pedir orçamento com a
+simulação anexada.
+**Como se pode fazer (a decidir com o Fábio, do mais simples ao mais
+ambicioso):**
+1. **Comparação lado a lado**: a foto do cliente e uma galeria de amostras
+   (texturas/cores em 1:1 e em ambientes reais); sem "pintar" a foto. Barato
+   e honesto, mas não é o efeito "uau".
+2. **Recolorir com IA no Cloudinary** (já é o nosso alojamento): as
+   transformações generativas do Cloudinary (`e_gen_recolor` para mudar a
+   cor de um objeto identificado por texto, `e_gen_replace` /
+   `e_gen_background_replace` para substituir o pavimento) aplicadas à foto
+   carregada pelo cliente, com o resultado guardado no Cloudinary. Funciona
+   bem para carros (cor de vinil) e razoavelmente para chãos lisos; textura
+   de flake/metallic é menos fiel. Custa créditos de IA por imagem (fora
+   do plano gratuito) — o backoffice teria de ter um tecto por dia.
+3. **Modelo de imagem generativo próprio** (Gemini/Imagen ou similar, via
+   Cloud Function): "aplica esta amostra a este chão" com a amostra como
+   referência. Melhor resultado para texturas, mais caro e mais lento
+   (segundos por imagem); precisa de moderação e de um tecto por cliente.
+**Requisitos que isto traz (não esquecer):** as fotos da casa/garagem/carro
+do cliente são dados pessoais → nova finalidade na política de
+privacidade (base legal: consentimento ao usar a funcionalidade), prazo de
+retenção das simulações (ex.: 90 dias ou até apagar o pedido), o Cloudinary
+já é subcontratante mas um modelo de IA externo seria outro; texto claro na
+app de que é uma simulação e não uma proposta de cor exata (o acabamento
+real depende do substrato); no backoffice, gestão das amostras (foto,
+nome, sistema/serviço e marca — reutiliza as tags da Secção 13) e o pedido
+de orçamento a receber a simulação como anexo (a coleção `requests` já
+aceita fotos).
+**Decisões a tomar com o Fábio quando chegar a vez:** opção 1, 2 ou 3 (ou
+1 agora e 2/3 depois); só chãos, só carros ou os dois; se a simulação é
+visível à equipa antes do pedido de orçamento; limite de simulações por
+cliente/dia.
 
 ---
 

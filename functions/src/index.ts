@@ -15,7 +15,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { defineSecret, defineString } from 'firebase-functions/params';
+import { defineInt, defineSecret, defineString } from 'firebase-functions/params';
 import { CloudinaryConfig } from './cloudinary';
 import { handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from './handlers';
 import { runDailyJobs } from './jobs';
@@ -48,6 +48,11 @@ const emailSecrets = QUOTE_EMAIL ? [defineSecret('RESEND_API_KEY')] : [];
 const EMAIL_FROM = defineString('EMAIL_FROM', { default: 'Marble Studios <app@marble.pt>' });
 const QUOTES_EMAIL_TO = defineString('QUOTES_EMAIL_TO', { default: 'quotes@marble.pt' });
 const BACKOFFICE_URL = defineString('BACKOFFICE_URL', { default: 'https://marble-studios-backoffice-dev.web.app' });
+
+// Tecto global de pedidos de orçamento por 24 h (Secção 11): acima disto os
+// pedidos ficam marcados `daily_cap` e a equipa recebe um só alerta por dia
+// — trava inundações com contas novas enquanto não há App Check. 0 = desligado.
+const REQUEST_DAILY_CAP = defineInt('REQUEST_DAILY_CAP', { default: 0 });
 
 function emailConfig(): RequestEmailConfig | null {
   if (!QUOTE_EMAIL) return null;
@@ -95,7 +100,7 @@ export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', se
 export const onRequestWritten = onDocumentWritten({ document: 'requests/{id}', secrets: [...emailSecrets, ...cloudinarySecrets] }, async (event) => {
   const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as ServiceRequest) : null;
   const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as ServiceRequest) : null;
-  await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig() }, new Date(), log);
+  await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig(), dailyCap: REQUEST_DAILY_CAP.value() }, new Date(), log);
 });
 
 // Agendamento de checkup (Secção 8): o cliente pediu/alterou/cancelou na
