@@ -215,7 +215,9 @@ export interface ServiceRequest {
   notes?: string;
   contactedAt?: Timestamp;
   closedAt?: Timestamp;
-  flagged?: 'rate_limit';
+  // 'rate_limit' = 3+ pedidos do mesmo cliente em 24 h; 'daily_cap' = o
+  // projeto inteiro passou REQUEST_DAILY_CAP (Secção 11). Ver requests.ts.
+  flagged?: 'rate_limit' | 'daily_cap';
   processedAt?: Timestamp;
   teamAlertId?: string;
   confirmationId?: string;

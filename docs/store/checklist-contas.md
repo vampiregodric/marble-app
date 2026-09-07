@@ -245,7 +245,7 @@ que falta está no ROADMAP, Secção 11, "Bloqueado nas contas". Do teu lado:
   confirmar com o dono; e **revisão por advogado** dos dois textos. Se
   mudarem: subir `LEGAL_VERSION`, `npm run build:legal`, publicar o Hosting.
 - **iPhone** para testar a build iOS no TestFlight antes de submeter.
-- **Emails do Firebase Auth no prod** (5 min). Decisão de 2026-09-06: os
+- **Emails do Firebase Auth no prod** — FEITO (2026-09-07) pelo Claude com a chave do prod (`npm run auth:emails`), nada a fazer. Decisão de 2026-09-06: os
   templates ficam **por defeito** — a app diz ao Firebase o idioma do
   telemóvel e o email "repor password" (que é também o "define a tua
   password" das contas criadas por um pedido de orçamento) sai em PT ou EN

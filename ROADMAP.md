@@ -983,10 +983,10 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
   por cliente — apanha inundações feitas com contas novas. Testado no dev
   sem deploy (3 pedidos de teste: normal / marcado + alerta / marcado sem
   alerta novo; tudo apagado). `models.ts` da app: `flagged` passou a
-  `'rate_limit' | 'daily_cap'`. **Depois da 12b:** alargar o mesmo tipo em
-  `functions/src/types.ts` e no `models.ts` do backoffice, e dar ao
-  `daily_cap` um rótulo na página Pedidos (hoje mostra "possível spam ·
-  daily_cap"). Entra no prod no próximo deploy das Functions.
+  `'rate_limit' | 'daily_cap'` (e `functions/src/types.ts` idem, depois de
+  a 12b entrar). **Fica para o backoffice:** alargar o mesmo tipo no seu
+  `models.ts` e dar ao `daily_cap` um rótulo na página Pedidos (hoje mostra
+  "possível spam · daily_cap"). Já está no prod (deploy de 2026-09-07).
 - **Regras e índices republicados no prod** (2026-09-06, com a Secção 7b:
   `type` só `quote`, sem `vehicleId`; os índices não mudaram).
 - **Dev build "Marble Dev"** lançada no EAS (build `419b6df0`, pacote
@@ -1018,13 +1018,15 @@ certos. Ver DEVELOPMENT.md, "Lançamento nas lojas".
 1. **Contas** (Fábio, em curso): D-U-N-S → Apple ID da empresa → Apple
    Developer Program (organização) → Google Play Console (organização).
 2. **Blaze no prod** — feito 2026-09-06. **Segredos** (Cloudinary, Resend) —
-   feitos; faltam o domínio marble.pt no Resend (checklist 6c) e rodar as
-   duas chaves (6d).
-3. **Deploy das Functions no prod** — só depois da **Secção 12b** no
-   master: leva a 12b, o tecto diário e, quando 6c estiver, `QUOTE_EMAIL=on`
-   + `BACKOFFICE_URL` de produção em `functions/.env.marble-studios-prod`.
-4. **Chave FCM V1** do prod no EAS em `pt.marble.app`, e a do dev em
-   `pt.marble.app.dev` (checklist 7, Fábio).
+   feitos; domínio marble.pt no Resend feito 2026-09-07 (6c). Falta rodar
+   as duas chaves que ficaram na conversa (6d), antes do lançamento.
+3. **Deploy das Functions no prod** — feito 2026-09-07 (commit `0f3fecd`,
+   sessão da parte 1): leva a Secção 12b, o tecto diário e
+   `QUOTE_EMAIL=on` + `BACKOFFICE_URL` de produção. Republicar só quando
+   `functions/` mudar (ex.: depois de rodar as chaves, 6d).
+4. **Chave FCM V1** — feita 2026-09-07: prod em `pt.marble.app`, dev em
+   `pt.marble.app.dev` (checklist 7). Emails do Auth no prod também feitos
+   a 2026-09-07 (`npm run auth:emails`, com a chave do prod).
 5. **Builds de produção**: `npx.cmd eas-cli build --profile production
    --platform android` (AAB) e `--platform ios` (pede o Apple ID da conta
    de organização).
