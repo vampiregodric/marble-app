@@ -955,8 +955,10 @@ propósito. Nunca escrevas texto solto num ecrã.
   escolhidas (guardam-se em PT). O que a equipa escreve (nota da proposta,
   nome/modelo do trabalho, nome do evento) sai como está. Os **manuais**
   do backoffice ("Enviar alerta") são como a equipa os escreve — a lista e
-  a ficha do cliente mostram o selo "EN" e o modal avisa, para a equipa
-  escrever em inglês a esses clientes. Para testar em EN: abrir a app web
+  a ficha do cliente mostram o selo "EN" e, desde 2026-09-07 (seguimento da
+  12b), o modal pré-preenche o texto modelo em inglês a esses clientes, com
+  um campo "Idioma do texto modelo" para a equipa trocar (ver o README do
+  backoffice). Para testar em EN: abrir a app web
   com `?lang=en` na conta de teste (grava `locale: 'en'`) e correr os
   jobs (`npm run functions:jobs`, ver "Testar sem deploy"); no fim abrir
   com `?lang=pt` para repor.

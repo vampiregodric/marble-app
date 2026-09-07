@@ -24,8 +24,10 @@ import { textToHtml } from './email';
 // pela equipa). Cada função dirigida ao cliente recebe o `locale` em
 // primeiro e tem as duas versões lado a lado, para não se esquecer uma ao
 // mudar a outra. Os alertas internos (`team_alert`) e o email à equipa são
-// sempre em PT. Os alertas manuais do backoffice não passam por aqui — a
-// equipa escreve-os como quiser (a ficha do cliente mostra "EN").
+// sempre em PT. Os alertas manuais do backoffice não passam por aqui: o
+// modal "Enviar alerta" tem os seus modelos PT/EN (SendAlertModal.tsx, no
+// mesmo tom destes) e pré-preenche em EN quando `locale` é 'en'
+// (2026-09-07); a equipa pode sempre editar o texto.
 
 export function clientLocale(c: Client | null | undefined): Locale {
   return c?.locale === 'en' ? 'en' : 'pt';
