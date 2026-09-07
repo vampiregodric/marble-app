@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { NavigationContainer, DarkTheme, LinkingOptions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,9 +16,11 @@ import RequestQuoteScreen from '../screens/RequestQuoteScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
 import LegalScreen from '../screens/LegalScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
+import NotificationsOnboardingScreen from '../screens/NotificationsOnboardingScreen';
 import AuthGate from '../components/AuthGate';
 import { markNotificationRead } from '../data/notifications';
 import { PushOpenData, usePushOpens } from '../push/push';
+import { useNotificationsOnboardingTrigger } from '../push/onboarding';
 import { navigationRef } from './navigationRef';
 import { RootStackParamList, TabParamList } from './types';
 import { useT } from '../i18n';
@@ -122,6 +124,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       Legal: 'legal/:doc',
       DeleteAccount: 'profile/delete-account',
       RequestQuote: 'request',
+      NotificationsOnboarding: 'welcome/notifications',
     },
   },
 };
@@ -145,6 +148,10 @@ export default function RootNavigator() {
     if (navigationRef.isReady()) openFromPush(data);
     else pendingPush.current = data;
   });
+  // Passo "Recebe os alertas no telemóvel" (Secção 15): abre-se sozinho,
+  // uma vez por conta, quando os tabs estão à vista — ver src/push/onboarding.ts.
+  const [ready, setReady] = useState(false);
+  useNotificationsOnboardingTrigger(ready);
 
   return (
     <NavigationContainer
@@ -156,6 +163,7 @@ export default function RootNavigator() {
           openFromPush(pendingPush.current);
           pendingPush.current = null;
         }
+        setReady(true);
       }}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -166,6 +174,7 @@ export default function RootNavigator() {
         <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="NotificationsOnboarding" component={NotificationsOnboardingScreen} options={{ presentation: 'card' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

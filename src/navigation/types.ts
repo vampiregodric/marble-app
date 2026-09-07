@@ -30,4 +30,8 @@ export type RootStackParamList = {
   // (Secção 9: AI Business, Marble Ads; Secção 10: Xtreme) vem `department`.
   // Sem nada, o formulário pede o departamento.
   RequestQuote: { workId?: string; department?: DepartmentId } | undefined;
+  // Passo "Recebe os alertas no telemóvel" (Secção 15), uma vez por conta,
+  // logo a seguir ao registo. Quem o abre é useNotificationsOnboardingTrigger
+  // (src/push/onboarding.ts); na web também por URL (welcome/notifications).
+  NotificationsOnboarding: undefined;
 };

@@ -68,7 +68,7 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 
 ## Implicações técnicas identificadas (a validar)
 - Vai ser necessário um **backoffice/painel de administração** para a equipa gerir: clientes, carros/produtos, trabalhos/portfólio, notificações, lembretes automáticos. **Confirmado (2026-09-03): é uma aplicação separada** da app do cliente, não faz parte deste projeto React Native — ver ROADMAP.md, Secção 5.
-- Sistema de notificações push com regras/gatilhos temporais (agendamento automático de lembretes) — **feito (Secção 6, 2026-09-04):** Cloud Functions + Expo Push Service; a permissão de notificações só é pedida no ecrã Alertas, ao tocar em "Ativar notificações", nunca no arranque; tocar no push abre o trabalho/evento/perfil certo.
+- Sistema de notificações push com regras/gatilhos temporais (agendamento automático de lembretes) — **feito (Secção 6, 2026-09-04):** Cloud Functions + Expo Push Service; a permissão de notificações só é pedida ao tocar em "Ativar notificações" — no passo "Recebe os alertas no telemóvel" logo a seguir ao registo (Secção 15, 2026-09-07) ou no cartão do ecrã Alertas — nunca no arranque; tocar no push abre o trabalho/evento/perfil certo.
 - Preferências de notificação por categoria, por cliente
 
 ## Decisões de arquitetura (confirmadas)
@@ -77,7 +77,9 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   - **Decidido (2026-09-03):** email/password com recuperação por email; Google/Apple sign-in só depois de existir conta de developer. Início, Portfólio e Eventos são visíveis sem conta (montra pública); Perfil e Alertas pedem login. O registo pede nome, email, password e telemóvel (obrigatório — a equipa liga ao cliente no fluxo de checkup).
 - **RGPD (decidido 2026-09-03):** registo exige aceitar termos + política
   numa checkbox não pré-marcada; consentimento de marketing ("Ofertas e
-  novidades") é separado, desligado por defeito e liga-se só no Perfil —
+  novidades") é separado, desligado por defeito e liga-se só por um gesto
+  do cliente — no passo "Recebe os alertas no telemóvel" que aparece uma
+  vez logo a seguir ao registo (Secção 15, 2026-09-07) ou no Perfil —
   as preferências por categoria ficam por baixo dele, porque "novo trabalho
   publicado" é marketing. Lembretes de checkup são operacionais e vão
   sempre. Apagar conta anonimiza o registo (histórico de trabalhos fica

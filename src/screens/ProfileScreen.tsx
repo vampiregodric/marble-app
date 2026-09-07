@@ -8,6 +8,7 @@ import Photo from '../components/Photo';
 import Avatar from '../components/Avatar';
 import ActionSheet, { SheetAction } from '../components/ActionSheet';
 import CheckupSheet from '../components/CheckupSheet';
+import Toggle from '../components/Toggle';
 import { CameraIcon, ChevronRightIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 import { authErrorMessage } from '../auth/errors';
@@ -62,14 +63,6 @@ function RequestRow({ request }: { request: ServiceRequest }) {
       <View style={[styles.assetStatus, closed ? styles.assetStatusOk : styles.assetStatusPending]}>
         <Text style={[styles.assetStatusText, closed ? styles.assetStatusTextOk : styles.assetStatusTextPending]}>{T.requestStatus[request.status]}</Text>
       </View>
-    </View>
-  );
-}
-
-function Toggle({ on }: { on: boolean }) {
-  return (
-    <View style={[styles.toggle, on && styles.toggleOn]}>
-      <View style={[styles.toggleThumb, on && styles.toggleThumbOn]} />
     </View>
   );
 }
@@ -630,10 +623,6 @@ const styles = StyleSheet.create({
   prefHint: { fontFamily: fonts.body, fontSize: 10, color: colors.inkFaint, lineHeight: 14, marginTop: 2 },
   alwaysOn: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(183,209,168,0.35)', paddingHorizontal: 8, paddingVertical: 3 },
   alwaysOnText: { fontFamily: fonts.eyebrow, fontSize: 7.5, letterSpacing: 0.6, color: colors.ok, textTransform: 'uppercase' },
-  toggle: { width: 34, height: 19, borderRadius: 10, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline, justifyContent: 'center' },
-  toggleOn: { backgroundColor: colors.gold, borderColor: colors.gold },
-  toggleThumb: { width: 13, height: 13, borderRadius: 7, backgroundColor: colors.inkFaint, marginLeft: 2 },
-  toggleThumbOn: { backgroundColor: '#0b0a08', marginLeft: 17 },
   accountList: { paddingHorizontal: 18, marginTop: 2, marginBottom: 24 },
   accountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.hairline },
   accountLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted },

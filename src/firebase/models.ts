@@ -117,6 +117,12 @@ export interface Client {
   // O job de retenção já avisou que a conta vai ser apagada por inatividade.
   // Limpa-se sozinho se o cliente voltar a abrir a app.
   retentionWarnedAt?: Timestamp;
+  // O cliente já viu o passo "Recebe os alertas no telemóvel" (Secção 15),
+  // que a app mostra UMA vez: logo a seguir a criar conta, ou na primeira
+  // abertura com sessão sem push ativo. Só a app escreve; ausente = ainda
+  // não viu. Não diz se o push ficou ativo (isso é `pushTokens`) nem se
+  // ligou "Ofertas e novidades" (`consent.marketing`).
+  onboardingSeenAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

@@ -402,6 +402,38 @@ antes — abrir a app web com `?lang=en` faz isso — e os logs marcam
   destaque dourada e canal `default` no plugin `expo-notifications`
   (`app.json`).
 
+### Passo "Recebe os alertas no telemóvel" (Secção 15)
+
+Desde 2026-09-07 a pergunta do cartão do ecrã Alertas faz-se também **uma
+vez, no momento certo**: `src/screens/NotificationsOnboardingScreen.tsx`,
+empilhado por cima dos tabs por `useNotificationsOnboardingTrigger`
+(`src/push/onboarding.ts`, chamado no `RootNavigator`). Quando abre:
+
+- logo a seguir a criar conta — registo ou pedido de orçamento sem conta
+  (`AuthContext.accountJustCreated`), em todas as plataformas; no web e
+  no Expo Go só mostra o interruptor "Ofertas e novidades" e "Continuar";
+- senão, na primeira abertura com sessão em que o push deste telemóvel
+  não esteja ativo (permissão por pedir ou recusada) e a conta ainda não
+  tenha `clients/{uid}.onboardingSeenAt` — apanha as contas anteriores à
+  secção uma única vez (decisão do Fábio). No web nunca;
+- só com os tabs à vista: com um ecrã empilhado por cima (a confirmação
+  de um pedido de orçamento, o Detalhe aberto por um push) espera que o
+  cliente volte aos tabs.
+
+Abrir o passo grava `onboardingSeenAt` (`AuthContext.markOnboardingSeen`;
+se a escrita falhar, o snapshot seguinte volta a tentar) — "Agora não", o
+botão de voltar do Android ou fechar a app não o fazem voltar; o cartão do
+ecrã Alertas fica para quem saltou. O botão principal é "Ativar
+notificações" (`enablePush`), "Abrir definições" (recusada) ou
+"Continuar" (ativas, ou sem push); "Ofertas e novidades" grava
+`consent.marketing` ao tocar, como no Perfil (mesmo `Toggle`).
+**Testar na web:** entrar com o token de dev e abrir
+`http://localhost:8082/welcome/notifications` (ou com `?lang=en`) — o
+passo abre por URL mesmo com `onboardingSeenAt` já gravado; para ver o
+gatilho automático, apaga esse campo no doc do cliente de teste. O fluxo
+com push real (permissão do Android, token, push do backoffice) só se vê
+na Marble Dev — é só JS, não precisa de build nova.
+
 ### Development build (Android) com EAS
 
 Substitui o Expo Go no telemóvel do Fábio: é "o Expo Go desta app", com o

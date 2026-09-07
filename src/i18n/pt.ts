@@ -101,6 +101,23 @@ export const pt = {
     channelName: 'Alertas da Marble Studios',
   },
 
+  // Passo "Recebe os alertas no telemóvel" (Secção 15), uma vez por conta,
+  // logo a seguir ao registo. O cartão de push reutiliza `alerts.*`
+  // (Ativar notificações, desligadas, Abrir definições, erro) e o
+  // interruptor reutiliza `profile.marketingLabel/marketingHint`.
+  onboarding: {
+    eyebrowNew: 'Bem-vindo',
+    eyebrow: 'Notificações',
+    title: 'Recebe os alertas no telemóvel',
+    lead: 'Os lembretes de checkup e as respostas da equipa fazem parte do serviço e vão sempre. Ofertas e novidades só se quiseres — decides aqui e mudas no Perfil quando quiseres.',
+    pushTitle: 'Notificações no telemóvel',
+    pushDesc: 'Sabe logo quando há um checkup a confirmar, um dia proposto pela equipa ou uma resposta ao teu pedido — mesmo com a app fechada.',
+    pushActive: 'Ativas neste telemóvel',
+    marketingError: 'Não foi possível guardar a tua escolha. Tenta outra vez ou muda-a no Perfil.',
+    notNow: 'Agora não',
+    continue: 'Continuar',
+  },
+
   work: {
     unavailableTitle: 'Este trabalho já não está disponível.',
     unavailableDesc: 'Pode ter sido retirado do portfólio. Vê os outros trabalhos publicados.',

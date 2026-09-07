@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, AppState } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,29 +10,10 @@ import { useAuth } from '../auth/AuthContext';
 import { markNotificationRead, useNotifications } from '../data/notifications';
 import { AppNotification } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
-import { enablePush, getPushPermission, openNotificationSettings, PushPermission } from '../push/push';
+import { enablePush, openNotificationSettings } from '../push/push';
+import { usePushPermission } from '../push/usePushPermission';
 import { timeAgo } from '../utils/dates';
 import { useT } from '../i18n';
-
-// Estado da permissão de push deste telemóvel, reavaliado quando a app
-// volta ao primeiro plano (o cliente pode ter ido às Definições do sistema).
-// 'unsupported' no web, no Expo Go (Android) e em simuladores.
-function usePushPermission(): [PushPermission | null, () => void] {
-  const [state, setState] = useState<PushPermission | null>(null);
-  const refresh = useCallback(() => {
-    getPushPermission()
-      .then(setState)
-      .catch(() => setState('unsupported'));
-  }, []);
-  useEffect(() => {
-    refresh();
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') refresh();
-    });
-    return () => sub.remove();
-  }, [refresh]);
-  return [state, refresh];
-}
 
 // Alertas do cliente (lembretes de checkup, novos trabalhos, ofertas,
 // eventos), em tempo real. Tocar num alerta marca-o como lido e abre o que
@@ -42,7 +23,9 @@ function usePushPermission(): [PushPermission | null, () => void] {
 // É também AQUI que se pede a permissão de notificações (Secção 6) — nunca
 // no arranque: um cartão explica para que servem e o pedido do sistema só
 // aparece quando o cliente toca em "Ativar notificações". O cartão
-// desaparece quando está ativo, e não existe no web nem no Expo Go.
+// desaparece quando está ativo, e não existe no web nem no Expo Go. Desde
+// a Secção 15 a mesma pergunta faz-se uma vez logo a seguir ao registo
+// (NotificationsOnboardingScreen); este cartão fica para quem saltou.
 export default function AlertsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();

@@ -88,6 +88,19 @@ export const en: Strings = {
     channelName: 'Marble Studios alerts',
   },
 
+  onboarding: {
+    eyebrowNew: 'Welcome',
+    eyebrow: 'Notifications',
+    title: 'Get the alerts on your phone',
+    lead: 'Checkup reminders and replies from the team are part of the service and are always sent. Offers and news only if you want them — choose here and change it in your Profile any time.',
+    pushTitle: 'Notifications on your phone',
+    pushDesc: 'Know right away when there is a checkup to confirm, a day proposed by the team or a reply to your request — even with the app closed.',
+    pushActive: 'On for this phone',
+    marketingError: 'Could not save your choice. Try again or change it in your Profile.',
+    notNow: 'Not now',
+    continue: 'Continue',
+  },
+
   work: {
     unavailableTitle: 'This project is no longer available.',
     unavailableDesc: 'It may have been removed from the portfolio. Have a look at the other published work.',

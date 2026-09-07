@@ -1302,7 +1302,40 @@ precisar de configuração no URL web. Não toca em `functions/`,
 Pré-visualização web: `marble-app-web-8084`.
 
 ### Secção 15 — Notificações logo a seguir ao registo
-**Estado:** Por fazer
+**Estado:** Feito na app (2026-09-07) e verificado no web pelo Claude: o
+passo abre só com o interruptor e "Continuar", grava `onboardingSeenAt`,
+"Ofertas e novidades" ligado no passo aparece ligado no Perfil, PT e EN,
+o gatilho automático não dispara no web para contas existentes,
+`npm run typecheck` limpo. **Falta o teste do Fábio na Marble Dev** (o
+critério de conclusão abaixo: criar conta → pedido de permissão do
+Android → token em `clients.pushTokens` → alerta do backoffice a chegar
+como push). Só JS — não precisa de build nova. O que ficou:
+- `src/screens/NotificationsOnboardingScreen.tsx` — o passo: cartão
+  "Notificações no telemóvel" (só com `pushSupported`; recusada →
+  "Notificações desligadas"; autorizada → selo "Ativas neste telemóvel"),
+  interruptor "Ofertas e novidades" (grava logo `consent.marketing`, como
+  no Perfil), botão principal (Ativar notificações / Abrir definições /
+  Continuar) e ligação "Agora não" enquanto há push por ativar. Abrir o
+  passo grava `clients/{uid}.onboardingSeenAt`
+  (`AuthContext.markOnboardingSeen`; se a escrita falhar, o snapshot
+  seguinte volta a tentar). Na web também abre por URL:
+  `/welcome/notifications`.
+- `src/push/onboarding.ts` — `useNotificationsOnboardingTrigger`, chamado
+  no `RootNavigator`: abre o passo uma vez por conta e só com os tabs à
+  vista (nunca por cima da confirmação de um pedido de orçamento nem de
+  um ecrã aberto por um push): logo a seguir a criar conta
+  (`AuthContext.accountJustCreated` — registo **e** pedido de orçamento
+  sem conta, em todas as plataformas) ou, **decisão do Fábio
+  (2026-09-07)**, na próxima abertura com sessão de qualquer conta sem
+  `onboardingSeenAt` e sem push ativo neste telemóvel (permissão por
+  pedir ou recusada) — apanha as contas anteriores à secção, uma única
+  vez. No web nunca, fora do registo.
+- Partilhado: `src/components/Toggle.tsx` (era local ao Perfil) e
+  `src/push/usePushPermission.ts` (era local ao ecrã Alertas); textos em
+  `src/i18n` (`onboarding.*`, reutiliza `alerts.*` e
+  `profile.marketing*`); `Client.onboardingSeenAt` em `models.ts` (campo
+  opcional — a cópia do backoffice sincroniza-se quando a Secção 12c
+  fechar; nada lá depende dele).
 **Depende de:** Secções 2, 3, 6 e 12 no master (feito). Só app (`src/`);
 não toca no backoffice, nas regras nem nas Functions. Pode correr em
 paralelo com a parte 2 da Secção 11 (que não toca em `src/`).

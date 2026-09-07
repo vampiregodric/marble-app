@@ -55,6 +55,14 @@ type AuthValue = {
   updateClient: (patch: ClientUpdate) => Promise<void>;
   acceptTerms: () => Promise<void>;
   setMarketingConsent: (granted: boolean) => Promise<void>;
+  // true enquanto a conta do utilizador atual tiver sido criada NESTA
+  // sessão da app (registo, ou pedido de orçamento sem conta). O passo
+  // "Recebe os alertas no telemóvel" (Secção 15, src/push/onboarding.ts)
+  // usa-o para aparecer logo a seguir — também no web e no Expo Go, onde
+  // não há push e só se pergunta pelas ofertas.
+  accountJustCreated: boolean;
+  // Grava clients/{uid}.onboardingSeenAt: o passo da Secção 15 não repete.
+  markOnboardingSeen: () => Promise<void>;
   // Apaga a conta: pede a password outra vez, anonimiza clients/{uid} e
   // remove o utilizador do Auth. Ver comentário em deleteAccount.
   deleteAccount: (password: string) => Promise<void>;
@@ -126,6 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [client, setClient] = useState<Client | null>(null);
+  // uid da conta criada nesta sessão da app (ver accountJustCreated).
+  const [createdUid, setCreatedUid] = useState<string | null>(null);
 
   useEffect(() => {
     // Idioma dos emails do Firebase Auth (repor password, "definir password"
@@ -171,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       client,
       needsTermsAcceptance: !!client && !client.deletedAt && client.consent?.termsVersion !== LEGAL_VERSION,
+      accountJustCreated: !!user && createdUid === user.uid,
       async signIn(email, password) {
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
         return cred.user.uid;
@@ -182,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), randomPassword());
         await updateProfile(cred.user, { displayName: name.trim() });
         await createClientDoc(cred.user, { name: name.trim(), phone: phone.trim(), acceptedTerms: true });
+        setCreatedUid(cred.user.uid);
         // Falhar aqui não é grave: "Esqueceste-te da password?" no login
         // envia o mesmo email.
         await sendPasswordResetEmail(auth, email.trim()).catch(() => {});
@@ -192,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(cred.user, { displayName: name.trim() });
         await createClientDoc(cred.user, { name: name.trim(), phone: phone.trim(), acceptedTerms: true });
+        setCreatedUid(cred.user.uid);
       },
       async signOut() {
         // Este telemóvel deixa de receber os alertas desta conta (senão o
@@ -231,6 +244,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedAt: serverTimestamp(),
         });
       },
+      async markOnboardingSeen() {
+        if (!user) throw new Error('Sem sessão.');
+        await updateDoc(clientRef(user.uid), { onboardingSeenAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      },
       // Sem Cloud Functions (plano gratuito) o cliente não pode apagar
       // `vehicles`/`notifications` (regras: write false) nem garantir uma
       // limpeza atómica. Por isso a conta é ANONIMIZADA: os dados pessoais
@@ -260,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await deleteUser(user);
       },
     }),
-    [initializing, user, client]
+    [initializing, user, client, createdUid]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

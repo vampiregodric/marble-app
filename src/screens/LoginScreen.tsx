@@ -29,7 +29,9 @@ type Mode = 'login' | 'register' | 'reset';
 // Só email/password por agora — Google/Apple ficam para depois da conta de
 // developer (Secção 11). O registo exige aceitar os termos numa checkbox
 // que nunca vem pré-marcada (RGPD). O consentimento de marketing NÃO se pede
-// aqui — decisão do Fábio (Secção 3): liga-se depois, no Perfil.
+// aqui — decisão do Fábio (Secção 3): liga-se no passo "Recebe os alertas
+// no telemóvel", que aparece logo a seguir ao registo (Secção 15), ou no
+// Perfil. Quem abre esse passo é src/push/onboarding.ts, não este ecrã.
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signIn, signUp, resetPassword } = useAuth();
