@@ -1332,6 +1332,49 @@ ativo), um passo único "Recebe os alertas no telemóvel":
 "Ofertas e novidades" ligado no passo aparece ligado no Perfil; no web o
 passo mostra só o interruptor; `npm run typecheck` limpo; PT e EN.
 
+### Secção 16 — Simulador "como ficaria" (foto do cliente + amostras)
+**Estado:** Ideia registada (2026-09-07, Fábio), por desenhar. **Depois do
+lançamento** — não entra na versão 1.0.
+**Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
+existe no pedido de orçamento — Secção 7), 13 (tags: sistema/serviço e
+marcas), backoffice para gerir amostras.
+**Objetivo:** O cliente fotografa o seu chão (sala, garagem, loja) ou o seu
+carro e vê como ficaria com um sistema/cor de epóxi ou uma cor/acabamento
+de vinil/PPF da Marble, escolhendo a partir de um trabalho do portfólio ou
+de **amostras** carregadas pela equipa. Depois pode pedir orçamento com a
+simulação anexada.
+**Como se pode fazer (a decidir com o Fábio, do mais simples ao mais
+ambicioso):**
+1. **Comparação lado a lado**: a foto do cliente e uma galeria de amostras
+   (texturas/cores em 1:1 e em ambientes reais); sem "pintar" a foto. Barato
+   e honesto, mas não é o efeito "uau".
+2. **Recolorir com IA no Cloudinary** (já é o nosso alojamento): as
+   transformações generativas do Cloudinary (`e_gen_recolor` para mudar a
+   cor de um objeto identificado por texto, `e_gen_replace` /
+   `e_gen_background_replace` para substituir o pavimento) aplicadas à foto
+   carregada pelo cliente, com o resultado guardado no Cloudinary. Funciona
+   bem para carros (cor de vinil) e razoavelmente para chãos lisos; textura
+   de flake/metallic é menos fiel. Custa créditos de IA por imagem (fora
+   do plano gratuito) — o backoffice teria de ter um tecto por dia.
+3. **Modelo de imagem generativo próprio** (Gemini/Imagen ou similar, via
+   Cloud Function): "aplica esta amostra a este chão" com a amostra como
+   referência. Melhor resultado para texturas, mais caro e mais lento
+   (segundos por imagem); precisa de moderação e de um tecto por cliente.
+**Requisitos que isto traz (não esquecer):** as fotos da casa/garagem/carro
+do cliente são dados pessoais → nova finalidade na política de
+privacidade (base legal: consentimento ao usar a funcionalidade), prazo de
+retenção das simulações (ex.: 90 dias ou até apagar o pedido), o Cloudinary
+já é subcontratante mas um modelo de IA externo seria outro; texto claro na
+app de que é uma simulação e não uma proposta de cor exata (o acabamento
+real depende do substrato); no backoffice, gestão das amostras (foto,
+nome, sistema/serviço e marca — reutiliza as tags da Secção 13) e o pedido
+de orçamento a receber a simulação como anexo (a coleção `requests` já
+aceita fotos).
+**Decisões a tomar com o Fábio quando chegar a vez:** opção 1, 2 ou 3 (ou
+1 agora e 2/3 depois); só chãos, só carros ou os dois; se a simulação é
+visível à equipa antes do pedido de orçamento; limite de simulações por
+cliente/dia.
+
 ---
 
 ## Notas para quem pega numa secção

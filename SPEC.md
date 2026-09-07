@@ -134,3 +134,14 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
 - Logótipo final (ficheiro isolado, ainda não enviado)
 - Informação de contacto/negócio (morada, horário, telefone, redes sociais) para secção "sobre"/rodapé
 - Conteúdo/navegação secundária: precisa de bottom nav bar? Que secções (Início, Portfólio, Perfil/Conta, Alertas)?
+
+## Ideias para depois do lançamento
+
+- **Simulador "como ficaria" (pedido do Fábio, 2026-09-07):** o cliente
+  fotografa o seu chão (sala, garagem, loja) ou o seu carro e vê, na app,
+  como ficaria com um sistema/cor de epóxi ou com uma cor/acabamento de
+  vinil/PPF da Marble — escolhendo a partir de um trabalho do portfólio ou
+  de **amostras** que a equipa carrega no backoffice (texturas de metallic,
+  flake, cores sólidas; cores de vinil). Serve para vender: o cliente
+  experimenta em casa e pede orçamento com a simulação anexada. Detalhes
+  técnicos e decisões em aberto no ROADMAP, Secção 16.
