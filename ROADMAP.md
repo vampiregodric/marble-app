@@ -1256,7 +1256,9 @@ Tetos estrelados; tocar em "Vinil e mudança de cor" abre
 em EN liga "Metallic epoxy" e "Flake systems"; URLs à mão
 (`?service=metallic-epoxy` sem categoria, serviço de outra categoria,
 categoria desconhecida) caem no sítio certo. `npm run typecheck` limpo.
-Falta o teste no telemóvel (Expo Go).
+Testado no telemóvel pelo Fábio a 2026-09-07 (Expo Go, servidor do
+checkout principal na 8081): cartões com "Ver trabalhos" na página
+Automotive e Portfólio em Automotive + Vinil só com o Jaguar e o Audi.
 **Decisões do Fábio (escolha múltipla, 2026-09-06):** (a) correspondência
 cartão → serviço tal como proposta (14 cartões; "Preparação e reparação da
 base", os produtos da Xtreme e as páginas AI/Ads não ligam); (b) o cartão
