@@ -53,6 +53,9 @@ export type WorkTag = {
   kind: 'service' | 'brand' | 'product';
   text: string;
   detail?: string;
+  // Só nas tags `service`: o id, para o Detalhe abrir o Portfólio filtrado
+  // (Secção 17). A marca vai pelo próprio `text`.
+  serviceId?: WorkServiceId;
 };
 
 // Tags de um trabalho pela ordem pedida pelo Fábio: sistema/serviço
@@ -66,7 +69,7 @@ export function workTags(work: Work): WorkTag[] {
     return [
       // Rótulo no idioma da app; um id desconhecido (backoffice mais novo do
       // que a app) cai no rótulo PT de models.ts ou no próprio id.
-      ...services.map((id): WorkTag => ({ key: `s-${id}`, kind: 'service', text: (S.workServices as Record<string, string>)[id] ?? workServiceLabel(id) })),
+      ...services.map((id): WorkTag => ({ key: `s-${id}`, kind: 'service', serviceId: id, text: (S.workServices as Record<string, string>)[id] ?? workServiceLabel(id) })),
       ...brands.map((b, i): WorkTag => ({ key: `b-${i}-${b}`, kind: 'brand', text: b })),
     ];
   }
@@ -83,6 +86,51 @@ export function workTags(work: Work): WorkTag[] {
 // Trabalhos que têm um dado sistema/serviço (filtro secundário do Portfólio).
 export function hasService(work: Work, id: WorkServiceId): boolean {
   return Array.isArray(work.services) && work.services.includes(id);
+}
+
+// ---------- Marcas (Secção 17) ----------
+
+// Chave de comparação de uma marca. `works.brands` é texto livre escrito no
+// backoffice, por isso "Inozetek", "inozetek " e o `?brand=inozetek` de um
+// URL à mão têm de cair na mesma marca: sem espaços à volta e sem
+// maiúsculas. O que se mostra continua a ser a grafia do trabalho.
+export function brandKey(brand: string): string {
+  return brand.trim().toLocaleLowerCase();
+}
+
+// Trabalhos que têm uma dada marca (terceira fila do Portfólio).
+export function hasBrand(work: Work, key: string): boolean {
+  return Array.isArray(work.brands) && work.brands.some((b) => typeof b === 'string' && brandKey(b) === key);
+}
+
+export type BrandOption = {
+  key: string;
+  // Grafia a mostrar: a do trabalho mais recente que a usa.
+  label: string;
+  count: number;
+};
+
+// Marcas com trabalhos num recorte do Portfólio (categoria e, dentro dela,
+// serviço — ou "Todos"): mais trabalhos primeiro, empates por ordem
+// alfabética (decisão do Fábio, 2026-09-07). Cada trabalho conta uma vez
+// por marca; trabalhos sem marca não entram em lado nenhum. Recebe a lista
+// já ordenada do mais recente para o mais antigo.
+export function brandOptions(works: Work[]): BrandOption[] {
+  const found = new Map<string, BrandOption>();
+  for (const w of works) {
+    const seen = new Set<string>();
+    for (const raw of w.brands ?? []) {
+      if (typeof raw !== 'string') continue;
+      const label = raw.trim();
+      const key = brandKey(label);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const cur = found.get(key);
+      if (cur) cur.count += 1;
+      else found.set(key, { key, label, count: 1 });
+    }
+  }
+  return [...found.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 // Um item da galeria do Detalhe, já normalizado para os componentes

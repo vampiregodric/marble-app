@@ -41,7 +41,8 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/DepartmentScreen.tsx` — página de serviços de um
   departamento: conteúdo estático de `src/data/departmentContent.ts`,
   foto de `settings/home`, trabalhos recentes da categoria (`works`)
-- `src/screens/PortfolioScreen.tsx` — Portfólio: `works` publicados
+- `src/screens/PortfolioScreen.tsx` — Portfólio: `works` publicados,
+  filtrados em memória por categoria, serviço e marca (três filas de chips)
 - `src/screens/WorkDetailScreen.tsx` — Detalhe: um doc de `works`, com a
   galeria `media[]` deslizável no topo e visualizador em ecrã inteiro
   (fotos + vídeo)
@@ -810,6 +811,23 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
   aplica-o com a categoria e só se pertencer a ela. Na web chega pela query
   string — `portfolio?category=Automotive&service=vinyl`; só `?service=…`
   também serve (dá a categoria dele); categoria desconhecida é ignorada.
+- **Marca no Portfólio (Secção 17):** terceira fila de chips com as marcas
+  (`works.brands`) que têm trabalhos no recorte atual — categoria e,
+  dentro dela, serviço — e **também em "Todos"** (as marcas atravessam
+  categorias, decisão do Fábio a 2026-09-07); mais trabalhos primeiro,
+  empates alfabéticos (`brandOptions()` em `data/works.ts`); tocar outra
+  vez desliga; mudar de categoria limpa serviço e marca; mudar de serviço
+  mantém a marca se ela continuar a ter trabalhos, senão larga-a. As
+  marcas comparam-se por `brandKey()` (sem espaços à volta nem
+  maiúsculas — "inozetek" no URL é a Inozetek) e mostram a grafia do
+  trabalho mais recente. Trabalhos sem marca só se veem sem marca
+  escolhida (não há chip "Sem marca"). URL: `?brand=Inozetek` (sozinho →
+  Todos + Inozetek; com `category`/`service`, dentro desse recorte; uma
+  marca sem trabalhos no recorte é ignorada — o ecrã guarda a marca pedida
+  e só a aplica quando ela existe, o que também resolve a chegada antes de
+  os trabalhos carregarem). No Detalhe, as tags de serviço e marca são
+  tocáveis: o serviço abre categoria + serviço, a marca abre Todos + marca;
+  as tags legadas (`products`) não.
 - **Backoffice:** cartão "Tags" no formulário do trabalho — chips de
   escolha múltipla do sistema/serviço da categoria (mudar a categoria deixa
   cair os que não pertencem), marcas com Enter/vírgula e sugestões

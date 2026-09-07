@@ -6,10 +6,12 @@ export type TabParamList = {
   Home: undefined;
   // Portfólio já filtrado: a página de um departamento (Secção 9) manda a
   // `category` ("Ver portfólio"); um cartão de "O que fazemos" manda também
-  // o `service` (Secção 14), sempre da mesma categoria. Na web chegam pela
-  // query string (portfolio?category=Automotive&service=ppf) — o ecrã
-  // valida os dois antes de os aplicar.
-  Portfolio: { category?: WorkCategory; service?: WorkServiceId } | undefined;
+  // o `service` (Secção 14), sempre da mesma categoria; uma tag do Detalhe
+  // (Secção 17) manda a `brand` (texto, como está no trabalho) — sozinha
+  // aplica-se em "Todos", porque as marcas atravessam categorias. Na web
+  // chegam pela query string (portfolio?category=Automotive&service=ppf,
+  // portfolio?brand=Inozetek) — o ecrã valida tudo antes de aplicar.
+  Portfolio: { category?: WorkCategory; service?: WorkServiceId; brand?: string } | undefined;
   Events: undefined;
   Alerts: undefined;
   Profile: undefined;

@@ -126,6 +126,8 @@ export const pt = {
     // Leitores de ecrã, nos chips das tags (Secção 13).
     serviceA11y: (s: string) => `Serviço: ${s}`,
     brandA11y: (b: string) => `Marca: ${b}`,
+    // Secção 17: as tags abrem o Portfólio filtrado (leitor de ecrã).
+    tagHint: 'Abre o Portfólio só com trabalhos desta tag',
   },
 
   gallery: {

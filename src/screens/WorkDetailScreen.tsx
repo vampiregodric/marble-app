@@ -101,20 +101,45 @@ export default function WorkDetailScreen() {
 
             {work.description ? <Text style={styles.desc}>{work.description}</Text> : null}
 
+            {/* Secção 17: as tags de serviço e de marca abrem o Portfólio já
+                filtrado — o serviço dentro da categoria do trabalho (como os
+                cartões de departamento da Secção 14), a marca em "Todos",
+                porque atravessa categorias. As tags legadas (`products`) não
+                filtram nada e ficam só texto. */}
             {tags.length > 0 && (
               <View style={styles.tags} accessibilityRole="list">
-                {tags.map((t) => (
-                  <View
-                    key={t.key}
-                    style={[styles.chip, t.kind === 'service' && styles.chipService]}
-                    accessibilityLabel={
-                      t.kind === 'service' ? T.work.serviceA11y(t.text) : t.kind === 'brand' ? T.work.brandA11y(t.text) : `${t.text}${t.detail ? ` · ${t.detail}` : ''}`
-                    }
-                  >
-                    <Text style={t.kind === 'service' ? styles.chipServiceText : styles.chipBrand}>{t.text}</Text>
-                    {t.detail ? <Text style={styles.chipItem}> · {t.detail}</Text> : null}
-                  </View>
-                ))}
+                {tags.map((t) => {
+                  const target =
+                    t.kind === 'service' && t.serviceId
+                      ? { category: work.category, service: t.serviceId }
+                      : t.kind === 'brand'
+                        ? { brand: t.text }
+                        : null;
+                  const label =
+                    t.kind === 'service' ? T.work.serviceA11y(t.text) : t.kind === 'brand' ? T.work.brandA11y(t.text) : `${t.text}${t.detail ? ` · ${t.detail}` : ''}`;
+                  const content = (
+                    <>
+                      <Text style={t.kind === 'service' ? styles.chipServiceText : styles.chipBrand}>{t.text}</Text>
+                      {t.detail ? <Text style={styles.chipItem}> · {t.detail}</Text> : null}
+                    </>
+                  );
+                  return target ? (
+                    <Pressable
+                      key={t.key}
+                      style={({ pressed }) => [styles.chip, t.kind === 'service' && styles.chipService, pressed && styles.chipPressed]}
+                      onPress={() => navigation.navigate('Tabs', { screen: 'Portfolio', params: target })}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
+                      accessibilityHint={T.work.tagHint}
+                    >
+                      {content}
+                    </Pressable>
+                  ) : (
+                    <View key={t.key} style={styles.chip} accessibilityLabel={label}>
+                      {content}
+                    </View>
+                  );
+                })}
               </View>
             )}
           </ScrollView>
@@ -154,6 +179,7 @@ const styles = StyleSheet.create({
   // O sistema/serviço distingue-se da marca: contorno dourado e maiúsculas
   // (como o selo da categoria), a marca fica em texto normal.
   chipService: { borderColor: colors.hairlineStrong, backgroundColor: 'rgba(198,161,91,0.10)' },
+  chipPressed: { opacity: 0.6 },
   chipServiceText: { fontFamily: fonts.eyebrow, fontSize: 9.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   chipBrand: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.ink },
   chipItem: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },

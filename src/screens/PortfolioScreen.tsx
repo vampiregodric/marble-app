@@ -6,7 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
 import { EmptyState, ErrorState, LoadingState } from '../components/ListState';
-import { hasService, usePublishedWorks } from '../data/works';
+import { brandKey, brandOptions, hasBrand, hasService, usePublishedWorks } from '../data/works';
 import { CATEGORIES } from '../data/categories';
 import { WORK_SERVICES, WorkCategory, WorkServiceId, workServicesOf } from '../firebase/models';
 import { RootStackParamList, TabParamList } from '../navigation/types';
@@ -20,37 +20,56 @@ type Filter = typeof ALL | WorkCategory;
 
 // Portfólio público: todos os trabalhos publicados no Firestore, filtrados por
 // categoria em memória. Pode chegar aqui já filtrado: a página de um
-// departamento manda `params.category` ("Ver portfólio") e um cartão de
-// "O que fazemos" manda também `params.service` (Secção 14). Dentro de uma
-// categoria há um segundo filtro, pelo sistema/serviço (Secção 13:
-// `works.services`) — só aparecem os que têm trabalhos publicados; em
-// "Todos" não há segunda fila.
+// departamento manda `params.category` ("Ver portfólio"), um cartão de
+// "O que fazemos" manda também `params.service` (Secção 14) e uma tag do
+// Detalhe manda `params.brand` (Secção 17). Dentro de uma categoria há um
+// segundo filtro, pelo sistema/serviço (Secção 13: `works.services`) — só
+// aparecem os que têm trabalhos publicados; em "Todos" não há segunda fila.
+// A terceira fila é a marca (`works.brands`, Secção 17): aparece em
+// qualquer recorte, incluindo "Todos" (as marcas atravessam categorias), só
+// com as marcas que têm trabalhos no recorte atual, e combina-se com o
+// serviço (E). Trabalhos sem marca só se veem sem marca escolhida.
 export default function PortfolioScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, 'Portfolio'>>();
   const [active, setActive] = useState<Filter>(ALL);
   const [service, setService] = useState<WorkServiceId | null>(null);
+  // Chave da marca pedida (brandKey). Só conta quando existe no recorte
+  // atual — ver `brand` abaixo — o que também cobre o URL à mão com uma
+  // marca que ninguém usou, e a chegada antes de os trabalhos carregarem.
+  const [brandWanted, setBrandWanted] = useState<string | null>(null);
   const screenW = useAppWidth();
   const cardW = (screenW - 36 - 10) / 2;
   const { data: works, loading, error } = usePublishedWorks();
   const T = useT();
 
-  // Mudar de categoria limpa o serviço (as listas são por categoria).
+  // Mudar de categoria limpa o serviço (as listas são por categoria) e a
+  // marca (o recorte muda por completo).
   const choose = (c: Filter) => {
     setActive(c);
     setService(null);
+    setBrandWanted(null);
   };
 
   // Params de chegada. Na web vêm da query string e podem ser qualquer
   // coisa: uma categoria desconhecida é ignorada; um serviço só entra se
-  // pertencer à categoria (e, sem categoria, dá a dele).
+  // pertencer à categoria (e, sem categoria, dá a dele); a marca sozinha
+  // aplica-se em "Todos".
   useEffect(() => {
     const p = route.params;
     if (!p) return;
-    const category = p.category ?? WORK_SERVICES.find((s) => s.id === p.service)?.category;
-    if (!category || !CATEGORIES.some((c) => c.key === category)) return;
-    setActive(category);
-    setService(p.service && workServicesOf(category).some((s) => s.id === p.service) ? p.service : null);
+    const wanted = p.category ?? WORK_SERVICES.find((s) => s.id === p.service)?.category;
+    const category = wanted && CATEGORIES.some((c) => c.key === wanted) ? wanted : null;
+    const brand = typeof p.brand === 'string' ? brandKey(p.brand) : '';
+    if (!category && !brand) return;
+    if (category) {
+      setActive(category);
+      setService(p.service && workServicesOf(category).some((s) => s.id === p.service) ? p.service : null);
+    } else {
+      setActive(ALL);
+      setService(null);
+    }
+    setBrandWanted(brand || null);
   }, [route.params]);
 
   const inCategory = useMemo(() => (active === ALL ? works : works.filter((w) => w.category === active)), [works, active]);
@@ -58,7 +77,21 @@ export default function PortfolioScreen() {
     () => (active === ALL ? [] : workServicesOf(active).filter((s) => inCategory.some((w) => hasService(w, s.id)))),
     [active, inCategory]
   );
-  const filtered = useMemo(() => (service ? inCategory.filter((w) => hasService(w, service)) : inCategory), [inCategory, service]);
+  const inService = useMemo(() => (service ? inCategory.filter((w) => hasService(w, service)) : inCategory), [inCategory, service]);
+  // Marcas do recorte atual (categoria + serviço), mais trabalhos primeiro.
+  const brandChoices = useMemo(() => brandOptions(inService), [inService]);
+  const brand = brandWanted && brandChoices.some((b) => b.key === brandWanted) ? brandWanted : null;
+  const filtered = useMemo(() => (brand ? inService.filter((w) => hasBrand(w, brand)) : inService), [inService, brand]);
+
+  // Mudar de serviço mantém a marca se ela continuar a ter trabalhos no
+  // recorte novo; senão larga-a (em vez de mostrar um Portfólio vazio).
+  const chooseService = (s: WorkServiceId | null) => {
+    setService(s);
+    if (brandWanted) {
+      const next = s ? inCategory.filter((w) => hasService(w, s)) : inCategory;
+      if (!next.some((w) => hasBrand(w, brandWanted))) setBrandWanted(null);
+    }
+  };
 
   const subtitle = loading ? T.common.loading : T.portfolio.count(works.length);
 
@@ -100,13 +133,33 @@ export default function PortfolioScreen() {
             return (
               <Pressable
                 key={s.id}
-                onPress={() => setService(on ? null : s.id)}
+                onPress={() => chooseService(on ? null : s.id)}
                 style={[styles.subChip, on && styles.subChipActive]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={label}
               >
                 <Text style={[styles.subChipText, on && styles.subChipTextActive]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+
+      {brandChoices.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subRow} contentContainerStyle={styles.chipsRowContent}>
+          {brandChoices.map((b) => {
+            const on = brand === b.key;
+            return (
+              <Pressable
+                key={b.key}
+                onPress={() => setBrandWanted(on ? null : b.key)}
+                style={[styles.subChip, on && styles.subChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={T.work.brandA11y(b.label)}
+              >
+                <Text style={[styles.subChipText, on && styles.subChipTextActive]}>{b.label}</Text>
               </Pressable>
             );
           })}
@@ -122,7 +175,7 @@ export default function PortfolioScreen() {
           title={active === ALL ? T.portfolio.emptyAll : service ? T.portfolio.emptyService : T.portfolio.emptyCategory}
           description={T.portfolio.emptyDesc}
           actionLabel={active === ALL ? undefined : service ? T.portfolio.seeCategory : T.portfolio.seeAll}
-          onAction={active === ALL ? undefined : service ? () => setService(null) : () => choose(ALL)}
+          onAction={active === ALL ? undefined : service ? () => chooseService(null) : () => choose(ALL)}
         />
       ) : (
         <ScrollView style={styles.gridScroll} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
@@ -165,7 +218,9 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.8, color: colors.inkMuted, textTransform: 'uppercase' },
   chipTextActive: { color: '#0b0a08', fontFamily: fonts.bodyBold },
   // Segunda fila (Secção 13): sistema/serviço dentro da categoria. Mais
-  // discreta do que a primeira — contorno dourado em vez de fundo cheio.
+  // discreta do que a primeira — contorno dourado em vez de fundo cheio. A
+  // terceira fila (Secção 17: marcas) usa exatamente o mesmo estilo; o que
+  // as distingue é o conteúdo (serviços vs. nomes de marcas).
   subRow: { flexGrow: 0, flexShrink: 0, height: 32, marginTop: 8, paddingLeft: 20 },
   subChip: { alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.hairline, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 5 },
   subChipActive: { borderColor: colors.gold, backgroundColor: 'rgba(198,161,91,0.14)' },

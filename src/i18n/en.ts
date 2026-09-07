@@ -108,6 +108,7 @@ export const en: Strings = {
     requestSimilar: 'Request a similar quote',
     serviceA11y: (s) => `Service: ${s}`,
     brandA11y: (b) => `Brand: ${b}`,
+    tagHint: 'Opens the Portfolio with only the work carrying this tag',
   },
 
   gallery: {

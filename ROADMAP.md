@@ -1240,9 +1240,9 @@ e pesquisa por tag; README. `firestore.rules` não mudou (as escritas em
 (`workServices`) — `models.ts` é copiado tal e qual para o backoffice, que
 não tem `tx()`; guarda-se sempre o id. Os sistemas de epóxi são nomes da
 Xtreme e ficam iguais nos dois idiomas.
-**Em aberto (pequeno, quando fizer falta):** um seletor de marca no
-Portfólio (hoje só o serviço filtra). As páginas de departamento já abrem o
-Portfólio filtrado por serviço — Secção 14.
+**Em aberto:** fechado. O seletor de marca no Portfólio ficou feito na
+Secção 17 — Filtro por marca no Portfólio (2026-09-08); as páginas de
+departamento abrem o Portfólio filtrado por serviço desde a Secção 14.
 **Objetivo (pedido do Fábio, 2026-09-04, na Secção 10):** cada trabalho
 de epóxi deve levar **2 tags** — a marca (Xtreme Polishing Systems) e o
 sistema (Metallic Epoxy, Solid Colour Epoxy, Quartz Epoxy, Flake Epoxy);
@@ -1433,6 +1433,56 @@ aceita fotos).
 1 agora e 2/3 depois); só chãos, só carros ou os dois; se a simulação é
 visível à equipa antes do pedido de orçamento; limite de simulações por
 cliente/dia.
+
+### Secção 17 — Filtro por marca no Portfólio
+**Estado:** Feito (2026-09-08), verificado na app web (8084, dados do dev)
+em PT e EN: em "Todos" a fila de marcas mostra Xtreme Polishing Systems,
+Inozetek e Avery Dennison por número de trabalhos; em Automotive + Vinil,
+tocar em Xtreme deixa só o Jaguar, mudar para Detailing mantém a Xtreme,
+mudar para PPF colorido larga-a; URLs à mão caem no sítio certo
+(`?brand=inozetek` em minúsculas → Todos + Inozetek; `?brand=Nada`
+ignorado; `?category=Epoxy%20Floors&brand=Inozetek` fica em Epoxy sem
+marca; `?service=metallic-epoxy&brand=XTREME%20polishing%20systems` →
+Epoxy + Metallic Epoxy + Xtreme); no Detalhe do Jaguar, tocar em
+"Inozetek" abre `portfolio?brand=Inozetek` e tocar em "Vinil" abre
+`portfolio?category=Automotive&service=vinyl`. `npm run typecheck` limpo.
+Por testar no telemóvel pelo Fábio (Expo Go, servidor da 8081).
+**Depende de:** Secção 13 — Tags nos trabalhos: marca e sistema/serviço
+(`works.brands`) e Secção 14 — Portfólio filtrado por serviço a partir dos
+departamentos (params `category`/`service` validados no `useEffect`).
+**Objetivo:** Fechar o "Em aberto" da Secção 13: o Portfólio filtrava por
+categoria e, dentro dela, por serviço; as marcas só se viam no Detalhe.
+Passa a haver uma terceira fila de chips com as marcas que têm trabalhos
+publicados no recorte atual, combinável com o serviço (E), e o param
+`brand` no URL (`?brand=`), como o `?service=` da Secção 14.
+**Decisões do Fábio (escolha múltipla, 2026-09-07):** (1) terceira fila
+por baixo dos serviços, no mesmo estilo discreto, **também em "Todos"** —
+ao contrário dos serviços, as marcas atravessam categorias (a Xtreme está
+em Epoxy e em Detailing), por isso `?brand=Inozetek` sozinho abre Todos +
+Inozetek; (2) ordem por número de trabalhos no recorte, empates
+alfabéticos; (3) trabalhos sem marca ficam de fora quando há uma marca
+escolhida, sem chip "Sem marca"; (4) as tags do Detalhe passam a tocáveis:
+o serviço abre o Portfólio na categoria do trabalho com esse serviço (como
+os cartões de departamento da Secção 14), a marca abre "Todos" com essa
+marca (atravessa categorias); as tags legadas (`products`) ficam só texto.
+**O que ficou feito (só `src/`):** `navigation/types.ts`
+(`Portfolio: { category?, service?, brand? }`); `data/works.ts` —
+`brandKey()` (sem espaços à volta nem maiúsculas: o texto livre do
+backoffice e o URL à mão caem na mesma marca), `hasBrand()`,
+`brandOptions()` (marcas de um recorte, mais trabalhos primeiro, grafia do
+trabalho mais recente), `WorkTag.serviceId`; `PortfolioScreen` — estado
+`brandWanted` (a marca pedida) e `brand` derivada (só conta se existir no
+recorte — cobre o URL com marca que ninguém usou e a chegada antes de os
+trabalhos carregarem), terceira fila com o estilo da segunda, mudar de
+categoria limpa serviço e marca, mudar de serviço mantém a marca se ela
+continuar a ter trabalhos no recorte novo (senão larga-a, em vez de
+mostrar um Portfólio vazio), `useEffect` dos params aceita `brand`
+(sozinha → Todos); `WorkDetailScreen` — chips de serviço e marca em
+`Pressable` que fazem `navigate('Tabs', { screen: 'Portfolio', params })`;
+i18n `work.tagHint` (pt/en; os nomes das marcas não se traduzem e a fila
+reutiliza `work.brandA11y`). Sem mexer em `RootNavigator` (a query string
+já vira params), no backoffice, nas regras ou nas Functions; `models.ts`
+não mudou. Detalhes em `DEVELOPMENT.md`, "Tags nos trabalhos".
 
 ---
 
