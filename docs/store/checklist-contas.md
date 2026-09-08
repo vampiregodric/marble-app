@@ -232,8 +232,10 @@ que falta está no ROADMAP, Secção 11, "Bloqueado nas contas". Do teu lado:
   (já no `.gitignore`); dar-lhe permissões de "Release manager" na app.
 - **Ficha da app** nas duas consolas com os textos de `docs/store/ficha-loja.md`
   e os formulários `data-safety.md` / `app-privacy.md`.
-- **Conta de demonstração** para os revisores, criada no prod, com um carro
-  com checkup pendente e alertas de exemplo.
+- **Conta de demonstração** para os revisores — FEITO (2026-09-08):
+  `revisao@marble.pt`, criada no prod por `npm run demo:account` com um carro
+  com checkup pendente, um chão em dia e dois alertas; email e password na
+  `ficha-loja.md` (secção "Acesso à app").
 - **Equipa com acesso ao backoffice no prod**: correr `scripts/set-admin.mjs`
   do backoffice com a chave do prod; publicar o backoffice num site de
   Hosting do prod (repositório do backoffice).
