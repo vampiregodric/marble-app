@@ -8,8 +8,10 @@ import {
   Pressable,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,6 +32,27 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppWidth } from '../utils/layout';
 import { useT } from '../i18n';
 
+// O Início tem de caber no ecrã sem scroll (pedido do Fábio, 2026-09-09: no
+// telemóvel dele a terceira fila de cartões ficava cortada). Primeiro
+// encolhe o carrossel, de 168 até 120; se ainda não chegar, encolhem os
+// seis cartões de departamento, de 122 até 100. Num telemóvel alto fica
+// tudo no máximo. Só num muito baixo (iPhone SE) sobra um resto para
+// deslizar. As parcelas fixas espelham os estilos lá em baixo — se mudares
+// uma altura ou margem, muda aqui.
+const CAROUSEL_MAX = 168;
+const CAROUSEL_MIN = 120;
+const DEPT_CARD_MAX = 122;
+const DEPT_CARD_MIN = 100;
+// Cabeçalho (6 + logo 56 + 14 + linha 1) + margem do carrossel (16) +
+// pontos (8 + 5) + rótulo "O que fazemos" (22 + ~14 + 12) + 4 de folga.
+const HOME_FIXED_ABOVE_GRID = 77 + 16 + 13 + 48 + 4;
+// Os dois intervalos entre filas e a folga do fim da grelha.
+const HOME_GRID_FIXED = 2 * 10 + 24;
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, v));
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, client } = useAuth();
@@ -39,6 +62,14 @@ export default function HomeScreen() {
   const screenW = useAppWidth();
   const carouselW = screenW - 36;
   const deptCardW = (screenW - 26 - 10) / 2 - 5;
+  const { height: windowH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // A barra de tabs já inclui a zona segura de baixo (RootNavigator).
+  const tabBarH = useBottomTabBarHeight();
+  // Espaço para o carrossel mais as três filas de cartões.
+  const free = windowH - insets.top - tabBarH - HOME_FIXED_ABOVE_GRID - HOME_GRID_FIXED;
+  const carouselH = Math.round(clamp(free - 3 * DEPT_CARD_MAX, CAROUSEL_MIN, CAROUSEL_MAX));
+  const deptCardH = Math.floor(clamp((free - carouselH) / 3, DEPT_CARD_MIN, DEPT_CARD_MAX));
 
   // Carrossel: destaques escolhidos pela equipa (works.featured), em tempo real.
   const { data: featured, loading } = useFeaturedWorks(5);
@@ -92,14 +123,14 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
-          style={[styles.carousel, { width: carouselW }]}
+          style={[styles.carousel, { width: carouselW, height: carouselH }]}
         >
           {loading ? (
-            <View style={[styles.slide, { width: carouselW }]}>
+            <View style={[styles.slide, { width: carouselW, height: carouselH }]}>
               <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
             </View>
           ) : featured.length === 0 ? (
-            <Pressable style={[styles.slide, { width: carouselW }]} onPress={() => openPortfolio()}>
+            <Pressable style={[styles.slide, { width: carouselW, height: carouselH }]} onPress={() => openPortfolio()}>
               <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
               <View style={styles.slideOverlay} />
               <View style={styles.slideText}>
@@ -111,7 +142,7 @@ export default function HomeScreen() {
             featured.map((w) => (
               <Pressable
                 key={w.id}
-                style={[styles.slide, { width: carouselW }]}
+                style={[styles.slide, { width: carouselW, height: carouselH }]}
                 onPress={() => navigation.navigate('WorkDetail', { workId: w.id })}
                 accessibilityRole="button"
                 accessibilityLabel={w.title}
@@ -157,7 +188,7 @@ export default function HomeScreen() {
             return (
               <Pressable
                 key={d.id}
-                style={[styles.deptCard, { width: deptCardW }]}
+                style={[styles.deptCard, { width: deptCardW, height: deptCardH }]}
                 onPress={hasDepartmentContent(d.id) ? () => navigation.navigate('Department', { id: d.id }) : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={d.name}
@@ -226,8 +257,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.goldBright,
   },
-  carousel: { height: 168, marginTop: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2 },
-  slide: { height: 168, position: 'relative' },
+  // A altura vem de carouselH (CAROUSEL_MIN..CAROUSEL_MAX), no próprio JSX.
+  carousel: { marginTop: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2 },
+  slide: { position: 'relative' },
   slideOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   slideText: { position: 'absolute', left: 16, right: 16, bottom: 16 },
   slideTag: {
@@ -247,8 +279,8 @@ const styles = StyleSheet.create({
   gridLabel: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 2, color: colors.inkMuted },
   gridLabelLine: { flex: 1, height: 1, backgroundColor: colors.hairline },
   deptGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 13, gap: 10, paddingBottom: 24 },
+  // A altura vem de deptCardH (DEPT_CARD_MIN..DEPT_CARD_MAX), no próprio JSX.
   deptCard: {
-    height: 122,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
