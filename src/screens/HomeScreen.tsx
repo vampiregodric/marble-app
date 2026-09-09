@@ -16,14 +16,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
-import { BellIcon, UserIcon } from '../components/Icons';
 import Photo from '../components/Photo';
-import Avatar from '../components/Avatar';
 import PlaceholderThumb from '../components/PlaceholderThumb';
-import { useAuth } from '../auth/AuthContext';
 import { useFeaturedWorks } from '../data/works';
 import { useHomeSettings } from '../data/settings';
-import { useUnreadCount } from '../data/notifications';
 import { categoryFullName } from '../data/categories';
 import { DEPARTMENTS } from '../data/departments';
 import { hasDepartmentContent } from '../data/departmentContent';
@@ -79,7 +75,6 @@ function deptNameSizes(names: string[], textWidth: number): Map<string, number> 
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user, client } = useAuth();
   const T = useT();
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -103,9 +98,6 @@ export default function HomeScreen() {
   // (settings/home). Sem foto, o cartão fica no gradiente — nunca um ícone.
   const { data: home } = useHomeSettings();
   const covers = home?.departmentCovers ?? {};
-  // Ponto no sino: só com sessão e alertas por ler.
-  const unread = useUnreadCount(user?.uid);
-  const avatarUrl = client?.avatarUrl?.trim();
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / carouselW);
@@ -117,28 +109,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Cabeçalho só com o logótipo. Os atalhos para Alertas e Perfil que
+          aqui estavam saíram a 2026-09-09 (decisão do Fábio): duplicavam as
+          tabs de baixo, que já mostram o número de alertas por ler. */}
       <View style={styles.header}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <View style={styles.headerIcons}>
-          <Pressable
-            style={styles.iconBtn}
-            onPress={() => navigation.navigate('Tabs', { screen: 'Alerts' })}
-            accessibilityRole="button"
-            accessibilityLabel={T.home.alertsA11y(unread)}
-          >
-            <BellIcon size={15} color={colors.gold} />
-            {unread > 0 ? <View style={styles.dot} /> : null}
-          </Pressable>
-          {/* Com sessão e foto de perfil, o botão do Perfil é a própria foto. */}
-          <Pressable
-            style={[styles.iconBtn, !!avatarUrl && styles.iconBtnAvatar]}
-            onPress={() => navigation.navigate('Tabs', { screen: 'Profile' })}
-            accessibilityRole="button"
-            accessibilityLabel={T.home.profileA11y}
-          >
-            {avatarUrl ? <Avatar url={avatarUrl} name={client?.name ?? ''} size={30} /> : <UserIcon size={15} color={colors.gold} />}
-          </Pressable>
-        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -255,10 +230,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
+  // A altura (6 + 56 + 14 + 1 = 77) entra em HOME_FIXED_ABOVE_GRID.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 6,
     paddingBottom: 14,
@@ -266,28 +241,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.hairline,
   },
   logo: { height: 56, width: 100 },
-  headerIcons: { flexDirection: 'row', gap: 14 },
-  iconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.panel2,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // O Avatar traz a própria borda; a do botão sairia a dobrar.
-  iconBtnAvatar: { borderWidth: 0, backgroundColor: 'transparent' },
-  dot: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.goldBright,
-  },
   // A altura vem de carouselH (CAROUSEL_MIN..CAROUSEL_MAX), no próprio JSX.
   carousel: { marginTop: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2 },
   slide: { position: 'relative' },

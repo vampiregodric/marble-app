@@ -34,10 +34,11 @@ compila `functions/src`, e sem as dependências das Functions dá erros
 
 Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/HomeScreen.tsx` — Início: carrossel = `works` com
-  `featured: true`; ponto no sino = alertas por ler; cartões dos seis
+  `featured: true`; cartões dos seis
   departamentos com a foto escolhida pela equipa (`settings/home`), cada
-  um abre a página de serviços do departamento (Secção 9); botão do Perfil
-  mostra a foto do cliente quando existe; o carrossel (168 a 120 px) e os
+  um abre a página de serviços do departamento (Secção 9); cabeçalho só
+  com o logótipo (os atalhos de alertas e perfil saíram a 2026-09-09:
+  duplicavam as tabs); o carrossel (168 a 120 px) e os
   cartões (122 a 100 px) encolhem para o Início caber sem scroll em
   qualquer telemóvel (constantes no topo do ficheiro; pedido do Fábio,
   2026-09-09); o carrossel mostra a foto do trabalho INTEIRA

@@ -33,8 +33,6 @@ export const pt = {
   },
 
   home: {
-    alertsA11y: (unread: number) => (unread > 0 ? `Alertas, ${unread} por ler` : 'Alertas'),
-    profileA11y: 'Perfil',
     featuredSoon: 'Os nossos trabalhos em destaque chegam em breve.',
     // "{categoria} · Concluído" no carrossel.
     completed: 'Concluído',

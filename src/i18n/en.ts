@@ -25,8 +25,6 @@ export const en: Strings = {
   },
 
   home: {
-    alertsA11y: (unread) => (unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'),
-    profileA11y: 'Profile',
     featuredSoon: 'Our featured work is coming soon.',
     completed: 'Completed',
     servicesLabel: 'OUR SERVICES',
