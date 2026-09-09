@@ -29,22 +29,24 @@ import { useAppWidth } from '../utils/layout';
 import { cloudinaryWhole } from '../media/cloudinary';
 import { useT } from '../i18n';
 
-// O Início tem de caber no ecrã sem scroll (pedido do Fábio, 2026-09-09: no
-// telemóvel dele a terceira fila de cartões ficava cortada). Primeiro
-// encolhe o carrossel, de 168 até 120; se ainda não chegar, encolhem os
-// seis cartões de departamento, de 122 até 100. Num telemóvel alto fica
-// tudo no máximo. Só num muito baixo (iPhone SE) sobra um resto para
+// Ordem do Início (decisão do Fábio, 2026-09-09): logótipo em cima, sem
+// traço; a seguir UMA linha fina que acaba no rótulo "Os nossos serviços"
+// ("———— OS NOSSOS SERVIÇOS", desenho dele); logo os seis cartões de
+// departamento e, em baixo, o carrossel dos destaques, que fica com TODO o
+// espaço que sobrar até à barra de tabs (até CAROUSEL_MAX).
+// O ecrã tem de caber sem scroll: se faltar espaço, primeiro encolhe o
+// carrossel até 120; se ainda não chegar, encolhem os cartões, de 122 até
+// 100. Só num telemóvel muito baixo (iPhone SE) sobra um resto para
 // deslizar. As parcelas fixas espelham os estilos lá em baixo — se mudares
 // uma altura ou margem, muda aqui.
-const CAROUSEL_MAX = 168;
+const CAROUSEL_MAX = 260;
 const CAROUSEL_MIN = 120;
 const DEPT_CARD_MAX = 122;
 const DEPT_CARD_MIN = 100;
-// Cabeçalho (6 + logo 56 + 14 + linha 1) + margem do carrossel (16) +
-// pontos (8 + 5) + rótulo "O que fazemos" (22 + ~14 + 12) + 4 de folga.
-const HOME_FIXED_ABOVE_GRID = 77 + 16 + 13 + 48 + 4;
-// Os dois intervalos entre filas e a folga do fim da grelha.
-const HOME_GRID_FIXED = 2 * 10 + 24;
+// Cabeçalho (6 + logo 56 + 8, sem traço) + rótulo da grelha (8 + ~14 + 10)
+// + os dois intervalos entre filas (2 × 10) + margem do carrossel (18) +
+// pontos (8 + 5 + 16 de fim) + 4 de folga.
+const HOME_FIXED = 70 + 32 + 20 + 18 + 29 + 4;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -80,15 +82,20 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const screenW = useAppWidth();
   const carouselW = screenW - 36;
-  const deptCardW = (screenW - 26 - 10) / 2 - 5;
+  // Grelha alinhada com o carrossel e o rótulo: 18 px de cada lado, 10 entre
+  // cartões (o Fábio notou o rótulo a acabar à direita dos cartões, 2026-09-09).
+  const deptCardW = Math.floor((screenW - 36 - 10) / 2);
   const { height: windowH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // A barra de tabs já inclui a zona segura de baixo (RootNavigator).
   const tabBarH = useBottomTabBarHeight();
   // Espaço para o carrossel mais as três filas de cartões.
-  const free = windowH - insets.top - tabBarH - HOME_FIXED_ABOVE_GRID - HOME_GRID_FIXED;
+  const free = windowH - insets.top - tabBarH - HOME_FIXED;
   const carouselH = Math.round(clamp(free - 3 * DEPT_CARD_MAX, CAROUSEL_MIN, CAROUSEL_MAX));
   const deptCardH = Math.floor(clamp((free - carouselH) / 3, DEPT_CARD_MIN, DEPT_CARD_MAX));
+  // Os slides vivem dentro do contorno de 1 px do carrossel.
+  const slideW = carouselW - 2;
+  const slideH = carouselH - 2;
   // Largura útil do nome: cartão menos as bordas (2) e o padding (24).
   const nameSizes = useMemo(() => deptNameSizes(DEPARTMENTS.map((d) => d.name), deptCardW - 26), [deptCardW]);
 
@@ -100,7 +107,7 @@ export default function HomeScreen() {
   const covers = home?.departmentCovers ?? {};
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / carouselW);
+    const idx = Math.round(e.nativeEvent.contentOffset.x / slideW);
     if (idx !== activeSlide) setActiveSlide(idx);
   };
 
@@ -117,66 +124,12 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          style={[styles.carousel, { width: carouselW, height: carouselH }]}
-        >
-          {loading ? (
-            <View style={[styles.slide, { width: carouselW, height: carouselH }]}>
-              <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
-            </View>
-          ) : featured.length === 0 ? (
-            <Pressable style={[styles.slide, { width: carouselW, height: carouselH }]} onPress={() => openPortfolio()}>
-              <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
-              <View style={styles.slideOverlay} />
-              <View style={styles.slideText}>
-                <Text style={styles.slideTag}>{T.common.brand}</Text>
-                <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
-              </View>
-            </Pressable>
-          ) : (
-            featured.map((w) => (
-              <Pressable
-                key={w.id}
-                style={[styles.slide, { width: carouselW, height: carouselH }]}
-                onPress={() => navigation.navigate('WorkDetail', { workId: w.id })}
-                accessibilityRole="button"
-                accessibilityLabel={w.title}
-              >
-                {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
-                    margem que sobrar fica no fundo escuro do carrossel. */}
-                <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
-                <View style={styles.slideOverlay} />
-                <View style={styles.slideText}>
-                  <Text style={styles.slideTag}>
-                    {categoryFullName(w.category)} · {T.home.completed}
-                  </Text>
-                  <Text style={styles.slideTitle} numberOfLines={2}>
-                    {w.title}
-                  </Text>
-                </View>
-              </Pressable>
-            ))
-          )}
-        </ScrollView>
-        {featured.length > 1 ? (
-          <View style={styles.dots}>
-            {featured.map((w, i) => (
-              <View key={w.id} style={[styles.pageDot, i === activeSlide && styles.pageDotActive]} />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.dotsSpacer} />
-        )}
-
+        {/* Rótulo da grelha: uma linha fina e, no fim dela, o texto — a única
+            linha por baixo do logótipo (o cabeçalho não tem traço). Desenho
+            do Fábio, 2026-09-09: "———— OS NOSSOS SERVIÇOS". */}
         <View style={styles.gridLabelRow}>
-          <Text style={styles.gridLabel}>{T.home.servicesLabel}</Text>
           <View style={styles.gridLabelLine} />
+          <Text style={styles.gridLabel}>{T.home.servicesLabel}</Text>
         </View>
 
         {/* Cartões de departamento: foto escolhida pela equipa como fundo,
@@ -223,6 +176,75 @@ export default function HomeScreen() {
             );
           })}
         </View>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          style={[styles.carousel, { width: carouselW, height: carouselH }]}
+        >
+          {loading ? (
+            <View style={[styles.slide, { width: slideW, height: slideH }]}>
+              <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
+            </View>
+          ) : featured.length === 0 ? (
+            <Pressable style={[styles.slide, { width: slideW, height: slideH }]} onPress={() => openPortfolio()}>
+              <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
+              <LinearGradient
+                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
+                  locations={[0.4, 0.72, 1]}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+              <View style={styles.slideText}>
+                <Text style={styles.slideTag}>{T.common.brand}</Text>
+                <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
+              </View>
+            </Pressable>
+          ) : (
+            featured.map((w) => (
+              <Pressable
+                key={w.id}
+                style={[styles.slide, { width: slideW, height: slideH }]}
+                onPress={() => navigation.navigate('WorkDetail', { workId: w.id })}
+                accessibilityRole="button"
+                accessibilityLabel={w.title}
+              >
+                {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
+                    margem que sobrar fica no fundo escuro do carrossel. */}
+                <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
+                  locations={[0.4, 0.72, 1]}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+                <View style={styles.slideText}>
+                  <Text style={styles.slideTag}>
+                    {categoryFullName(w.category)} · {T.home.completed}
+                  </Text>
+                  <Text style={styles.slideTitle} numberOfLines={2}>
+                    {w.title}
+                  </Text>
+                </View>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
+        {/* Experiência de 2026-09-09 (Fábio): o carrossel dos destaques fica
+            por baixo do menu dos departamentos. */}
+        {featured.length > 1 ? (
+          <View style={styles.dots}>
+            {featured.map((w, i) => (
+              <View key={w.id} style={[styles.pageDot, i === activeSlide && styles.pageDotActive]} />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.dotsSpacer} />
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -230,21 +252,21 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
-  // A altura (6 + 56 + 14 + 1 = 77) entra em HOME_FIXED_ABOVE_GRID.
+  // A altura (6 + 56 + 8 = 70) entra em HOME_FIXED. Sem traço por baixo: a
+  // linha fina é a do rótulo da grelha, logo a seguir.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 6,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hairline,
+    paddingBottom: 8,
   },
   logo: { height: 56, width: 100 },
   // A altura vem de carouselH (CAROUSEL_MIN..CAROUSEL_MAX), no próprio JSX.
-  carousel: { marginTop: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2 },
+  // Contorno igual ao dos cartões e gradiente só em baixo (em vez do véu
+  // uniforme a 35%) — revisão crítica aceite pelo Fábio, 2026-09-09.
+  carousel: { marginTop: 18, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline },
   slide: { position: 'relative' },
-  slideOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   slideText: { position: 'absolute', left: 16, right: 16, bottom: 16 },
   slideTag: {
     fontFamily: fonts.eyebrow,
@@ -255,14 +277,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   slideTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 8, height: 5 },
-  dotsSpacer: { height: 5, marginTop: 8 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 8, height: 5, marginBottom: 16 },
+  dotsSpacer: { height: 5, marginTop: 8, marginBottom: 16 },
   pageDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
   pageDotActive: { backgroundColor: colors.goldBright, width: 14 },
-  gridLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 22, marginBottom: 12 },
-  gridLabel: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 2, color: colors.inkMuted },
+  gridLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 8, marginBottom: 10 },
   gridLabelLine: { flex: 1, height: 1, backgroundColor: colors.hairline },
-  deptGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 13, gap: 10, paddingBottom: 24 },
+  gridLabel: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 2, color: colors.inkMuted },
+  deptGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 18, gap: 10 },
   // A altura vem de deptCardH (DEPT_CARD_MIN..DEPT_CARD_MAX), no próprio JSX.
   deptCard: {
     borderRadius: 14,

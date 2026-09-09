@@ -38,10 +38,13 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   departamentos com a foto escolhida pela equipa (`settings/home`), cada
   um abre a página de serviços do departamento (Secção 9); cabeçalho só
   com o logótipo (os atalhos de alertas e perfil saíram a 2026-09-09:
-  duplicavam as tabs); o carrossel (168 a 120 px) e os
-  cartões (122 a 100 px) encolhem para o Início caber sem scroll em
-  qualquer telemóvel (constantes no topo do ficheiro; pedido do Fábio,
-  2026-09-09); o carrossel mostra a foto do trabalho INTEIRA
+  duplicavam as tabs); ordem do ecrã (decisão do Fábio, 2026-09-09): logótipo sem
+  traço, uma linha fina que acaba em "OS NOSSOS SERVIÇOS", os seis cartões
+  (18 px de margem, como o carrossel) e, em baixo, o carrossel dos
+  destaques, com contorno fino e gradiente só em baixo, que fica com o
+  espaço que sobrar até à barra de tabs (120 a 260 px); se faltar espaço,
+  encolhe primeiro ele e depois os cartões (122 a 100 px), para o Início
+  caber sem scroll em qualquer telemóvel (constantes no topo do ficheiro); o carrossel mostra a foto do trabalho INTEIRA
   (`Photo fit="contain"`, a partir do ficheiro completo via
   `cloudinaryWhole()` em `media/cloudinary.ts`), tal como a galeria do
   Detalhe (`WorkGallery`); os cartões de departamento e o cabeçalho da
