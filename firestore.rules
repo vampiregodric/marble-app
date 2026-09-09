@@ -28,6 +28,14 @@ rules_version = '2';
 //   campo a campo (validNewRequest): tipos, tamanhos (REQUEST_LIMITS em
 //   src/firebase/models.ts) e só os campos do formulário — `status` nasce
 //   'new', e `notes`, `flagged`, etc. são da equipa e das Functions.
+// - `samples` (Secção 16, 2026-09-09): amostras do simulador "como ficaria",
+//   carregadas pela equipa; a app só lê as publicadas (a query TEM de
+//   incluir `where('published', '==', true)`, como em `works`).
+// - `simulations` (Secção 16): o cliente cria as suas (foto já no
+//   Cloudinary, estado 'pending', validada campo a campo), lê-as, liga-as a
+//   um pedido de orçamento (`requestId`, só isso) e apaga-as. O resultado e
+//   o estado são da Cloud Function (Admin SDK). A equipa lê todas (decisão
+//   do Fábio, 2026-09-09) e pode apagar.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
 // (update, já permitido) e apaga o utilizador do Auth. `delete: false`
@@ -56,12 +64,22 @@ service cloud.firestore {
       return v is string && v.size() <= max;
     }
 
+    // Simulação "como ficaria" anexada a um pedido (Secção 16): cópia do
+    // essencial (RequestSimulation em src/firebase/models.ts).
+    function validRequestSimulation(s) {
+      return s.keys().hasOnly(['id', 'name', 'photoUrl', 'resultUrl', 'thumbnailUrl'])
+        && s.keys().hasAll(['id', 'name', 'photoUrl'])
+        && isStr(s.id, 100) && isStr(s.name, 120) && isStr(s.photoUrl, 600)
+        && (!('resultUrl' in s) || isStr(s.resultUrl, 600))
+        && (!('thumbnailUrl' in s) || isStr(s.thumbnailUrl, 600));
+    }
+
     // Um pedido acabado de criar pela app (Secção 7). As regras não iteram
     // listas, por isso `services`, `fields` e `photos` só têm o tamanho
     // limitado; o conteúdo é texto que a equipa lê no backoffice.
     function validNewRequest(d) {
       return d.keys().hasOnly(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
-          'workId', 'workTitle', 'services', 'fields', 'message', 'photos', 'platform', 'createdAt', 'updatedAt'])
+          'workId', 'workTitle', 'services', 'fields', 'message', 'photos', 'simulation', 'platform', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
           'services', 'fields', 'message', 'createdAt', 'updatedAt'])
         && d.clientId == request.auth.uid
@@ -76,6 +94,7 @@ service cloud.firestore {
         && d.fields is list && d.fields.size() <= 8
         && isStr(d.message, 2000)
         && (!('photos' in d) || (d.photos is list && d.photos.size() <= 5))
+        && (!('simulation' in d) || validRequestSimulation(d.simulation))
         && (!('workId' in d) || isStr(d.workId, 100))
         && (!('workTitle' in d) || isStr(d.workTitle, 200))
         && (!('platform' in d) || d.platform in ['android', 'ios', 'web'])
@@ -183,6 +202,62 @@ service cloud.firestore {
       allow read: if ownsResource() || isAdmin();
       allow create: if isAdmin() || (signedIn() && validNewRequest(request.resource.data));
       allow update, delete: if isAdmin();
+    }
+
+    // ---------- Simulador "como ficaria" (Secção 16) ----------
+
+    // Amostras: conteúdo da equipa, público quando publicado (como `works`).
+    match /samples/{sampleId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Uma imagem no Cloudinary, no formato que a app escreve (SimulationImage).
+    function validImage(p) {
+      return p.keys().hasOnly(['url', 'thumbnailUrl', 'publicId'])
+        && p.keys().hasAll(['url', 'thumbnailUrl', 'publicId'])
+        && isStr(p.url, 600) && isStr(p.thumbnailUrl, 600) && isStr(p.publicId, 300);
+    }
+    // A amostra ou o trabalho aplicado (SimulationSource): cópia na altura.
+    function validSimulationSource(s) {
+      return s.keys().hasOnly(['type', 'id', 'name', 'photoUrl', 'thumbnailUrl', 'service', 'brand', 'finish'])
+        && s.keys().hasAll(['type', 'id', 'name', 'photoUrl'])
+        && s.type in ['sample', 'work']
+        && isStr(s.id, 100) && isStr(s.name, 120) && isStr(s.photoUrl, 600)
+        && (!('thumbnailUrl' in s) || isStr(s.thumbnailUrl, 600))
+        // `service` é palavra reservada na linguagem das regras — por índice.
+        && (!('service' in s) || isStr(s['service'], 40))
+        && (!('brand' in s) || isStr(s.brand, 60))
+        && (!('finish' in s) || s.finish in ['gloss', 'satin', 'matte']);
+    }
+    // Uma simulação acabada de criar pela app: nasce 'pending', com a foto
+    // do cliente já no Cloudinary; `result`, `error`, `model`, `processedAt`
+    // são da Cloud Function e recusam-se aqui.
+    function validNewSimulation(d) {
+      return d.keys().hasOnly(['clientId', 'kind', 'photo', 'source', 'status', 'platform', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['clientId', 'kind', 'photo', 'source', 'status', 'createdAt', 'updatedAt'])
+        && d.clientId == request.auth.uid
+        && d.kind in ['floor', 'car']
+        && d.status == 'pending'
+        && validImage(d.photo)
+        && validSimulationSource(d.source)
+        && (!('platform' in d) || d.platform in ['android', 'ios', 'web'])
+        && d.createdAt == request.time
+        && d.updatedAt == request.time;
+    }
+
+    match /simulations/{simulationId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if signedIn() && validNewSimulation(request.resource.data);
+      // O dono só liga a simulação ao pedido de orçamento que acabou de
+      // enviar. Estado e resultado são da Function; apagar é do dono ou da
+      // equipa (a Function limpa os ficheiros no Cloudinary).
+      allow update: if isAdmin()
+        || (ownsResource()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requestId', 'updatedAt'])
+          && isStr(request.resource.data.requestId, 100)
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if ownsResource() || isAdmin();
     }
   }
 }

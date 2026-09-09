@@ -55,6 +55,12 @@ type AuthValue = {
   updateClient: (patch: ClientUpdate) => Promise<void>;
   acceptTerms: () => Promise<void>;
   setMarketingConsent: (granted: boolean) => Promise<void>;
+  // Simulador "como ficaria" (Secção 16): true enquanto o cliente não tiver
+  // autorizado o uso das fotos na LEGAL_VERSION atual — o simulador mostra a
+  // checkbox (não pré-marcada) na primeira simulação e sempre que a
+  // política mudar.
+  needsSimulatorConsent: boolean;
+  acceptSimulatorConsent: () => Promise<void>;
   // true enquanto a conta do utilizador atual tiver sido criada NESTA
   // sessão da app (registo, ou pedido de orçamento sem conta). O passo
   // "Recebe os alertas no telemóvel" (Secção 15, src/push/onboarding.ts)
@@ -181,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       client,
       needsTermsAcceptance: !!client && !client.deletedAt && client.consent?.termsVersion !== LEGAL_VERSION,
+      needsSimulatorConsent: !client || client.consent?.simulatorVersion !== LEGAL_VERSION,
       accountJustCreated: !!user && createdUid === user.uid,
       async signIn(email, password) {
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -241,6 +248,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await updateDoc(clientRef(user.uid), {
           'consent.marketing': granted,
           'consent.marketingUpdatedAt': serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      },
+      async acceptSimulatorConsent() {
+        if (!user) throw new Error('Sem sessão.');
+        await updateDoc(clientRef(user.uid), {
+          'consent.simulatorVersion': LEGAL_VERSION,
+          'consent.simulatorAcceptedAt': serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       },

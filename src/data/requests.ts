@@ -10,6 +10,7 @@ import {
   REQUEST_LIMITS,
   RequestField,
   RequestPhoto,
+  RequestSimulation,
   ServiceRequest,
 } from '../firebase/models';
 import { useFirestoreList, ListState } from './firestoreHooks';
@@ -48,6 +49,8 @@ export type NewRequestInput = {
   photos: RequestPhoto[];
   workId?: string;
   workTitle?: string;
+  // Simulação "como ficaria" anexada (Secção 16).
+  simulation?: RequestSimulation;
 };
 
 function platform(): ServiceRequest['platform'] {
@@ -76,6 +79,12 @@ export async function createRequest(id: string, uid: string, input: NewRequestIn
   if (input.photos.length) data.photos = input.photos.slice(0, REQUEST_LIMITS.photosMax);
   if (input.workId) data.workId = input.workId;
   if (input.workTitle) data.workTitle = input.workTitle;
+  if (input.simulation) {
+    const s: Record<string, string> = { id: input.simulation.id, name: input.simulation.name.slice(0, 120), photoUrl: input.simulation.photoUrl };
+    if (input.simulation.resultUrl) s.resultUrl = input.simulation.resultUrl;
+    if (input.simulation.thumbnailUrl) s.thumbnailUrl = input.simulation.thumbnailUrl;
+    data.simulation = s;
+  }
   const p = platform();
   if (p) data.platform = p;
   await setDoc(doc(db, COLLECTIONS.requests, id), data);

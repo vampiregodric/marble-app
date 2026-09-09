@@ -21,7 +21,9 @@ import { handleClientUpdated, handleVehicleUpdated, handleWorkWritten } from './
 import { runDailyJobs } from './jobs';
 import { pushNotification } from './push';
 import { handleRequestWritten, RequestEmailConfig } from './requests';
-import { AppNotification, Client, ServiceRequest, Vehicle, Work } from './types';
+import { handleSimulationWritten } from './simulations';
+import { AppNotification, Client, ServiceRequest, Simulation, Vehicle, Work } from './types';
+import { VertexConfig } from './vertex';
 
 initializeApp();
 // Firestore está em eur3 (Europa); europe-west1 (Bélgica) é a região v2
@@ -53,6 +55,22 @@ const BACKOFFICE_URL = defineString('BACKOFFICE_URL', { default: 'https://marble
 // pedidos ficam marcados `daily_cap` e a equipa recebe um só alerta por dia
 // — trava inundações com contas novas enquanto não há App Check. 0 = desligado.
 const REQUEST_DAILY_CAP = defineInt('REQUEST_DAILY_CAP', { default: 0 });
+
+// Simulador "como ficaria" (Secção 16): o modelo de imagem corre no Vertex
+// AI do MESMO projeto (sem segredo — credenciais da própria Function; o
+// Fábio ativa a API e dá o papel "Vertex AI User", ver DEVELOPMENT.md). O
+// resultado sobe para o Cloudinary com o preset unsigned da app. Tecto
+// global de simulações por 24 h para o custo ter máximo (≈ 0,05 € cada).
+const VERTEX_LOCATION = defineString('VERTEX_LOCATION', { default: 'global' });
+const VERTEX_IMAGE_MODEL = defineString('VERTEX_IMAGE_MODEL', { default: 'gemini-3.1-flash-image' });
+const SIMULATION_DAILY_CAP = defineInt('SIMULATION_DAILY_CAP', { default: 60 });
+const CLOUDINARY_SIMULATION_PRESET = defineString('CLOUDINARY_SIMULATION_PRESET', { default: 'marble-simulations' });
+
+function vertexConfig(): VertexConfig | null {
+  const project = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '';
+  if (!project) return null;
+  return { project, location: VERTEX_LOCATION.value(), model: VERTEX_IMAGE_MODEL.value() };
+}
 
 function emailConfig(): RequestEmailConfig | null {
   if (!QUOTE_EMAIL) return null;
@@ -102,6 +120,26 @@ export const onRequestWritten = onDocumentWritten({ document: 'requests/{id}', s
   const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as ServiceRequest) : null;
   await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig(), dailyCap: REQUEST_DAILY_CAP.value() }, new Date(), log);
 });
+
+// Simulador (Secção 16): simulação criada → tectos, modelo de imagem,
+// resultado no Cloudinary; apagada → ficheiros fora do Cloudinary. Mais
+// memória e tempo do que as outras: duas imagens em base64 e 10–30 s de
+// modelo.
+export const onSimulationWritten = onDocumentWritten(
+  { document: 'simulations/{id}', secrets: cloudinarySecrets, timeoutSeconds: 180, memory: '512MiB' },
+  async (event) => {
+    const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as Simulation) : null;
+    const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as Simulation) : null;
+    await handleSimulationWritten(
+      getFirestore(),
+      before,
+      after,
+      { vertex: vertexConfig(), cloudinary: cloudinaryConfig(), cloudName: CLOUDINARY_CLOUD_NAME.value(), uploadPreset: CLOUDINARY_SIMULATION_PRESET.value(), dailyCap: SIMULATION_DAILY_CAP.value() },
+      new Date(),
+      log
+    );
+  }
+);
 
 // Agendamento de checkup (Secção 8): o cliente pediu/alterou/cancelou na
 // app, ou a equipa aprovou/propôs outro dia → alerta interno ou `message`.

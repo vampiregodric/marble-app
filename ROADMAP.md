@@ -1392,8 +1392,40 @@ ativo), um passo único "Recebe os alertas no telemóvel":
 passo mostra só o interruptor; `npm run typecheck` limpo; PT e EN.
 
 ### Secção 16 — Simulador "como ficaria" (foto do cliente + amostras)
-**Estado:** Ideia registada (2026-09-07, Fábio), por desenhar. **Depois do
-lançamento** — não entra na versão 1.0.
+**Estado:** Feito na app, regras, Cloud Functions e backoffice (2026-09-09),
+verificado no dev pelo Claude: regras testadas com
+`npm run check:firestore:auth` (amostras só publicadas; simulação válida
+aceite; estado/resultado recusados ao cliente; ligar ao pedido e apagar
+permitidos; variantes inválidas recusadas); duas amostras criadas na
+página Amostras do backoffice (upload para o Cloudinary); na app web (8085,
+dados do dev) o bloco "Simulador" na página Epoxy Floors com a miniatura
+da amostra, a grelha de amostras no simulador, "As tuas simulações" no
+Perfil e o cartão "Termos atualizados" (LEGAL_VERSION 2026-09-09).
+Fluxo completo verificado na web: foto injetada na galeria → upload para o
+Cloudinary (tag `simulation_<id>`) → doc `pending` com a vista lado a lado
+→ handler da Function corrido localmente (`--simulation <id>`) → o Vertex
+respondeu 403 "API não ativada no projeto" (esperado até o Fábio a ativar)
+→ `failed` → a app mostra "Não conseguimos gerar a simulação…" com a
+comparação, em PT e EN → "Pedir orçamento com esta simulação" abre o
+formulário com o cartão "Com a simulação", o pedido fica com `simulation`
+e a simulação com `requestId` → no backoffice o pedido mostra a secção
+"Simulação", a ficha do cliente lista-a ("anexada a um pedido") e a página
+Simulações mostra estado, erro, "pode ser contactado" e custo estimado →
+"Ver no meu carro" no Detalhe do Jaguar abre o simulador com a capa do
+trabalho já escolhida ao lado da amostra de carro → "Apagar simulação"
+(folha com explicação) apaga e o ecrã diz "já não está disponível". O
+upload de teste usou o preset `marble-works` (o `marble-simulations` ainda
+não existe); os ficheiros ficam no Cloudinary com a tag
+`simulation_SZxokGzfnyl2eP3AGN4k` até a limpeza (segredos) existir; o pedido
+de teste foi apagado, as duas amostras de teste (texturas geradas) ficaram
+para o Fábio substituir por fotos reais. `npm run typecheck` limpo (app,
+Functions e backoffice). **Falta o que só o Fábio faz** (passos e comandos em
+`DEVELOPMENT.md`, "Simulador"): preset `marble-simulations` no Cloudinary,
+ativar a API do Vertex AI no projeto dev e dar o papel "Vertex AI User"
+às contas de serviço, deploy das Functions no dev, `deploy:dev` do
+backoffice, páginas legais no prod. Por testar no telemóvel (Marble Dev,
+servidor da 8081). **Pós-lançamento** por decisão anterior — mas está
+pronto a entrar quando o Fábio quiser.
 **Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
 existe no pedido de orçamento — Secção 7), 13 (tags: sistema/serviço e
 marcas), backoffice para gerir amostras.
@@ -1402,37 +1434,96 @@ carro e vê como ficaria com um sistema/cor de epóxi ou uma cor/acabamento
 de vinil/PPF da Marble, escolhendo a partir de um trabalho do portfólio ou
 de **amostras** carregadas pela equipa. Depois pode pedir orçamento com a
 simulação anexada.
-**Como se pode fazer (a decidir com o Fábio, do mais simples ao mais
-ambicioso):**
-1. **Comparação lado a lado**: a foto do cliente e uma galeria de amostras
-   (texturas/cores em 1:1 e em ambientes reais); sem "pintar" a foto. Barato
-   e honesto, mas não é o efeito "uau".
-2. **Recolorir com IA no Cloudinary** (já é o nosso alojamento): as
-   transformações generativas do Cloudinary (`e_gen_recolor` para mudar a
-   cor de um objeto identificado por texto, `e_gen_replace` /
-   `e_gen_background_replace` para substituir o pavimento) aplicadas à foto
-   carregada pelo cliente, com o resultado guardado no Cloudinary. Funciona
-   bem para carros (cor de vinil) e razoavelmente para chãos lisos; textura
-   de flake/metallic é menos fiel. Custa créditos de IA por imagem (fora
-   do plano gratuito) — o backoffice teria de ter um tecto por dia.
-3. **Modelo de imagem generativo próprio** (Gemini/Imagen ou similar, via
-   Cloud Function): "aplica esta amostra a este chão" com a amostra como
-   referência. Melhor resultado para texturas, mais caro e mais lento
-   (segundos por imagem); precisa de moderação e de um tecto por cliente.
-**Requisitos que isto traz (não esquecer):** as fotos da casa/garagem/carro
-do cliente são dados pessoais → nova finalidade na política de
-privacidade (base legal: consentimento ao usar a funcionalidade), prazo de
-retenção das simulações (ex.: 90 dias ou até apagar o pedido), o Cloudinary
-já é subcontratante mas um modelo de IA externo seria outro; texto claro na
-app de que é uma simulação e não uma proposta de cor exata (o acabamento
-real depende do substrato); no backoffice, gestão das amostras (foto,
-nome, sistema/serviço e marca — reutiliza as tags da Secção 13) e o pedido
-de orçamento a receber a simulação como anexo (a coleção `requests` já
-aceita fotos).
-**Decisões a tomar com o Fábio quando chegar a vez:** opção 1, 2 ou 3 (ou
-1 agora e 2/3 depois); só chãos, só carros ou os dois; se a simulação é
-visível à equipa antes do pedido de orçamento; limite de simulações por
-cliente/dia.
+**As três abordagens que estavam em cima da mesa** (comparação feita a
+2026-09-09): (1) comparação lado a lado, sem "pintar" — grátis, sem efeito
+"uau"; (2) IA do Cloudinary (`e_gen_recolor` 50 tx, `e_gen_replace` 120 tx,
+`e_gen_background_replace` 230 tx por imagem; plano grátis 25 000 tx/mês
+partilhados com o portfólio; ≈ 0,02–0,09 € ao pagar) — não usa a amostra e
+falha nas texturas metallic/flake; e precisava na mesma de uma Cloud
+Function, porque qualquer pessoa gera transformações a custo nosso por URL e
+restringir isso ("strict transformations") é global à conta e partia todos
+os URLs da app e do backoffice; (3) modelo de imagem generativo (Gemini
+"Nano Banana" 3.1 Flash Image, ≈ 0,04–0,07 € por imagem a 1K, 5–20 s) —
+o único que recebe a amostra real como referência.
+**Decisões do Fábio (escolha múltipla, 2026-09-09):** (a) **abordagem 3 com
+a 1 embutida**: a vista lado a lado (foto do cliente | amostra) aparece
+enquanto a IA corre e fica como resultado quando ela falha ou o tecto do
+dia esgotou; (b) **chãos e carros** (Epoxy Floors e Automotive; gráfico não
+faz sentido); (c) **a equipa vê todas** as simulações (página Simulações no
+backoffice), não só as anexadas a um pedido — com o aviso de que contactar
+um cliente por causa de uma simulação sem pedido é marketing (só com
+"Ofertas e novidades" ligado; o selo "sem marketing" avisa); (d) **5 por
+cliente por dia** (`SIMULATION_PER_DAY` nas Functions) mais um **tecto
+global de 60 por dia** (`SIMULATION_DAILY_CAP` em `functions/.env`; um
+alerta interno por dia quando bate) — pior caso ≈ 4 €/dia; (e) **entradas**:
+bloco "Experimenta no teu chão/carro" nas páginas de departamento com chãos
+ou carros (Epoxy Floors, Xtreme, Automotive — só quando há amostras
+publicadas nessa categoria), "Ver no meu chão/carro" no Detalhe de um
+trabalho (a capa do trabalho é a amostra), a simulação anexada ao pedido de
+orçamento, "As tuas simulações" no Perfil; **o Início não muda**; (f)
+**retenção 90 dias** para simulações sem pedido (`RETENTION.simulationDays`;
+as anexadas seguem o prazo do pedido, 12 meses depois de fechado); (g)
+**Vertex AI no mesmo projeto Google Cloud do Firebase** (mesma fatura
+Blaze, mesmo contrato de tratamento de dados, sem chave para guardar), em
+vez de uma chave da Gemini API; (h) **consentimento por checkbox não
+pré-marcada, uma vez por conta**, com a versão dos textos legais guardada
+(`clients.consent.simulatorVersion/simulatorAcceptedAt`) — volta a pedir se
+a política mudar. Sugestões do Claude aceites no pacote: conta obrigatória
+(quem não tem sessão vê as amostras e entra ao tocar em "Simular", num
+modal, sem perder a foto), selo "SIMULAÇÃO" gravado na imagem entregue
+(vai com ela quando o cliente a partilha), aviso "cor e acabamento reais
+dependem do substrato", dica "sem pessoas nem matrícula", apagar simulação
+a simulação e todas ao apagar a conta.
+**Como funciona:** a app reduz a foto a 1600 px, sobe-a para o Cloudinary
+(preset unsigned `marble-simulations`, tag `simulation_<id>`) e cria
+`simulations/{id}` com `status: 'pending'`, a `source` (cópia da amostra ou
+da capa do trabalho) e o `kind`; a Function `onSimulationWritten` verifica
+os tectos, vai buscar as duas imagens ao Cloudinary (1024 px, JPEG), pede ao
+Vertex AI (`gemini-3.1-flash-image`, endpoint `global`) a foto editada com a
+amostra como referência, sobe o resultado com o mesmo preset (tag da
+simulação) e escreve `result`/`status: 'done'` (ou `'failed'` com o motivo,
+`'limited'`, `'capped'`); a app escuta o doc e mostra Antes/Depois. "Pedir
+orçamento com esta simulação" abre o formulário já com o departamento e
+grava `requests.simulation` (cópia: nome, foto, resultado) e
+`simulations.requestId`; a equipa vê-a no pedido (backoffice) e no email.
+Apagar o doc (cliente, equipa, retenção, conta apagada, pedido anonimizado)
+dispara a limpeza dos ficheiros pela tag (precisa dos segredos do
+Cloudinary, como as fotos de perfil).
+**O que ficou feito:** app — `models.ts` (`samples`, `simulations`,
+`Sample`, `Simulation`, `SimulationSource`, `RequestSimulation`,
+`SIMULATION_LIMITS`, `consent.simulator*`), `data/samples.ts`,
+`data/simulations.ts`, `media/cloudinary.ts` (`uploadSimulationPhoto`),
+`screens/SimulatorScreen.tsx` (rota `Simulator`, web `simulator?kind=|workId=|simulationId=`),
+blocos em `DepartmentScreen`, `WorkDetailScreen`, `RequestQuoteScreen`
+(param `simulationId`), `ProfileScreen`, `AuthContext`
+(`needsSimulatorConsent`/`acceptSimulatorConsent`), `ActionSheet`
+(`description`), i18n `simulator.*` (+ `department.simulator*`,
+`work.seeOnMine`, `profile.simulations*`, `request.withSimulation`,
+`errors.simulation*`) em PT e EN, textos legais (§2, §3, §5 Vertex AI, §6,
+§7 e termos §1/§5; `LEGAL_VERSION` 2026-09-09, HTML regenerado);
+`firestore.rules` (`samples`, `simulations`, `requests.simulation`) e o
+índice `simulations(clientId, createdAt desc)`, publicados no dev;
+`scripts/check-firestore-auth.mjs` com os testes novos. Functions —
+`vertex.ts` (chamada REST com `google-auth-library`), `simulations.ts`
+(tectos, prompt, upload do resultado, selo, retenção, apagar por cliente e
+por pedido), `onSimulationWritten` em `index.ts` (512 MiB, 180 s),
+`runJobs.ts --simulation <id>`, job diário `simulations`, `handlers.ts`
+(conta apagada) e `requests.ts` (pedido anonimizado), `texts.ts` (alerta
+interno e email com a simulação), `functions/.env` (`VERTEX_LOCATION`,
+`VERTEX_IMAGE_MODEL`, `SIMULATION_DAILY_CAP`, `CLOUDINARY_SIMULATION_PRESET`).
+Backoffice — páginas **Amostras** (`/amostras`: criar/editar/apagar, foto
+por upload ou capa de um trabalho, sistema/serviço e marca da Secção 13,
+acabamento nos carros, publicada, ordem) e **Simulações** (`/simulacoes`:
+todas, com cliente, estado, tempo, custo estimado, foto/resultado, apagar),
+secção no pedido e na ficha do cliente, contagens na barra lateral,
+`models.ts` copiado. Detalhes em `DEVELOPMENT.md`, "Simulador".
+**Em aberto:** confirmar no dev a qualidade do resultado com fotos reais
+(a instrução ao modelo está em `buildPrompt`, `functions/src/simulations.ts`
+— afinar aí); o endpoint `global` do Vertex processa fora da UE (o contrato
+de tratamento de dados da Google Cloud cobre; se o modelo passar a existir
+em `europe-west1`, muda `VERTEX_LOCATION`); as imagens geradas trazem a
+marca de água SynthID da Google (invisível); App Check continua a ser a
+defesa a sério contra abuso do preset unsigned (Secção 11).
 
 ### Secção 17 — Filtro por marca no Portfólio
 **Estado:** Feito (2026-09-08), verificado na app web (8084, dados do dev)

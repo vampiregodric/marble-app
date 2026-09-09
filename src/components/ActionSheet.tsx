@@ -17,11 +17,13 @@ export type SheetAction = {
 type Props = {
   visible: boolean;
   title?: string;
+  // Linha explicativa por baixo do título (ex: o que apagar implica).
+  description?: string;
   actions: SheetAction[];
   onClose: () => void;
 };
 
-export default function ActionSheet({ visible, title, actions, onClose }: Props) {
+export default function ActionSheet({ visible, title, description, actions, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const T = useT();
   return (
@@ -32,6 +34,7 @@ export default function ActionSheet({ visible, title, actions, onClose }: Props)
         {/* Pressable vazio a envolver o painel para o toque lá dentro não fechar. */}
         <Pressable style={[styles.sheet, { paddingBottom: 8 + insets.bottom }]} onPress={() => {}}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
+          {description ? <Text style={styles.desc}>{description}</Text> : null}
           {actions.map((a) => (
             <Pressable key={a.label} style={styles.row} onPress={a.onPress} accessibilityRole="button">
               <Text style={[styles.rowText, a.destructive && styles.rowTextDestructive]}>{a.label}</Text>
@@ -47,6 +50,7 @@ export default function ActionSheet({ visible, title, actions, onClose }: Props)
 }
 
 const styles = StyleSheet.create({
+  desc: { fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, color: colors.inkMuted, textAlign: 'center', paddingHorizontal: 18, paddingBottom: 10 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end', alignItems: 'center' },
   sheet: {
     width: '100%',

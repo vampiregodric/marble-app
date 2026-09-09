@@ -1,4 +1,4 @@
-import { DepartmentId, WorkServiceId } from '../firebase/models';
+import { DepartmentId, SampleFinish, SimulationKind, SimulationStatus, WorkServiceId } from '../firebase/models';
 
 // Todos os textos da interface em PORTUGUÊS — a fonte de verdade (Secção
 // 12). O inglês está em en.ts, com EXATAMENTE as mesmas chaves: o tipo
@@ -127,6 +127,8 @@ export const pt = {
     brandA11y: (b: string) => `Marca: ${b}`,
     // Secção 17: as tags abrem o Portfólio filtrado (leitor de ecrã).
     tagHint: 'Abre o Portfólio só com trabalhos desta tag',
+    // Secção 16: abre o simulador com a capa deste trabalho como amostra.
+    seeOnMine: { floor: 'Ver no meu chão', car: 'Ver no meu carro' } satisfies Record<SimulationKind, string>,
   },
 
   gallery: {
@@ -149,6 +151,14 @@ export const pt = {
     recentEmpty: 'Ainda não há trabalhos publicados nesta categoria.',
     seeAlso: 'Ver também',
     pricing: 'Investimento',
+    // Simulador "como ficaria" (Secção 16), nas páginas com chãos ou carros.
+    simulatorLabel: 'Simulador',
+    simulatorTitle: { floor: 'Experimenta no teu chão', car: 'Experimenta no teu carro' } satisfies Record<SimulationKind, string>,
+    simulatorDesc: {
+      floor: 'Fotografa o teu chão e vê como ficaria com um sistema de epóxi da Marble.',
+      car: 'Fotografa o teu carro e vê como ficaria com uma cor de vinil ou PPF.',
+    } satisfies Record<SimulationKind, string>,
+    simulatorOpen: 'Abrir o simulador',
   },
 
   login: {
@@ -221,6 +231,12 @@ export const pt = {
     requestsEmptyDesc: 'Pede a partir de um trabalho do Portfólio ("Pedir orçamento semelhante") ou aqui.',
     requestQuote: 'Pedir orçamento',
     similarTo: (title: string) => `Semelhante a: ${title}`,
+    // Simulador (Secção 16).
+    simulationsTitle: 'As tuas simulações',
+    simulationsEmpty: 'Ainda não fizeste nenhuma simulação.',
+    simulationsEmptyDesc: 'Fotografa o teu chão ou o teu carro e vê como ficaria com uma amostra da Marble.',
+    openSimulator: 'Abrir o simulador',
+    simulationA11y: (name: string, status: string) => `Simulação ${name}: ${status.toLowerCase()}`,
     notificationsTitle: 'Notificações',
     operationalLabel: 'Lembretes dos teus carros e chãos',
     operationalHint: 'Checkups e contactos sobre trabalhos teus. Fazem parte do serviço.',
@@ -358,6 +374,10 @@ export const pt = {
     backHome: 'Voltar ao início',
     similarTo: 'Orçamento semelhante a',
     workUnavailable: 'Trabalho já não disponível',
+    // Secção 16: pedido enviado a partir de uma simulação.
+    withSimulation: 'Com a simulação',
+    simulationUnavailable: 'Simulação já não disponível',
+    simulationAttached: 'A simulação vai anexada ao pedido: a equipa vê a tua foto e o resultado.',
     department: 'Departamento',
     chooseDepartment: 'Escolhe o departamento.',
     chooseOption: 'Escolhe uma opção.',
@@ -389,6 +409,71 @@ export const pt = {
     dailyLimit: (n: number) =>
       `Já enviaste ${n} pedidos nas últimas 24 horas. Se quiseres acrescentar algo, espera pela nossa resposta ou fala connosco diretamente.`,
     sendFailed: (code: string) => `Não foi possível enviar o pedido. Tenta outra vez.${code ? ` (${code})` : ''}`,
+  },
+
+  // Simulador "como ficaria" (Secção 16): o cliente fotografa o chão ou o
+  // carro, escolhe uma amostra e a Cloud Function gera a simulação.
+  simulator: {
+    title: 'Simulador',
+    eyebrow: 'Como ficaria',
+    heading: { floor: 'O teu chão com epóxi da Marble', car: 'O teu carro com vinil ou PPF' } satisfies Record<SimulationKind, string>,
+    lead: 'Tira uma foto, escolhe uma amostra e vê uma simulação em segundos.',
+    kind: { floor: 'Chão', car: 'Carro' } satisfies Record<SimulationKind, string>,
+    stepPhoto: '1 · A tua foto',
+    stepSample: '2 · A amostra',
+    takePhoto: 'Tirar foto',
+    fromLibrary: 'Escolher da galeria',
+    changePhoto: 'Trocar foto',
+    photoA11y: 'A tua foto',
+    photoHint: {
+      floor: 'Fotografa o chão de frente, com luz, sem pessoas. Quanto mais chão se vir, melhor.',
+      car: 'Fotografa o carro inteiro, de lado ou a três quartos, sem pessoas nem matrícula legível.',
+    } satisfies Record<SimulationKind, string>,
+    allSamples: 'Todas',
+    fromWork: (title: string) => `Do trabalho: ${title}`,
+    sampleA11y: (name: string) => `Amostra ${name}`,
+    samplesEmpty: 'A equipa ainda não carregou amostras para aqui.',
+    samplesEmptyDesc: 'Em breve. Entretanto vê os trabalhos no Portfólio.',
+    finish: { gloss: 'Brilhante', satin: 'Acetinado', matte: 'Mate' } satisfies Record<SampleFinish, string>,
+    // Checkbox de consentimento (uma vez por conta): "Autorizo … {Política de privacidade}. …"
+    consentPrefix: 'Autorizo que a foto que escolhi seja usada para gerar a simulação, como descrito na ',
+    consentSuffix: '. A equipa da Marble Studios vê as simulações; posso apagá-las quando quiser.',
+    consentRequired: 'Para gerar a simulação precisamos da tua autorização para usar a foto.',
+    consentNote: 'A foto é usada só para a simulação. A equipa vê-a; apagas quando quiseres, no Perfil.',
+    needPhoto: 'Escolhe ou tira uma foto primeiro.',
+    needSample: 'Escolhe uma amostra.',
+    loginToSimulate: 'Entrar para simular',
+    loginLead: 'Entra ou cria conta para gerar a simulação — fica guardada no teu Perfil.',
+    simulate: 'Simular',
+    busyUpload: 'A enviar a foto…',
+    busyCreate: 'A pedir a simulação…',
+    dailyLimit: (n: number) => `Já fizeste ${n} simulações nas últimas 24 horas. Amanhã podes fazer mais.`,
+    generating: 'A gerar a simulação…',
+    generatingHint: 'Costuma demorar 10 a 30 segundos. Podes esperar aqui ou voltar ao Perfil mais tarde.',
+    before: 'Antes',
+    after: 'Depois',
+    sampleLabel: 'Amostra',
+    yourPhoto: 'A tua foto',
+    badge: 'Simulação',
+    resultNote:
+      'É uma simulação feita por inteligência artificial para te dar uma ideia. A cor e o acabamento reais dependem do substrato, da luz e da aplicação — a equipa confirma com amostras físicas antes de qualquer trabalho.',
+    failed: 'Não conseguimos gerar a simulação para esta foto.',
+    failedHint: 'Tenta outra foto, com mais luz e o chão ou o carro bem visíveis. Entretanto compara aqui a foto com a amostra.',
+    limited: 'Já fizeste as simulações de hoje.',
+    limitedHint: 'Amanhã podes fazer mais. Entretanto compara aqui a foto com a amostra.',
+    capped: 'O simulador chegou ao limite de hoje.',
+    cappedHint: 'Tenta amanhã. Entretanto compara aqui a foto com a amostra.',
+    requestQuote: 'Pedir orçamento com esta simulação',
+    tryAnother: 'Experimentar outra amostra',
+    delete: 'Apagar simulação',
+    deleteTitle: 'Apagar esta simulação?',
+    deleteDesc: 'A foto e o resultado são apagados. Se a tiveres anexado a um pedido de orçamento, a cópia no pedido fica com a equipa até o pedido fechar.',
+    deleteYes: 'Sim, apagar',
+    deleteFailed: 'Não foi possível apagar. Tenta outra vez.',
+    unavailableTitle: 'Esta simulação já não está disponível.',
+    unavailableDesc: 'Pode ter sido apagada ou ter passado o prazo de 90 dias.',
+    status: { pending: 'A gerar', done: 'Pronta', failed: 'Sem resultado', limited: 'Limite do dia', capped: 'Limite do dia' } satisfies Record<SimulationStatus, string>,
+    createFailed: (code: string) => `Não foi possível pedir a simulação. Tenta outra vez.${code ? ` (${code})` : ''}`,
   },
 
   personalData: {
@@ -452,6 +537,8 @@ export const pt = {
     avatarNotConfigured: 'O alojamento de fotos ainda não está configurado nesta versão da app.',
     requestUploadNotConfigured: 'O envio de fotos ainda não está configurado nesta versão da app.',
     requestPresetMissing: 'O envio de fotos ainda não está ativo nesta versão da app. Remove as fotos e envia o pedido sem elas — a equipa pede-tas depois.',
+    simulationUploadNotConfigured: 'O simulador ainda não está configurado nesta versão da app.',
+    simulationPresetMissing: 'O simulador ainda não está ativo nesta versão da app. Tenta mais tarde.',
     uploadNetwork: 'Falha de rede ao enviar a foto. Verifica a internet e tenta outra vez.',
     uploadTimeout: 'O envio demorou demasiado. Tenta outra vez com melhor ligação.',
     uploadStatus: (status: number) => `O alojamento de fotos respondeu ${status}.`,

@@ -16,6 +16,10 @@
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --vehicle <id>       # simula o trigger de agendamento de checkup (Secção 8) a
 //                                                                          #   partir do estado atual de vehicles/{id}.checkupRequest;
 //                                                                          #   --before none|pending|proposed|approved força o estado anterior
+//   npm run run-jobs -- ../serviceAccountKey.dev.json --simulation <id>    # simula o trigger de uma simulação "como ficaria" acabada de criar
+//                                                                          #   (Secção 16): tectos, Vertex AI com a chave de dev (a conta de serviço
+//                                                                          #   precisa do papel "Vertex AI User"), resultado no Cloudinary; --daily-cap N
+//                                                                          #   liga o tecto global; VERTEX_LOCATION / VERTEX_IMAGE_MODEL no ambiente
 //
 // ATENÇÃO: escreve a sério no Firestore de dev (cria alertas, marca passos
 // como enviados). É o mesmo código que corre no Firebase.
@@ -29,7 +33,9 @@ import { guessPreviousRequest, handleClientUpdated, handleVehicleUpdated, handle
 import { runDailyJobs } from '../jobs';
 import { pushNotification } from '../push';
 import { handleRequestWritten, RequestEmailConfig } from '../requests';
-import { AppNotification, CheckupRequestStatus, Client, ServiceRequest, Vehicle, Work } from '../types';
+import { handleSimulationWritten } from '../simulations';
+import { AppNotification, CheckupRequestStatus, Client, ServiceRequest, Simulation, Vehicle, Work } from '../types';
+import { VertexConfig } from '../vertex';
 
 const args = process.argv.slice(2);
 const keyPath = args.find((a) => !a.startsWith('--'));
@@ -39,10 +45,10 @@ const flag = (name: string): string | undefined => {
 };
 
 if (!keyPath) {
-  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--request id] [--vehicle id [--before estado]]');
+  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--request id] [--vehicle id [--before estado]] [--simulation id]');
   process.exit(1);
 }
-const key = JSON.parse(readFileSync(keyPath, 'utf8')) as { project_id: string };
+const key = JSON.parse(readFileSync(keyPath, 'utf8')) as { project_id: string; client_email?: string };
 if (!String(key.project_id).endsWith('-dev')) {
   console.error(`Recusado: a chave é de ${key.project_id}; isto é só para o projeto de desenvolvimento.`);
   process.exit(1);
@@ -76,6 +82,33 @@ async function main(): Promise<void> {
   const avatarUid = flag('avatar');
   const vehicleId = flag('vehicle');
   const requestId = flag('request');
+  const simulationId = flag('simulation');
+
+  if (simulationId) {
+    const snap = await db.collection('simulations').doc(simulationId).get();
+    if (!snap.exists) throw new Error(`simulations/${simulationId} não existe`);
+    // Como o trigger: se já foi processada, não repete (apaga `processedAt`
+    // e põe status 'pending' no doc para forçar).
+    const vertex: VertexConfig = {
+      project: key.project_id,
+      location: process.env.VERTEX_LOCATION || 'global',
+      model: process.env.VERTEX_IMAGE_MODEL || 'gemini-3.1-flash-image',
+      keyFile: keyPath,
+    };
+    const dailyCap = Number(flag('daily-cap') ?? process.env.SIMULATION_DAILY_CAP ?? 0) || 0;
+    console.log(`vertex: ${vertex.model} @ ${vertex.location} · conta ${key.client_email ?? '?'}`);
+    await handleSimulationWritten(
+      db,
+      null,
+      { id: snap.id, ...snap.data() } as Simulation,
+      { vertex, cloudinary, cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'kr9bmaqh', uploadPreset: process.env.CLOUDINARY_SIMULATION_PRESET || 'marble-simulations', dailyCap },
+      now,
+      log
+    );
+    const after = await db.collection('simulations').doc(simulationId).get();
+    console.log(`estado: ${after.data()?.status}${after.data()?.error ? ` — ${after.data()?.error}` : ''}${after.data()?.result?.url ? `\nresultado: ${after.data()?.result.url}` : ''}`);
+    return;
+  }
 
   if (vehicleId) {
     const snap = await db.collection('vehicles').doc(vehicleId).get();

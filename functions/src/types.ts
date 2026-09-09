@@ -211,6 +211,8 @@ export interface ServiceRequest {
   fields: RequestField[];
   message: string;
   photos?: RequestPhoto[];
+  // Simulação "como ficaria" anexada (Secção 16): cópia do essencial.
+  simulation?: { id: string; name: string; photoUrl: string; resultUrl?: string; thumbnailUrl?: string };
   platform?: string;
   notes?: string;
   contactedAt?: Timestamp;
@@ -224,6 +226,47 @@ export interface ServiceRequest {
   emailSentAt?: Timestamp;
   emailError?: string;
   anonymizedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+// ---------- Simulador "como ficaria" (Secção 16) ----------
+
+export type SimulationKind = 'floor' | 'car';
+export type SimulationStatus = 'pending' | 'done' | 'failed' | 'limited' | 'capped';
+
+export interface SimulationImage {
+  url: string;
+  thumbnailUrl: string;
+  publicId: string;
+}
+
+// A amostra (ou a capa de um trabalho) aplicada — cópia na altura.
+export interface SimulationSource {
+  type: 'sample' | 'work';
+  id: string;
+  name: string;
+  photoUrl: string;
+  thumbnailUrl?: string;
+  service?: string;
+  brand?: string;
+  finish?: 'gloss' | 'satin' | 'matte';
+}
+
+export interface Simulation {
+  id: string;
+  clientId: string;
+  kind: SimulationKind;
+  photo: SimulationImage;
+  source: SimulationSource;
+  status: SimulationStatus;
+  platform?: string;
+  result?: SimulationImage;
+  error?: string;
+  model?: string;
+  durationMs?: number;
+  processedAt?: Timestamp;
+  requestId?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }

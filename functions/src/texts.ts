@@ -307,7 +307,7 @@ export const TEXTS = {
     const what = requestSummary(r);
     return {
       title: `Novo pedido de orçamento: ${DEPARTMENT_NAME[r.department] ?? r.department}`,
-      description: `${r.name || 'Cliente'} · ${r.phone || 'sem telemóvel'} (${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference})${what ? ` · ${what}` : ''}${r.workTitle ? ` · semelhante a "${r.workTitle}"` : ''}. Ver em Pedidos.`,
+      description: `${r.name || 'Cliente'} · ${r.phone || 'sem telemóvel'} (${CONTACT_PREFERENCE_LABEL[r.contactPreference] ?? r.contactPreference})${what ? ` · ${what}` : ''}${r.workTitle ? ` · semelhante a "${r.workTitle}"` : ''}${r.simulation ? ` · com simulação (${r.simulation.name})` : ''}. Ver em Pedidos.`,
     };
   },
   // Email à equipa (quotes@marble.pt) com tudo o que o cliente escreveu.
@@ -329,6 +329,7 @@ export const TEXTS = {
       r.message.trim() || '—',
       '',
       r.photos?.length ? `Fotos (${r.photos.length}):\n${r.photos.map((p) => p.url).join('\n')}` : '',
+      r.simulation ? `Simulação "como ficaria" (${r.simulation.name}):\nFoto do cliente: ${r.simulation.photoUrl}${r.simulation.resultUrl ? `\nResultado: ${r.simulation.resultUrl}` : '\n(sem resultado da IA — só a comparação)'}` : '',
       '',
       `Ver no backoffice: ${backofficeUrl}`,
       r.platform ? `Enviado pela app (${r.platform}) a ${formatDay(r.createdAt.toDate(), 'pt', true)}.` : '',

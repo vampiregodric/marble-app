@@ -10,6 +10,8 @@ import { EmptyState, ErrorState } from '../components/ListState';
 import { BackIcon, ShareIcon, CalendarIcon, CarIcon } from '../components/Icons';
 import { galleryItems, useWork, workTags } from '../data/works';
 import { categoryFullName } from '../data/categories';
+import { simulationUploadConfigured } from '../media/cloudinary';
+import { simulationKindOf } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -147,6 +149,13 @@ export default function WorkDetailScreen() {
           {/* Secção 7: abre o formulário já com este trabalho como contexto
               (foto de capa + título) e o departamento pela categoria. */}
           <View style={styles.ctaBar}>
+            {/* Secção 16: a capa deste trabalho como amostra no simulador —
+                só chãos e carros, e só com o simulador configurado. */}
+            {simulationKindOf(work.category) && work.photoUrl && simulationUploadConfigured ? (
+              <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('Simulator', { workId: work.id })} accessibilityRole="button">
+                <Text style={styles.ghostText}>{T.work.seeOnMine[simulationKindOf(work.category)!]}</Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.ctaBtn} onPress={() => navigation.navigate('RequestQuote', { workId: work.id })} accessibilityRole="button">
               <Text style={styles.ctaText}>{T.work.requestSimilar}</Text>
             </Pressable>
@@ -186,4 +195,6 @@ const styles = StyleSheet.create({
   ctaBar: { padding: 18, borderTopWidth: 1, borderTopColor: colors.hairline },
   ctaBtn: { backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   ctaText: { fontFamily: fonts.eyebrow, fontSize: 11, fontWeight: '700', letterSpacing: 0.8, color: '#0b0a08', textTransform: 'uppercase' },
+  ghostBtn: { borderWidth: 1, borderColor: colors.hairlineStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
+  ghostText: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
 });
