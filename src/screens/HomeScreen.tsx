@@ -44,9 +44,9 @@ const CAROUSEL_MIN = 120;
 const DEPT_CARD_MAX = 122;
 const DEPT_CARD_MIN = 100;
 // Cabeçalho (6 + logo 56 + 8, sem traço) + rótulo da grelha (8 + ~14 + 10)
-// + os dois intervalos entre filas (2 × 10) + margem do carrossel (18) +
-// pontos (8 + 5 + 16 de fim) + 4 de folga.
-const HOME_FIXED = 70 + 32 + 20 + 18 + 29 + 4;
+// + os dois intervalos entre filas (2 × 10) + margens do carrossel (18 em
+// cima, 16 em baixo; o indicador de página vive dentro dele) + 4 de folga.
+const HOME_FIXED = 70 + 32 + 20 + 18 + 16 + 4;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -176,77 +176,78 @@ export default function HomeScreen() {
             );
           })}
         </View>
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          style={[styles.carousel, { width: carouselW, height: carouselH }]}
-        >
-          {loading ? (
-            <View style={[styles.slide, { width: slideW, height: slideH }]}>
-              <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
-            </View>
-          ) : featured.length === 0 ? (
-            <Pressable style={[styles.slide, { width: slideW, height: slideH }]} onPress={() => openPortfolio()}>
-              <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
-              <LinearGradient
-                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
-                  locations={[0.4, 0.72, 1]}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-              <View style={styles.slideText}>
-                <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
-                <Text style={styles.slideSub}>{T.common.brand}</Text>
+        <View style={[styles.carousel, { width: carouselW, height: carouselH }]}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            style={{ width: slideW, height: slideH }}
+          >
+            {loading ? (
+              <View style={[styles.slide, { width: slideW, height: slideH }]}>
+                <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
               </View>
-            </Pressable>
-          ) : (
-            featured.map((w) => (
-              <Pressable
-                key={w.id}
-                style={[styles.slide, { width: slideW, height: slideH }]}
-                onPress={() => navigation.navigate('WorkDetail', { workId: w.id })}
-                accessibilityRole="button"
-                accessibilityLabel={w.title}
-              >
-                {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
-                    margem que sobrar fica no fundo escuro do carrossel. */}
-                <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
+            ) : featured.length === 0 ? (
+              <Pressable style={[styles.slide, { width: slideW, height: slideH }]} onPress={() => openPortfolio()}>
+                <PlaceholderThumb variant={0} style={StyleSheet.absoluteFill} />
                 <LinearGradient
-                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
-                  locations={[0.4, 0.72, 1]}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
+                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
+                    locations={[0.4, 0.72, 1]}
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="none"
+                  />
                 <View style={styles.slideText}>
-                  {/* Mesmo formato dos cartões de cima: título a negrito e a
-                      categoria por baixo, sem "Concluído" (Fábio, 2026-09-09:
-                      se está exposto, está concluído). */}
-                  <Text style={styles.slideTitle} numberOfLines={2}>
-                    {w.title}
-                  </Text>
-                  <Text style={styles.slideSub} numberOfLines={1}>
-                    {categoryFullName(w.category)}
-                  </Text>
+                  <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
+                  <Text style={styles.slideSub}>{T.common.brand}</Text>
                 </View>
               </Pressable>
-            ))
-          )}
-        </ScrollView>
-        {/* Experiência de 2026-09-09 (Fábio): o carrossel dos destaques fica
-            por baixo do menu dos departamentos. */}
-        {featured.length > 1 ? (
-          <View style={styles.dots}>
-            {featured.map((w, i) => (
-              <View key={w.id} style={[styles.pageDot, i === activeSlide && styles.pageDotActive]} />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.dotsSpacer} />
-        )}
+            ) : (
+              featured.map((w) => (
+                <Pressable
+                  key={w.id}
+                  style={[styles.slide, { width: slideW, height: slideH }]}
+                  onPress={() => navigation.navigate('WorkDetail', { workId: w.id })}
+                  accessibilityRole="button"
+                  accessibilityLabel={w.title}
+                >
+                  {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
+                      margem que sobrar fica no fundo escuro do carrossel. */}
+                  <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
+                    locations={[0.4, 0.72, 1]}
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="none"
+                  />
+                  <View style={styles.slideText}>
+                    {/* Mesmo formato dos cartões de cima: título a negrito e a
+                        categoria por baixo, sem "Concluído" (Fábio, 2026-09-09:
+                        se está exposto, está concluído). */}
+                    <Text style={styles.slideTitle} numberOfLines={2}>
+                      {w.title}
+                    </Text>
+                    <Text style={styles.slideSub} numberOfLines={1}>
+                      {categoryFullName(w.category)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
+          {/* Indicador de página na vertical, dentro do limite direito do
+              carrossel (Fábio, 2026-09-09: poupa a fila de pontos por baixo,
+              que passa para o próprio carrossel). */}
+          {featured.length > 1 ? (
+            <View style={styles.dotsV} pointerEvents="none">
+              {featured.map((w, i) => (
+                <View key={w.id} style={[styles.pageDotV, i === activeSlide && styles.pageDotVActive]} />
+              ))}
+            </View>
+          ) : null}
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -268,16 +269,17 @@ const styles = StyleSheet.create({
   // A altura vem de carouselH (CAROUSEL_MIN..CAROUSEL_MAX), no próprio JSX.
   // Contorno igual ao dos cartões e gradiente só em baixo (em vez do véu
   // uniforme a 35%) — revisão crítica aceite pelo Fábio, 2026-09-09.
-  carousel: { marginTop: 18, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline },
+  carousel: { marginTop: 18, marginBottom: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline },
   slide: { position: 'relative' },
   // Texto do carrossel no formato dos cartões de departamento (deptName/deptTagline).
-  slideText: { position: 'absolute', left: 12, right: 12, bottom: 12 },
+  // À direita deixa-se espaço para o indicador de página.
+  slideText: { position: 'absolute', left: 12, right: 24, bottom: 12 },
   slideTitle: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 2 },
   slideSub: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 8, height: 5, marginBottom: 16 },
-  dotsSpacer: { height: 5, marginTop: 8, marginBottom: 16 },
-  pageDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
-  pageDotActive: { backgroundColor: colors.goldBright, width: 14 },
+  // Indicador de página na vertical, encostado ao limite direito do carrossel.
+  dotsV: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', gap: 5 },
+  pageDotV: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
+  pageDotVActive: { backgroundColor: colors.goldBright, height: 14 },
   gridLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 8, marginBottom: 10 },
   gridLabelLine: { flex: 1, height: 1, backgroundColor: colors.hairline },
   gridLabel: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 2, color: colors.inkMuted },
