@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  carouselLabelText: { fontFamily: fonts.eyebrow, fontSize: 8.5, letterSpacing: 1.2, color: colors.goldBright, textTransform: 'uppercase' },
+  carouselLabelText: { fontFamily: fonts.eyebrow, fontSize: 7.5, letterSpacing: 1.1, color: colors.goldBright, textTransform: 'uppercase' },
   // Indicador de página na vertical, encostado ao limite direito do carrossel.
   dotsV: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', gap: 5 },
   pageDotV: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },

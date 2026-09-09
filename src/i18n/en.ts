@@ -27,7 +27,7 @@ export const en: Strings = {
   home: {
     featuredSoon: 'Our featured work is coming soon.',
     servicesLabel: 'OUR SERVICES',
-    latestWorks: 'Latest work',
+    latestWorks: 'Highlights',
   },
 
   departments: {
