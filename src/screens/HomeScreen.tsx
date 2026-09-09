@@ -30,6 +30,7 @@ import { hasDepartmentContent } from '../data/departmentContent';
 import { WorkCategory } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { useAppWidth } from '../utils/layout';
+import { cloudinaryWhole } from '../media/cloudinary';
 import { useT } from '../i18n';
 
 // O Início tem de caber no ecrã sem scroll (pedido do Fábio, 2026-09-09: no
@@ -51,6 +52,20 @@ const HOME_GRID_FIXED = 2 * 10 + 24;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
+}
+
+// Nome do departamento numa só linha (pedido do Fábio, 2026-09-09, para o
+// texto não tapar a foto): a letra encolhe só onde o nome não cabe na
+// largura do cartão ("Xtreme Polishing Systems", e "Automotive Aesthetics"
+// em ecrãs estreitos). Estimativa pelo número de caracteres — a Manrope
+// Bold mede 0,50 a 0,54 em por carácter nestes nomes (medido no browser);
+// usa-se 0,54 com 3% de folga, por isso funciona igual na web. No
+// telemóvel, adjustsFontSizeToFit fica como rede se a estimativa falhar.
+const DEPT_NAME_MAX = 12.5;
+const DEPT_NAME_MIN = 9.5;
+const DEPT_NAME_EM_PER_CHAR = 0.54;
+function deptNameSize(name: string, textWidth: number): number {
+  return clamp((textWidth * 0.97) / (name.length * DEPT_NAME_EM_PER_CHAR), DEPT_NAME_MIN, DEPT_NAME_MAX);
 }
 
 export default function HomeScreen() {
@@ -181,7 +196,11 @@ export default function HomeScreen() {
             distribuidor oficial), por isso fica. Tocar abre a página de
             serviços do departamento (Secção 9) — decisão do Fábio: serviços
             primeiro, o Portfólio filtrado fica a um toque dentro da página.
-            Sem conteúdo (Xtreme até à Secção 10) o cartão fica inerte. */}
+            Sem conteúdo (Xtreme até à Secção 10) o cartão fica inerte.
+            A foto aparece INTEIRA (fit="contain", a partir do ficheiro
+            completo e não do thumbnail 4:3) e o nome fica numa só linha,
+            encolhendo a letra onde não cabe ("Xtreme Polishing Systems") —
+            pedido do Fábio (2026-09-09), para o texto não tapar a imagem. */}
         <View style={styles.deptGrid}>
           {DEPARTMENTS.map((d) => {
             const cover = covers[d.id];
@@ -193,7 +212,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={d.name}
               >
-                <Photo url={cover?.thumbnailUrl || cover?.photoUrl} seed={d.id} />
+                <Photo url={cloudinaryWhole(cover?.photoUrl || cover?.thumbnailUrl, 640)} seed={d.id} fit="contain" />
                 <LinearGradient
                   colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
                   locations={[0, 0.5, 1]}
@@ -201,7 +220,13 @@ export default function HomeScreen() {
                   pointerEvents="none"
                 />
                 <View style={styles.deptText}>
-                  <Text style={styles.deptName} numberOfLines={2}>
+                  {/* Largura útil do texto: cartão menos as bordas (2) e o padding (24). */}
+                  <Text
+                    style={[styles.deptName, { fontSize: deptNameSize(d.name, deptCardW - 26) }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
                     {d.name}
                   </Text>
                   <Text style={styles.deptTagline} numberOfLines={1}>
@@ -289,7 +314,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   deptText: { padding: 12 },
-  deptName: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 2 },
+  // fontSize vem de deptNameSize() no JSX (DEPT_NAME_MIN..DEPT_NAME_MAX).
+  deptName: { fontFamily: fonts.bodyBold, color: colors.ink, marginBottom: 2 },
   deptTagline: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
   badge: {
     position: 'absolute',

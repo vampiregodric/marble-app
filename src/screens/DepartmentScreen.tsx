@@ -6,6 +6,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
+import { cloudinaryWhole } from '../media/cloudinary';
 import { EmptyState } from '../components/ListState';
 import { BackIcon } from '../components/Icons';
 import { DEPARTMENTS } from '../data/departments';
@@ -86,7 +87,9 @@ export default function DepartmentScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={[styles.hero, { width: heroW, height: heroH }]}>
-          <Photo url={cover?.photoUrl || cover?.thumbnailUrl} seed={department.id} />
+          {/* Foto inteira, sem cortar (pedido do Fábio, 2026-09-09); a margem
+              que sobrar fica no fundo escuro do cartão. */}
+          <Photo url={cloudinaryWhole(cover?.photoUrl || cover?.thumbnailUrl, 1200)} seed={department.id} fit="contain" />
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.9)']}
             locations={[0.3, 0.6, 1]}

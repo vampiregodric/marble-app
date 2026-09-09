@@ -38,6 +38,29 @@ export function avatarDeliveryUrl(publicId: string, version?: number | string): 
   return `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${AVATAR_SIZE},h_${AVATAR_SIZE},g_face,q_auto,f_auto/${v}${publicId}`;
 }
 
+// Reescreve um URL de entrega do Cloudinary (o formato que o backoffice
+// grava em works.photoUrl, settings/home.departmentCovers, etc.) para
+// entregar a imagem INTEIRA reduzida a `width` px de largura: `c_limit`
+// não corta nada. Serve os sítios que mostram a foto sem a cortar
+// (`fit="contain"` no Photo — decisão do Fábio, 2026-09-09) e que não podem
+// usar o `thumbnailUrl`, porque esse já vem recortado a 4:3 pelo
+// backoffice (c_fill,w_480,h_360). Substitui o primeiro segmento de
+// transformação, se existir; URLs de outros sítios saem como entraram.
+export function cloudinaryWhole(url: string | undefined | null, width: number): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  const m = trimmed.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/);
+  if (!m) return trimmed;
+  let rest = m[2];
+  const first = rest.split('/')[0];
+  // Um segmento de transformação é "chave_valor" separados por vírgulas
+  // (c_fill,w_480,h_360,q_auto,f_auto); "v123" (versão) e o public_id não são.
+  if (/^(?:[a-z]{1,2}_[^/,]+)(?:,[a-z]{1,2}_[^/,]+)*$/.test(first) && /(^|,)[cwhqfg]_/.test(first)) {
+    rest = rest.slice(first.length + 1);
+  }
+  return `${m[1]}c_limit,w_${width},q_auto,f_auto/${rest}`;
+}
+
 type UploadResponse = {
   public_id: string;
   version?: number;

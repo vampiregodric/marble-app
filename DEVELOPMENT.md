@@ -40,7 +40,13 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   mostra a foto do cliente quando existe; o carrossel (168 a 120 px) e os
   cartões (122 a 100 px) encolhem para o Início caber sem scroll em
   qualquer telemóvel (constantes no topo do ficheiro; pedido do Fábio,
-  2026-09-09)
+  2026-09-09); a foto de cada departamento aparece INTEIRA
+  (`Photo fit="contain"`, a partir do ficheiro completo via
+  `cloudinaryWhole()` em `media/cloudinary.ts`, não do thumbnail 4:3) e o
+  nome fica numa só linha, com a letra a encolher onde não cabe
+  (`deptNameSize()`); o cabeçalho da página de departamento também mostra a
+  foto inteira — decisão do Fábio (2026-09-09): "em vez de cortar, adaptar
+  ao espaço"
 - `src/screens/DepartmentScreen.tsx` — página de serviços de um
   departamento: conteúdo estático de `src/data/departmentContent.ts`,
   foto de `settings/home`, trabalhos recentes da categoria (`works`)
