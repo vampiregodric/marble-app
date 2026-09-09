@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -55,17 +55,26 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 // Nome do departamento numa só linha (pedido do Fábio, 2026-09-09, para o
-// texto não tapar a foto): a letra encolhe só onde o nome não cabe na
-// largura do cartão ("Xtreme Polishing Systems", e "Automotive Aesthetics"
-// em ecrãs estreitos). Estimativa pelo número de caracteres — a Manrope
+// texto não tapar a foto). Estimativa pelo número de caracteres — a Manrope
 // Bold mede 0,50 a 0,54 em por carácter nestes nomes (medido no browser);
-// usa-se 0,54 com 3% de folga, por isso funciona igual na web. No
-// telemóvel, adjustsFontSizeToFit fica como rede se a estimativa falhar.
+// usa-se 0,54 com 5% de folga, igual em todas as plataformas (sem
+// adjustsFontSizeToFit, que no Android encolhe de forma imprevisível).
+// Decisão do Fábio (2026-09-09): os nomes têm TODOS o mesmo tamanho — o que
+// o segundo nome mais comprido ("Automotive Aesthetics") precisa para caber
+// — e só o mais comprido ("Xtreme Polishing Systems") fica mais pequeno,
+// porque é o que é preciso para caber numa linha.
 const DEPT_NAME_MAX = 12.5;
 const DEPT_NAME_MIN = 9.5;
 const DEPT_NAME_EM_PER_CHAR = 0.54;
-function deptNameSize(name: string, textWidth: number): number {
-  return clamp((textWidth * 0.97) / (name.length * DEPT_NAME_EM_PER_CHAR), DEPT_NAME_MIN, DEPT_NAME_MAX);
+function fittingSize(name: string, textWidth: number): number {
+  return clamp((textWidth * 0.95) / (name.length * DEPT_NAME_EM_PER_CHAR), DEPT_NAME_MIN, DEPT_NAME_MAX);
+}
+// Tamanho de cada nome: o comum a todos, menos o mais comprido (fica com o dele).
+function deptNameSizes(names: string[], textWidth: number): Map<string, number> {
+  const own = names.map((n) => fittingSize(n, textWidth));
+  const sorted = [...own].sort((a, b) => a - b);
+  const shared = sorted[1] ?? sorted[0] ?? DEPT_NAME_MAX;
+  return new Map(names.map((n, i) => [n, Math.min(shared, own[i])]));
 }
 
 export default function HomeScreen() {
@@ -85,6 +94,8 @@ export default function HomeScreen() {
   const free = windowH - insets.top - tabBarH - HOME_FIXED_ABOVE_GRID - HOME_GRID_FIXED;
   const carouselH = Math.round(clamp(free - 3 * DEPT_CARD_MAX, CAROUSEL_MIN, CAROUSEL_MAX));
   const deptCardH = Math.floor(clamp((free - carouselH) / 3, DEPT_CARD_MIN, DEPT_CARD_MAX));
+  // Largura útil do nome: cartão menos as bordas (2) e o padding (24).
+  const nameSizes = useMemo(() => deptNameSizes(DEPARTMENTS.map((d) => d.name), deptCardW - 26), [deptCardW]);
 
   // Carrossel: destaques escolhidos pela equipa (works.featured), em tempo real.
   const { data: featured, loading } = useFeaturedWorks(5);
@@ -162,7 +173,9 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={w.title}
               >
-                <Photo url={w.photoUrl} seed={w.id} />
+                {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
+                    margem que sobrar fica no fundo escuro do carrossel. */}
+                <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
                 <View style={styles.slideOverlay} />
                 <View style={styles.slideText}>
                   <Text style={styles.slideTag}>
@@ -197,10 +210,9 @@ export default function HomeScreen() {
             serviços do departamento (Secção 9) — decisão do Fábio: serviços
             primeiro, o Portfólio filtrado fica a um toque dentro da página.
             Sem conteúdo (Xtreme até à Secção 10) o cartão fica inerte.
-            A foto aparece INTEIRA (fit="contain", a partir do ficheiro
-            completo e não do thumbnail 4:3) e o nome fica numa só linha,
-            encolhendo a letra onde não cabe ("Xtreme Polishing Systems") —
-            pedido do Fábio (2026-09-09), para o texto não tapar a imagem. */}
+            A foto enche o cartão (cover, thumbnail 4:3) — o Fábio
+            experimentou a foto inteira e voltou atrás (2026-09-09). O nome
+            fica numa só linha (deptNameSizes), para não tapar a imagem. */}
         <View style={styles.deptGrid}>
           {DEPARTMENTS.map((d) => {
             const cover = covers[d.id];
@@ -212,7 +224,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={d.name}
               >
-                <Photo url={cloudinaryWhole(cover?.photoUrl || cover?.thumbnailUrl, 640)} seed={d.id} fit="contain" />
+                <Photo url={cover?.thumbnailUrl || cover?.photoUrl} seed={d.id} />
                 <LinearGradient
                   colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
                   locations={[0, 0.5, 1]}
@@ -220,13 +232,7 @@ export default function HomeScreen() {
                   pointerEvents="none"
                 />
                 <View style={styles.deptText}>
-                  {/* Largura útil do texto: cartão menos as bordas (2) e o padding (24). */}
-                  <Text
-                    style={[styles.deptName, { fontSize: deptNameSize(d.name, deptCardW - 26) }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                  >
+                  <Text style={[styles.deptName, { fontSize: nameSizes.get(d.name) ?? DEPT_NAME_MAX }]} numberOfLines={1}>
                     {d.name}
                   </Text>
                   <Text style={styles.deptTagline} numberOfLines={1}>
@@ -314,7 +320,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   deptText: { padding: 12 },
-  // fontSize vem de deptNameSize() no JSX (DEPT_NAME_MIN..DEPT_NAME_MAX).
+  // fontSize vem de deptNameSizes() no JSX (DEPT_NAME_MIN..DEPT_NAME_MAX).
   deptName: { fontFamily: fonts.bodyBold, color: colors.ink, marginBottom: 2 },
   deptTagline: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
   badge: {
