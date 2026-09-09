@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
   useWindowDimensions,
   AccessibilityInfo,
+  AppState,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -141,7 +142,10 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!isFocused || reduceMotion || featured.length < 2) return;
     const timer = setInterval(() => {
-      if (touchedRef.current) return;
+      // Em segundo plano (app minimizada; na web, separador escondido) não se
+      // arranca a animação — o browser congela-a a meio e o carrossel ficava
+      // preso entre duas páginas (visto no painel de testes, 2026-09-09).
+      if (touchedRef.current || AppState.currentState !== 'active') return;
       const next = (activeRef.current + 1) % featured.length;
       scrollRef.current?.scrollTo({ y: next * slideH, animated: true });
     }, 5000);
