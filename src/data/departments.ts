@@ -23,9 +23,12 @@ export type Department = {
   badge?: string;
 };
 
+// Ordem = ordem dos cartões no Início (e do seletor de departamento no
+// pedido de orçamento). Epoxy primeiro, carros a seguir — decisão do Fábio
+// (2026-09-09).
 export const DEPARTMENTS: Department[] = [
-  { id: 'automotive', name: 'Automotive Aesthetics', tagline: S.departments.tagline.automotive, category: 'Automotive' },
   { id: 'epoxy', name: 'Epoxy Floors', tagline: S.departments.tagline.epoxy, category: 'Epoxy Floors' },
+  { id: 'automotive', name: 'Automotive Aesthetics', tagline: S.departments.tagline.automotive, category: 'Automotive' },
   { id: 'graphic', name: 'Graphic Solutions', tagline: S.departments.tagline.graphic, category: 'Graphic' },
   { id: 'ai', name: 'AI Business', tagline: S.departments.tagline.ai },
   { id: 'ads', name: 'Marble Ads', tagline: S.departments.tagline.ads },
