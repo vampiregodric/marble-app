@@ -199,8 +199,8 @@ export default function HomeScreen() {
                   pointerEvents="none"
                 />
               <View style={styles.slideText}>
-                <Text style={styles.slideTag}>{T.common.brand}</Text>
                 <Text style={styles.slideTitle}>{T.home.featuredSoon}</Text>
+                <Text style={styles.slideSub}>{T.common.brand}</Text>
               </View>
             </Pressable>
           ) : (
@@ -222,11 +222,14 @@ export default function HomeScreen() {
                   pointerEvents="none"
                 />
                 <View style={styles.slideText}>
-                  <Text style={styles.slideTag}>
-                    {categoryFullName(w.category)} · {T.home.completed}
-                  </Text>
+                  {/* Mesmo formato dos cartões de cima: título a negrito e a
+                      categoria por baixo, sem "Concluído" (Fábio, 2026-09-09:
+                      se está exposto, está concluído). */}
                   <Text style={styles.slideTitle} numberOfLines={2}>
                     {w.title}
+                  </Text>
+                  <Text style={styles.slideSub} numberOfLines={1}>
+                    {categoryFullName(w.category)}
                   </Text>
                 </View>
               </Pressable>
@@ -267,16 +270,10 @@ const styles = StyleSheet.create({
   // uniforme a 35%) — revisão crítica aceite pelo Fábio, 2026-09-09.
   carousel: { marginTop: 18, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline },
   slide: { position: 'relative' },
-  slideText: { position: 'absolute', left: 16, right: 16, bottom: 16 },
-  slideTag: {
-    fontFamily: fonts.eyebrow,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: colors.goldBright,
-    marginBottom: 4,
-  },
-  slideTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  // Texto do carrossel no formato dos cartões de departamento (deptName/deptTagline).
+  slideText: { position: 'absolute', left: 12, right: 12, bottom: 12 },
+  slideTitle: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 2 },
+  slideSub: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 8, height: 5, marginBottom: 16 },
   dotsSpacer: { height: 5, marginTop: 8, marginBottom: 16 },
   pageDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },

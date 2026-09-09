@@ -35,7 +35,6 @@ export const pt = {
   home: {
     featuredSoon: 'Os nossos trabalhos em destaque chegam em breve.',
     // "{categoria} · Concluído" no carrossel.
-    completed: 'Concluído',
     servicesLabel: 'OS NOSSOS SERVIÇOS',
   },
 

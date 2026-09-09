@@ -26,7 +26,6 @@ export const en: Strings = {
 
   home: {
     featuredSoon: 'Our featured work is coming soon.',
-    completed: 'Completed',
     servicesLabel: 'OUR SERVICES',
   },
 
