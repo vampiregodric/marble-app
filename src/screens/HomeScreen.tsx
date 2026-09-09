@@ -22,7 +22,6 @@ import Photo from '../components/Photo';
 import PlaceholderThumb from '../components/PlaceholderThumb';
 import { useFeaturedWorks } from '../data/works';
 import { useHomeSettings } from '../data/settings';
-import { categoryFullName } from '../data/categories';
 import { DEPARTMENTS } from '../data/departments';
 import { hasDepartmentContent } from '../data/departmentContent';
 import { WorkCategory } from '../firebase/models';
@@ -261,28 +260,21 @@ export default function HomeScreen() {
                 >
                   {/* Foto do trabalho INTEIRA (decisão do Fábio, 2026-09-09); a
                       margem que sobrar fica no fundo escuro do carrossel. */}
+                  {/* Só a foto: o título e a categoria saíram (experiência do
+                      Fábio, 2026-09-09) — ficam no Detalhe, a um toque, e no
+                      rótulo de acessibilidade do slide. */}
                   <Photo url={cloudinaryWhole(w.photoUrl, 1000)} seed={w.id} fit="contain" />
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
-                    locations={[0.4, 0.72, 1]}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  />
-                  <View style={styles.slideText}>
-                    {/* Mesmo formato dos cartões de cima: título a negrito e a
-                        categoria por baixo, sem "Concluído" (Fábio, 2026-09-09:
-                        se está exposto, está concluído). */}
-                    <Text style={styles.slideTitle} numberOfLines={2}>
-                      {w.title}
-                    </Text>
-                    <Text style={styles.slideSub} numberOfLines={1}>
-                      {categoryFullName(w.category)}
-                    </Text>
-                  </View>
                 </Pressable>
               ))
             )}
           </ScrollView>
+          {/* Rótulo fixo do carrossel, no canto superior esquerdo, por cima
+              das fotos (Fábio, 2026-09-09) — o mesmo selo dos cartões. */}
+          {featured.length > 0 ? (
+            <View style={styles.carouselLabel} pointerEvents="none">
+              <Text style={styles.carouselLabelText}>{T.home.latestWorks}</Text>
+            </View>
+          ) : null}
           {/* Indicador de página na vertical, dentro do limite direito do
               carrossel (Fábio, 2026-09-09: poupa a fila de pontos por baixo,
               que passa para o próprio carrossel). */}
@@ -320,10 +312,24 @@ const styles = StyleSheet.create({
   carousel: { marginTop: 18, marginBottom: 16, marginHorizontal: 18, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.hairline },
   slide: { position: 'relative' },
   // Texto do carrossel no formato dos cartões de departamento (deptName/deptTagline).
-  // À direita deixa-se espaço para o indicador de página.
+  // À direita deixa-se espaço para o indicador de página. Só o slide
+  // "em breve" tem texto; as fotos dos trabalhos não.
   slideText: { position: 'absolute', left: 12, right: 24, bottom: 12 },
   slideTitle: { fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.ink, marginBottom: 2 },
   slideSub: { fontFamily: fonts.body, fontSize: 10, color: colors.inkMuted },
+  // Rótulo do carrossel: o selo dos cartões ("Oficial"), no canto superior esquerdo.
+  carouselLabel: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  carouselLabelText: { fontFamily: fonts.eyebrow, fontSize: 8.5, letterSpacing: 1.2, color: colors.goldBright, textTransform: 'uppercase' },
   // Indicador de página na vertical, encostado ao limite direito do carrossel.
   dotsV: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', gap: 5 },
   pageDotV: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },

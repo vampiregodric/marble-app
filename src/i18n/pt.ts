@@ -34,8 +34,9 @@ export const pt = {
 
   home: {
     featuredSoon: 'Os nossos trabalhos em destaque chegam em breve.',
-    // "{categoria} · Concluído" no carrossel.
     servicesLabel: 'OS NOSSOS SERVIÇOS',
+    // Rótulo fixo no canto superior esquerdo do carrossel (Fábio, 2026-09-09).
+    latestWorks: 'Últimos trabalhos',
   },
 
   // Os seis cartões do Início: o nome é marca (não se traduz); a tagline e
