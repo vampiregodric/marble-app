@@ -41,7 +41,10 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   duplicavam as tabs); ordem do ecrã (decisão do Fábio, 2026-09-09): logótipo sem
   traço, uma linha fina que acaba em "OS NOSSOS SERVIÇOS", os seis cartões
   (18 px de margem, como o carrossel) e, em baixo, o carrossel dos
-  destaques, com contorno fino e gradiente só em baixo, que fica com o
+  destaques — VERTICAL (desliza-se de baixo para cima), com o indicador
+  de página à direita dentro dele, a rodar sozinho de 5 em 5 s até ao
+  primeiro toque e parado com "reduzir movimento" ligado no telemóvel —,
+  com contorno fino e gradiente só em baixo, que fica com o
   espaço que sobrar até à barra de tabs (120 a 260 px); se faltar espaço,
   encolhe primeiro ele e depois os cartões (122 a 100 px), para o Início
   caber sem scroll em qualquer telemóvel (constantes no topo do ficheiro); o carrossel mostra a foto do trabalho INTEIRA

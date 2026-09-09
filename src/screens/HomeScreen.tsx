@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,12 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   useWindowDimensions,
+  AccessibilityInfo,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
@@ -43,10 +44,10 @@ const CAROUSEL_MAX = 260;
 const CAROUSEL_MIN = 120;
 const DEPT_CARD_MAX = 122;
 const DEPT_CARD_MIN = 100;
-// Cabeçalho (6 + logo 56 + 8, sem traço) + rótulo da grelha (8 + ~14 + 10)
+// Cabeçalho (6 + logo 56 + 2, sem traço) + rótulo da grelha (6 + ~14 + 10)
 // + os dois intervalos entre filas (2 × 10) + margens do carrossel (18 em
 // cima, 16 em baixo; o indicador de página vive dentro dele) + 4 de folga.
-const HOME_FIXED = 70 + 32 + 20 + 18 + 16 + 4;
+const HOME_FIXED = 64 + 30 + 20 + 18 + 16 + 4;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -80,6 +81,13 @@ export default function HomeScreen() {
   const T = useT();
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  // Rotação automática (Fábio, 2026-09-09): avança de 5 em 5 s enquanto o
+  // Início está à vista; para de vez ao primeiro toque ou deslize do
+  // cliente; não roda com "reduzir movimento" ligado no telemóvel.
+  const activeRef = useRef(0);
+  const touchedRef = useRef(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const isFocused = useIsFocused();
   const screenW = useAppWidth();
   const carouselW = screenW - 36;
   // Grelha alinhada com o carrossel e o rótulo: 18 px de cada lado, 10 entre
@@ -106,10 +114,39 @@ export default function HomeScreen() {
   const { data: home } = useHomeSettings();
   const covers = home?.departmentCovers ?? {};
 
+  // O carrossel é vertical: a página é a altura de um slide.
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / slideW);
+    const idx = Math.round(e.nativeEvent.contentOffset.y / slideH);
+    activeRef.current = idx;
     if (idx !== activeSlide) setActiveSlide(idx);
   };
+  const stopAuto = () => {
+    touchedRef.current = true;
+  };
+
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((on) => {
+        if (alive) setReduceMotion(on);
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isFocused || reduceMotion || featured.length < 2) return;
+    const timer = setInterval(() => {
+      if (touchedRef.current) return;
+      const next = (activeRef.current + 1) % featured.length;
+      scrollRef.current?.scrollTo({ y: next * slideH, animated: true });
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isFocused, reduceMotion, featured.length, slideH]);
 
   const openPortfolio = (category?: WorkCategory) =>
     navigation.navigate('Tabs', { screen: 'Portfolio', params: category ? { category } : undefined });
@@ -177,12 +214,17 @@ export default function HomeScreen() {
           })}
         </View>
         <View style={[styles.carousel, { width: carouselW, height: carouselH }]}>
+          {/* Carrossel VERTICAL (decisão do Fábio, 2026-09-09, coerente com o
+              indicador de página à direita): desliza-se de baixo para cima;
+              roda sozinho de 5 em 5 s até ao primeiro toque. */}
           <ScrollView
             ref={scrollRef}
-            horizontal
             pagingEnabled
-            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
             onScroll={onScroll}
+            onScrollBeginDrag={stopAuto}
+            onTouchStart={stopAuto}
             scrollEventThrottle={16}
             style={{ width: slideW, height: slideH }}
           >
@@ -256,14 +298,16 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
-  // A altura (6 + 56 + 8 = 70) entra em HOME_FIXED. Sem traço por baixo: a
+  // A altura (6 + 56 + 2 = 64) entra em HOME_FIXED. Sem traço por baixo: a
   // linha fina é a do rótulo da grelha, logo a seguir.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 6,
-    paddingBottom: 8,
+    // O PNG do logótipo já traz ar por baixo; a linha fica logo a seguir
+    // (Fábio, 2026-09-09: "puxar a linha de cima para cima").
+    paddingBottom: 2,
   },
   logo: { height: 56, width: 100 },
   // A altura vem de carouselH (CAROUSEL_MIN..CAROUSEL_MAX), no próprio JSX.
@@ -280,7 +324,7 @@ const styles = StyleSheet.create({
   dotsV: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', gap: 5 },
   pageDotV: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
   pageDotVActive: { backgroundColor: colors.goldBright, height: 14 },
-  gridLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 8, marginBottom: 10 },
+  gridLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 6, marginBottom: 10 },
   gridLabelLine: { flex: 1, height: 1, backgroundColor: colors.hairline },
   gridLabel: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 2, color: colors.inkMuted },
   deptGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 18, gap: 10 },

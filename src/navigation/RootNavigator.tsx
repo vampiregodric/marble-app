@@ -72,9 +72,12 @@ function Tabs() {
         tabBarStyle: {
           backgroundColor: colors.screen,
           borderTopColor: colors.hairline,
-          height: 62 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
-          paddingTop: 8,
+          // Mais baixa e com o ícone à mesma distância da linha de cima e do
+          // fundo (Fábio, 2026-09-09: antes havia mais ar em cima do que em
+          // baixo). O Início lê esta altura com useBottomTabBarHeight.
+          height: 54 + insets.bottom,
+          paddingBottom: 6 + insets.bottom,
+          paddingTop: 2,
         },
         tabBarActiveTintColor: colors.goldBright,
         tabBarInactiveTintColor: colors.inkFaint,
