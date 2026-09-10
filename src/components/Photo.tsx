@@ -11,6 +11,16 @@ import PlaceholderThumb from './PlaceholderThumb';
 type Props = {
   url?: string | null;
   seed: string;
+  // 'cover' (por defeito) enche o contentor e corta o que sobra — cartões
+  // de departamento do Início, cabeçalho da página de departamento, cartões
+  // do Portfólio, miniaturas. 'contain' mostra a foto INTEIRA e deixa margem
+  // onde a proporção não bate certo (o fundo do contentor aparece): o
+  // carrossel dos destaques no Início e a galeria do Detalhe do trabalho —
+  // decisão do Fábio (2026-09-09): é a foto do trabalho que tem de se ver
+  // completa; os cartões ficam esticados. Quem usa 'contain' deve passar a
+  // foto completa, não o thumbnailUrl (esse já vem recortado a 4:3 do
+  // backoffice) — ver cloudinaryWhole() em media/cloudinary.ts.
+  fit?: 'cover' | 'contain';
 };
 
 function variantFor(seed: string): number {
@@ -19,7 +29,7 @@ function variantFor(seed: string): number {
   return Math.abs(h) % 6;
 }
 
-export default function Photo({ url, seed }: Props) {
+export default function Photo({ url, seed, fit = 'cover' }: Props) {
   const [failed, setFailed] = useState(false);
   const trimmed = url && url.trim() ? url.trim() : null;
   // Um URL novo (ex: a equipa trocou a foto) volta a tentar carregar.
@@ -31,7 +41,7 @@ export default function Photo({ url, seed }: Props) {
       <Image
         source={{ uri }}
         style={styles.fill}
-        resizeMode="cover"
+        resizeMode={fit}
         onError={() => setFailed(true)}
         accessibilityIgnoresInvertColors
       />

@@ -16,8 +16,10 @@
 // Histórico: 2026-09-03 (primeira versão); 2026-09-04 (foto de perfil
 // opcional + Cloudinary como subcontratante, Secção 5b); 2026-09-05
 // (pedidos de orçamento: conta criada a partir do pedido, fotos do pedido,
-// prazo de 12 meses, emails via Resend — Secção 7).
-export const LEGAL_VERSION = '2026-09-05';
+// prazo de 12 meses, emails via Resend — Secção 7); 2026-09-09 (simulador
+// "como ficaria": fotos do chão/carro do cliente, Vertex AI da Google como
+// subcontratante, 90 dias de retenção, a equipa vê as simulações — Secção 16).
+export const LEGAL_VERSION = '2026-09-09';
 
 // Dados da empresa (preenchidos pelo Fábio a 2026-09-03). A marca é
 // "Marble Studios"; a entidade legal é a Cacto Elegante, Lda. Se algum
@@ -64,6 +66,10 @@ export const RETENTION = {
   // apagados N meses depois de o pedido ser fechado pela equipa (Secção 7,
   // decisão do Fábio a 2026-09-04). O job diário das Functions faz isto.
   requestMonths: 12,
+  // Simulações "como ficaria" sem pedido de orçamento: apagadas N dias depois
+  // de criadas (Secção 16, decisão do Fábio a 2026-09-09). O job diário das
+  // Functions faz isto; as anexadas a um pedido seguem o prazo do pedido.
+  simulationDays: 90,
 };
 
 const PRIVACY: LegalText = {
@@ -90,11 +96,12 @@ const PRIVACY: LegalText = {
         'Dados de serviço, registados pela equipa quando fazes um trabalho connosco: o teu carro ou chão (modelo, e matrícula quando for necessária para o serviço), o trabalho realizado, produtos aplicados, datas de checkup e fotografias do trabalho.',
         'Foto de perfil, opcional: só se a escolheres no Perfil, da galeria ou da câmara. Serve apenas para a tua conta (e para a equipa te reconhecer na tua ficha), e podes trocá-la ou removê-la quando quiseres.',
         'Pedidos de orçamento e de checkup, que tu fazes na app: o que pretendes, o teu carro, espaço ou empresa, a tua mensagem, a forma como preferes ser contactado e, se as juntares, fotografias do carro ou do espaço. Se ainda não tiveres conta, o pedido cria-a com o nome, email e telemóvel que indicares, e recebes um email para definires a password.',
+        'Simulações "como ficaria", só se usares o simulador: a fotografia do teu chão ou do teu carro que escolheres, a amostra que aplicaste e a imagem gerada.',
         'Preferências: que notificações queres receber, e se aceitaste receber ofertas e novidades.',
         'Dados técnicos mínimos: um identificador do dispositivo para entregar notificações push (só se as ativares no telemóvel) e registos de erros da app, sem conteúdo pessoal.',
       ],
       after: [
-        'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além das que escolheres para a foto de perfil ou para um pedido de orçamento. A app não tem pagamentos.',
+        'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além das que escolheres para a foto de perfil, para um pedido de orçamento ou para uma simulação. A app não tem pagamentos.',
       ],
     },
     {
@@ -106,6 +113,7 @@ const PRIVACY: LegalText = {
         'Responder a um pedido de orçamento ou de checkup que fizeste na app, incluindo a confirmação de que o recebemos: diligências pré-contratuais a teu pedido (artigo 6.º, n.º 1, alínea b) do RGPD).',
         'Enviar-te ofertas e novidades (novos trabalhos no portfólio, eventos, promoções): apenas com o teu consentimento, que dás e retiras no Perfil, em "Ofertas e novidades". Está desligado por defeito.',
         'Mostrar a tua foto de perfil na tua conta: consentimento, que dás ao escolher a foto e retiras ao removê-la.',
+        'Gerar uma simulação "como ficaria" a partir de uma fotografia tua, guardá-la na tua conta e mostrá-la à equipa para preparar uma proposta: consentimento, que dás na primeira vez que usas o simulador (numa caixa não pré-marcada) e retiras apagando as simulações no Perfil ou escrevendo-nos. A imagem é gerada por um modelo de inteligência artificial (ver secção 5) e é uma simulação, não uma proposta de cor ou acabamento exatos. Se a equipa te contactar por causa de uma simulação sem lhe teres pedido orçamento, isso é marketing e só acontece com "Ofertas e novidades" ligado.',
         'Emitir faturas e cumprir obrigações fiscais e de garantia: obrigação legal.',
         'Manter a app segura e prevenir abusos: interesse legítimo.',
       ],
@@ -124,8 +132,9 @@ const PRIVACY: LegalText = {
       ],
       bullets: [
         'Google Firebase (Google Ireland Ltd.): autenticação, base de dados e alojamento da app. A base de dados está em servidores na União Europeia (região "eur3", Europa). O serviço de autenticação pode processar dados fora da UE ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e dos termos de tratamento de dados da Google.',
+        'Google Cloud Vertex AI (Google Ireland Ltd.): geração das simulações "como ficaria", no mesmo projeto Google Cloud da base de dados. Recebe a fotografia que escolheres e a amostra, devolve a imagem gerada e não usa as tuas fotografias para treinar modelos, ao abrigo dos termos de tratamento de dados da Google Cloud.',
         'Expo (Expo, Inc., EUA): serviço de entrega de notificações push, apenas quando as ativares. Recebe o identificador do dispositivo e o texto da notificação.',
-        'Cloudinary (Cloudinary Ltd., Israel e EUA): alojamento e entrega das fotografias e vídeos da app, ou seja, as fotografias dos trabalhos do portfólio, a tua foto de perfil se a escolheres, e as fotografias que juntares a um pedido de orçamento. Os ficheiros podem ficar em servidores fora da União Europeia, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e da decisão de adequação da Comissão para Israel.',
+        'Cloudinary (Cloudinary Ltd., Israel e EUA): alojamento e entrega das fotografias e vídeos da app, ou seja, as fotografias dos trabalhos do portfólio, a tua foto de perfil se a escolheres, as fotografias que juntares a um pedido de orçamento, e as fotografias e imagens do simulador "como ficaria". Os ficheiros podem ficar em servidores fora da União Europeia, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia e da decisão de adequação da Comissão para Israel.',
         'Resend (Resend, Inc., EUA): envio dos emails da app, ou seja, a confirmação de um pedido de orçamento para ti e o aviso do pedido para a equipa. Recebe o teu nome, email e o conteúdo do pedido, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão Europeia.',
       ],
       after: ['Podemos ainda partilhar dados quando a lei o exigir, por exemplo com a Autoridade Tributária no âmbito da faturação.'],
@@ -139,6 +148,7 @@ const PRIVACY: LegalText = {
         `A foto de perfil deixa de aparecer de imediato quando a removes ou apagas a conta; o ficheiro é eliminado do alojamento no prazo máximo de ${RETENTION.avatarFileDays} dias.`,
         `Contas sem qualquer atividade durante ${RETENTION.inactiveAccountYears} anos são apagadas da mesma forma.`,
         `Pedidos de orçamento e de checkup ficam guardados enquanto estiverem em curso e até ${RETENTION.requestMonths} meses depois de a equipa os fechar; depois ficam sem dados pessoais (contactos, texto e fotografias apagados). Apagar a conta apaga também os dados pessoais dos teus pedidos.`,
+        `Simulações "como ficaria" ficam guardadas ${RETENTION.simulationDays} dias, ou até as apagares no Perfil. Se anexares uma simulação a um pedido de orçamento, a cópia que fica no pedido segue o prazo do pedido. Apagar a conta apaga todas as tuas simulações.`,
         `Faturas e documentos fiscais são conservados fora da app pelo prazo legal de ${RETENTION.invoicingYears} anos.`,
       ],
     },
@@ -149,7 +159,7 @@ const PRIVACY: LegalText = {
         'Aceder aos teus dados e receber uma cópia.',
         'Retificar dados errados. Nome e telemóvel corrigem-se em Perfil > Dados pessoais; a foto de perfil troca-se ou remove-se tocando no avatar, no Perfil.',
         'Apagar a conta e os dados, em Perfil > Apagar conta, ou pedindo-nos por email.',
-        'Retirar o consentimento para marketing a qualquer momento, em Perfil > Ofertas e novidades. Isso não afeta a legalidade do que foi feito antes.',
+        'Retirar o consentimento para marketing a qualquer momento, em Perfil > Ofertas e novidades, e o consentimento do simulador apagando as tuas simulações (no Perfil ou na própria simulação). Isso não afeta a legalidade do que foi feito antes.',
         'Opor-te ou pedir a limitação do tratamento, e receber os teus dados num formato de uso corrente (portabilidade).',
         'Apresentar reclamação à Comissão Nacional de Proteção de Dados (CNPD), em www.cnpd.pt.',
       ],
@@ -186,7 +196,7 @@ const TERMS: LegalText = {
     {
       title: '1. O que é a app',
       paragraphs: [
-        `A app ${COMPANY.brand} é disponibilizada por ${COMPANY.legalName}, NIF ${COMPANY.nif}, com sede em ${COMPANY.address}. Serve para os clientes acompanharem os trabalhos feitos nos seus carros e chãos, receberem lembretes de checkup, verem o portfólio e os eventos, e pedirem orçamentos.`,
+        `A app ${COMPANY.brand} é disponibilizada por ${COMPANY.legalName}, NIF ${COMPANY.nif}, com sede em ${COMPANY.address}. Serve para os clientes acompanharem os trabalhos feitos nos seus carros e chãos, receberem lembretes de checkup, verem o portfólio e os eventos, pedirem orçamentos e experimentarem, no simulador, como ficaria o seu chão ou carro.`,
         'A app é gratuita e não tem pagamentos. Qualquer serviço que contrates é combinado, faturado e pago diretamente com a equipa, fora da app.',
       ],
     },
@@ -219,6 +229,7 @@ const TERMS: LegalText = {
       paragraphs: [
         `As fotografias dos trabalhos publicadas no portfólio pertencem à ${COMPANY.brand}. Ao contratar um serviço, aceitas que o resultado possa ser fotografado e publicado no portfólio da app e nas redes sociais da ${COMPANY.brand}, sem identificar o proprietário e com a matrícula ocultada. Se não quiseres que o teu carro ou chão apareça, basta dizê-lo à equipa antes ou depois do trabalho, e retiramos as fotografias.`,
         'A foto de perfil que escolheres é só para a tua conta: não é publicada nem partilhada, e apenas a equipa a vê na tua ficha. Usa uma foto tua, ou de que tenhas o direito de usar.',
+        `O simulador "como ficaria" gera imagens por inteligência artificial a partir da tua fotografia e de uma amostra. É uma simulação para te dar uma ideia, não uma proposta de cor ou acabamento: o resultado real depende do substrato, da luz e da aplicação, e é confirmado com amostras físicas antes de qualquer trabalho. Usa só fotografias tuas, do teu chão ou do teu carro, sem outras pessoas. As simulações ficam na tua conta e a equipa da ${COMPANY.brand} também as vê, para preparar propostas; podes partilhá-las, mas não as apresentes como resultado real de um trabalho.`,
       ],
     },
     {

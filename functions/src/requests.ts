@@ -3,6 +3,7 @@ import { CloudinaryConfig, deleteFilesByTag } from './cloudinary';
 import { hasAppAccount } from './consent';
 import { EmailConfig, sendEmail } from './email';
 import { createNotification } from './notify';
+import { deleteRequestSimulations } from './simulations';
 import { clientLocale, TEXTS } from './texts';
 import { addDays } from './time';
 import { Client, ServiceRequest, Work } from './types';
@@ -204,10 +205,13 @@ export async function anonymizeRequest(db: Firestore, id: string, now: Date): Pr
     message: '',
     fields: [],
     photos: FieldValue.delete(),
+    simulation: FieldValue.delete(),
     notes: FieldValue.delete(),
     anonymizedAt: ts,
     updatedAt: ts,
   });
+  // A simulação anexada (Secção 16) segue o prazo do pedido.
+  await deleteRequestSimulations(db, id);
 }
 
 // Conta apagada (app ou retenção) → todos os pedidos do cliente.

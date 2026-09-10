@@ -52,7 +52,10 @@ export default function WorkGallery({ items, seed, width, height, overlay, onOpe
                 accessibilityRole="imagebutton"
                 accessibilityLabel={T.gallery.itemA11y(item.type, i + 1, items.length)}
               >
-                <Photo url={item.type === 'video' ? item.thumbnailUrl : item.url} seed={`${seed}-${i}`} />
+                {/* Foto INTEIRA (decisão do Fábio, 2026-09-09: no Detalhe a foto
+                    do trabalho tem de se ver completa); a margem fica no
+                    fundo escuro. A miniatura do vídeo segue a mesma regra. */}
+                <Photo url={item.type === 'video' ? item.thumbnailUrl : item.url} seed={`${seed}-${i}`} fit="contain" />
                 {item.type === 'video' ? (
                   <View style={styles.videoPillWrap} pointerEvents="none">
                     <View style={styles.videoPill}>

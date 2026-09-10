@@ -13,6 +13,10 @@ export const COLLECTIONS = {
   // Pedidos de orçamento feitos pelo cliente na app (Secção 7). Ver
   // ServiceRequest. Os checkups (Secção 8) vivem em `vehicles.checkupRequest`.
   requests: 'requests',
+  // Simulador "como ficaria" (Secção 16): as amostras que a equipa carrega
+  // no backoffice e as simulações de cada cliente. Ver Sample e Simulation.
+  samples: 'samples',
+  simulations: 'simulations',
 } as const;
 
 // Categorias tal como usadas no filtro do Portfólio (PortfolioScreen).
@@ -54,6 +58,12 @@ export interface ClientConsent {
   // e `event_reminder` a quem tem isto a true.
   marketing: boolean;
   marketingUpdatedAt: Timestamp | null;
+  // Simulador "como ficaria" (Secção 16): o cliente autorizou, uma vez por
+  // conta, que as fotos que carrega no simulador sejam usadas para gerar a
+  // simulação (base legal: consentimento). Guarda-se a versão dos textos
+  // legais em que aceitou — se a política mudar, o simulador pede outra vez.
+  simulatorVersion?: string;
+  simulatorAcceptedAt?: Timestamp | null;
 }
 
 export interface Client {
@@ -511,6 +521,18 @@ export interface RequestPhoto {
   publicId: string;
 }
 
+// Simulação anexada a um pedido de orçamento (Secção 16). `photoUrl` é a
+// foto do cliente, `resultUrl` a simulação (vazio se a IA não deu resultado
+// e o cliente anexou só a comparação), `thumbnailUrl` a miniatura para a
+// lista. Validado campo a campo em firestore.rules (validRequestSimulation).
+export interface RequestSimulation {
+  id: string;
+  name: string;
+  photoUrl: string;
+  resultUrl?: string;
+  thumbnailUrl?: string;
+}
+
 // Um campo estruturado do formulário, guardado já com a etiqueta para o
 // backoffice o mostrar sem conhecer o formulário de cada departamento
 // (src/data/requestForms.ts). Ex: { key: 'car', label: 'Carro', value: 'BMW M4 2022' }.
@@ -546,6 +568,10 @@ export interface ServiceRequest {
   fields: RequestField[];
   message: string;
   photos?: RequestPhoto[];
+  // Simulação "como ficaria" anexada ao pedido (Secção 16): cópia do
+  // essencial, para a equipa a ver no backoffice mesmo que a simulação seja
+  // apagada depois. `simulations/{id}.requestId` aponta de volta.
+  simulation?: RequestSimulation;
   platform?: 'android' | 'ios' | 'web';
   // --- equipa (backoffice) ---
   notes?: string;
@@ -596,3 +622,133 @@ export const REQUEST_LIMITS = {
 // Prazo de resposta prometido ao cliente (ecrã de sucesso, alerta, email).
 // Decisão do Fábio (2026-09-04): 1 dia útil.
 export const REQUEST_RESPONSE_PROMISE = 'no prazo de 1 dia útil';
+
+// ---------- Simulador "como ficaria" (Secção 16) ----------
+
+// Acabamento de uma amostra de carro (vinil/PPF). Rótulos PT para o
+// backoffice; a app traduz em S.simulator.finish.
+export type SampleFinish = 'gloss' | 'satin' | 'matte';
+
+export const SAMPLE_FINISH_LABEL: Record<SampleFinish, string> = {
+  gloss: 'Brilhante',
+  satin: 'Acetinado',
+  matte: 'Mate',
+};
+
+// Só estas categorias têm simulador: chãos (Epoxy Floors) e carros
+// (Automotive). Gráfico não faz sentido "pintar" numa foto.
+export type SimulationKind = 'floor' | 'car';
+
+export const SIMULATION_KIND_CATEGORY: Record<SimulationKind, WorkCategory> = {
+  floor: 'Epoxy Floors',
+  car: 'Automotive',
+};
+
+export function simulationKindOf(category: WorkCategory | undefined): SimulationKind | undefined {
+  if (category === 'Epoxy Floors') return 'floor';
+  if (category === 'Automotive') return 'car';
+  return undefined;
+}
+
+// Uma amostra carregada pela equipa no backoffice (página Amostras): a
+// textura de um sistema de epóxi (metallic, flake, cor sólida, quartzo) ou
+// a cor/acabamento de um vinil ou PPF. É o que o cliente escolhe no
+// simulador para aplicar à foto do seu chão ou carro; a foto da amostra vai
+// como referência para o modelo de imagem (Cloud Function). Só as
+// `published` aparecem na app — a query TEM de incluir
+// where('published', '==', true), como em `works` (regras: leitura pública
+// se publicada, escrita da equipa).
+export interface Sample {
+  id: string;
+  name: string;
+  category: WorkCategory;
+  // Sistema (chãos) ou serviço (carros: vinil, PPF colorido) — as tags da
+  // Secção 13; é o filtro da grelha do simulador.
+  service?: WorkServiceId;
+  brand?: string;
+  // Carros: acabamento da película.
+  finish?: SampleFinish;
+  description?: string;
+  photoUrl: string;
+  thumbnailUrl?: string;
+  publicId?: string;
+  published: boolean;
+  // Ordem na grelha da app (0 = primeiro).
+  order: number;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export const SAMPLE_LIMITS = {
+  nameMax: 60,
+  descriptionMax: 200,
+} as const;
+
+// 'pending' → a Cloud Function ainda não correu; 'done' → `result` tem a
+// imagem; 'failed' → o modelo não devolveu imagem (a app mostra a
+// comparação lado a lado); 'limited' → o cliente passou
+// SIMULATION_LIMITS.perDayMax em 24 h; 'capped' → o projeto inteiro passou
+// o tecto diário (SIMULATION_DAILY_CAP em functions/.env).
+export type SimulationStatus = 'pending' | 'done' | 'failed' | 'limited' | 'capped';
+
+// Uma imagem no Cloudinary (foto do cliente ou resultado), no mesmo formato
+// das fotos dos pedidos. Tag `simulation_<id>`: é por ela que a Function
+// apaga os ficheiros quando a simulação é apagada.
+export interface SimulationImage {
+  url: string;
+  thumbnailUrl: string;
+  publicId: string;
+}
+
+// O que se aplicou à foto: uma amostra, ou a capa de um trabalho do
+// portfólio ("Ver no meu chão/carro" no Detalhe). É uma cópia na altura —
+// a amostra pode ser despublicada ou o trabalho retirado depois, e a
+// simulação continua legível.
+export interface SimulationSource {
+  type: 'sample' | 'work';
+  id: string;
+  name: string;
+  photoUrl: string;
+  thumbnailUrl?: string;
+  service?: WorkServiceId;
+  brand?: string;
+  finish?: SampleFinish;
+}
+
+// Uma simulação pedida pelo cliente na app. Ele cria o doc (foto já no
+// Cloudinary, estado 'pending'); a Cloud Function onSimulationWritten
+// verifica os tectos, chama o modelo de imagem (Vertex AI, mesmo projeto
+// Google Cloud) e escreve `result`/`status`; a app escuta em tempo real.
+// Decisões do Fábio (2026-09-09): a equipa vê todas (backoffice, página
+// Simulações); guardam-se 90 dias se não forem anexadas a um pedido
+// (RETENTION.simulationDays); com pedido, seguem o prazo do pedido.
+export interface Simulation {
+  id: string;
+  clientId: string;
+  kind: SimulationKind;
+  photo: SimulationImage;
+  source: SimulationSource;
+  status: SimulationStatus;
+  platform?: 'android' | 'ios' | 'web';
+  // --- Cloud Function onSimulationWritten ---
+  result?: SimulationImage;
+  error?: string;
+  model?: string;
+  durationMs?: number;
+  processedAt?: Timestamp;
+  // --- app, ao enviar um pedido de orçamento com a simulação ---
+  requestId?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Limites partilhados entre a app, firestore.rules e as Functions.
+export const SIMULATION_LIMITS = {
+  // Por cliente em 24 h (decisão do Fábio, 2026-09-09). A app avisa antes;
+  // a Function marca 'limited' do lado dela.
+  perDayMax: 5,
+  // Simulações sem pedido de orçamento apagadas ao fim de N dias (job diário).
+  retentionDays: 90,
+  // Lado maior da foto do cliente, reduzida no telemóvel antes de subir.
+  photoMaxDimension: 1600,
+} as const;

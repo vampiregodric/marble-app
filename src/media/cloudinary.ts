@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { RequestPhoto } from '../firebase/models';
+import { RequestPhoto, SimulationImage } from '../firebase/models';
 import { S } from '../i18n';
 
 // Ficheiros que a app escreve: a foto de perfil do cliente (Secção 5b) e,
@@ -22,10 +22,16 @@ import { S } from '../i18n';
 const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
 const preset = process.env.EXPO_PUBLIC_CLOUDINARY_PRESET_AVATARS ?? '';
 const requestPreset = process.env.EXPO_PUBLIC_CLOUDINARY_PRESET_REQUESTS ?? '';
+// Simulador "como ficaria" (Secção 16): preset unsigned marble-simulations
+// (pasta simulations, só imagens, c_limit 2000). A Cloud Function usa o
+// MESMO preset para guardar o resultado.
+const simulationPreset = process.env.EXPO_PUBLIC_CLOUDINARY_PRESET_SIMULATIONS ?? '';
 
 export const avatarUploadConfigured = Boolean(cloudName && preset);
 // Sem preset, o formulário de orçamento esconde a secção das fotos.
 export const requestUploadConfigured = Boolean(cloudName && requestPreset);
+// Sem preset, o simulador avisa que ainda não está configurado.
+export const simulationUploadConfigured = Boolean(cloudName && simulationPreset);
 
 // Lado do quadrado entregue à app. O ficheiro guardado tem até 1024 px
 // (reduzido no telemóvel antes de subir, ver avatarPicker.ts).
@@ -36,6 +42,29 @@ const AVATAR_SIZE = 512;
 export function avatarDeliveryUrl(publicId: string, version?: number | string): string {
   const v = version ? `v${version}/` : '';
   return `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${AVATAR_SIZE},h_${AVATAR_SIZE},g_face,q_auto,f_auto/${v}${publicId}`;
+}
+
+// Reescreve um URL de entrega do Cloudinary (o formato que o backoffice
+// grava em works.photoUrl, settings/home.departmentCovers, etc.) para
+// entregar a imagem INTEIRA reduzida a `width` px de largura: `c_limit`
+// não corta nada. Serve os sítios que mostram a foto sem a cortar
+// (`fit="contain"` no Photo — decisão do Fábio, 2026-09-09) e que não podem
+// usar o `thumbnailUrl`, porque esse já vem recortado a 4:3 pelo
+// backoffice (c_fill,w_480,h_360). Substitui o primeiro segmento de
+// transformação, se existir; URLs de outros sítios saem como entraram.
+export function cloudinaryWhole(url: string | undefined | null, width: number): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  const m = trimmed.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/);
+  if (!m) return trimmed;
+  let rest = m[2];
+  const first = rest.split('/')[0];
+  // Um segmento de transformação é "chave_valor" separados por vírgulas
+  // (c_fill,w_480,h_360,q_auto,f_auto); "v123" (versão) e o public_id não são.
+  if (/^(?:[a-z]{1,2}_[^/,]+)(?:,[a-z]{1,2}_[^/,]+)*$/.test(first) && /(^|,)[cwhqfg]_/.test(first)) {
+    rest = rest.slice(first.length + 1);
+  }
+  return `${m[1]}c_limit,w_${width},q_auto,f_auto/${rest}`;
 }
 
 type UploadResponse = {
@@ -102,6 +131,48 @@ export async function uploadRequestPhoto(localUri: string, requestId: string, on
     url: `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_1600,q_auto,f_auto/${v}${res.public_id}`,
     thumbnailUrl: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_480,h_360,q_auto,f_auto/${v}${res.public_id}`,
     publicId: res.public_id,
+  };
+}
+
+// Foto do chão/carro do cliente para uma simulação (Secção 16). Tag
+// `simulation_<id>` — a Function apaga por ela quando a simulação é apagada
+// (pelo cliente, pela equipa ou pela retenção). O resultado da IA fica
+// depois com a mesma tag, escrito pela Function.
+export async function uploadSimulationPhoto(localUri: string, simulationId: string, onProgress?: (fraction: number) => void): Promise<SimulationImage> {
+  if (!simulationUploadConfigured) {
+    throw new Error(S.errors.simulationUploadNotConfigured);
+  }
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(localUri)).blob();
+    form.append('file', blob, 'foto.jpg');
+  } else {
+    form.append('file', { uri: localUri, name: 'foto.jpg', type: 'image/jpeg' } as unknown as Blob);
+  }
+  form.append('upload_preset', simulationPreset);
+  form.append('tags', `simulation,simulation_${simulationId}`);
+
+  let res: UploadResponse;
+  try {
+    res = await xhrUpload(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, form, onProgress);
+  } catch (err) {
+    if (err instanceof Error && /preset/i.test(err.message)) {
+      throw new Error(S.errors.simulationPresetMissing);
+    }
+    throw err;
+  }
+  return simulationImage(res.public_id, res.version);
+}
+
+// URLs de entrega de uma imagem de simulação (foto do cliente ou resultado),
+// no mesmo formato das fotos dos pedidos. A Function usa o mesmo formato
+// para o resultado, com o selo "SIMULAÇÃO" por cima (ver functions/src/simulations.ts).
+export function simulationImage(publicId: string, version?: number | string): SimulationImage {
+  const v = version ? `v${version}/` : '';
+  return {
+    url: `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_1600,q_auto,f_auto/${v}${publicId}`,
+    thumbnailUrl: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_480,h_360,q_auto,f_auto/${v}${publicId}`,
+    publicId,
   };
 }
 

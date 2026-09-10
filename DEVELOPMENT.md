@@ -34,13 +34,29 @@ compila `functions/src`, e sem as dependências das Functions dá erros
 
 Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
 - `src/screens/HomeScreen.tsx` — Início: carrossel = `works` com
-  `featured: true`; ponto no sino = alertas por ler; cartões dos seis
+  `featured: true`; cartões dos seis
   departamentos com a foto escolhida pela equipa (`settings/home`), cada
-  um abre a página de serviços do departamento (Secção 9); botão do Perfil
-  mostra a foto do cliente quando existe; o carrossel (168 a 120 px) e os
-  cartões (122 a 100 px) encolhem para o Início caber sem scroll em
-  qualquer telemóvel (constantes no topo do ficheiro; pedido do Fábio,
-  2026-09-09)
+  um abre a página de serviços do departamento (Secção 9); cabeçalho só
+  com o logótipo (os atalhos de alertas e perfil saíram a 2026-09-09:
+  duplicavam as tabs); ordem do ecrã (decisão do Fábio, 2026-09-09): logótipo sem
+  traço, uma linha fina que acaba em "OS NOSSOS SERVIÇOS", os seis cartões
+  (18 px de margem, como o carrossel) e, em baixo, o carrossel dos
+  destaques — VERTICAL (desliza-se de baixo para cima), com o indicador
+  de página à direita dentro dele, a rodar sozinho de 5 em 5 s até ao
+  primeiro toque e parado com "reduzir movimento" ligado no telemóvel —,
+  com contorno fino e gradiente só em baixo, que fica com o
+  espaço que sobrar até à barra de tabs (120 a 260 px); se faltar espaço,
+  encolhe primeiro ele e depois os cartões (122 a 100 px), para o Início
+  caber sem scroll em qualquer telemóvel (constantes no topo do ficheiro); o carrossel mostra a foto do trabalho INTEIRA
+  (`Photo fit="contain"`, a partir do ficheiro completo via
+  `cloudinaryWhole()` em `media/cloudinary.ts`), tal como a galeria do
+  Detalhe (`WorkGallery`); os cartões de departamento e o cabeçalho da
+  página de departamento continuam a esticar a foto (cover) — o Fábio
+  experimentou a foto inteira aí e voltou atrás (2026-09-09). O nome do
+  departamento fica numa só linha: todos com o mesmo tamanho, o que o
+  segundo nome mais comprido precisa, e só o mais comprido ("Xtreme
+  Polishing Systems") mais pequeno (`deptNameSizes()`, estimativa por
+  caracteres igual em todas as plataformas)
 - `src/screens/DepartmentScreen.tsx` — página de serviços de um
   departamento: conteúdo estático de `src/data/departmentContent.ts`,
   foto de `settings/home`, trabalhos recentes da categoria (`works`)
@@ -57,7 +73,13 @@ Os seis ecrãs leem o Firestore de dev em tempo real (Secção 4, 2026-09-03):
   pedidos" (`requests` do uid, estado em tempo real)
 - `src/screens/RequestQuoteScreen.tsx` — Pedir orçamento (Secção 7): a
   partir de um trabalho ("Pedir orçamento semelhante"), de um departamento
-  (Secções 9/10) ou do Perfil; sem sessão cria a conta na hora
+  (Secções 9/10), do Perfil ou de uma simulação (Secção 16, param
+  `simulationId`); sem sessão cria a conta na hora
+- `src/screens/SimulatorScreen.tsx` — Simulador "como ficaria" (Secção
+  16): foto do cliente + amostra (`samples`) → `simulations/{id}`, que a
+  Cloud Function preenche com o resultado; Antes/Depois, lado a lado
+  enquanto gera. Entradas nas páginas de departamento com chãos/carros, no
+  Detalhe ("Ver no meu chão/carro") e no Perfil. Ver "Simulador" abaixo
 
 Já não há arrays de exemplo em nenhum ecrã. Ver "Dados reais" abaixo.
 Todos os textos da interface existem em **PT e EN** (Secção 12,
@@ -858,6 +880,141 @@ Secção 13 — Tags nos trabalhos: marca e sistema/serviço.
   formulário). Só aceita chaves `-dev`; o prod ainda não tem trabalhos,
   nascem já com tags. O seed (`npm run seed`) já escreve
   `services`/`brands`. Feito no dev a 2026-09-05 (8 trabalhos).
+
+## Simulador "como ficaria" (Secção 16)
+
+O cliente fotografa o chão ou o carro, escolhe uma amostra e vê, em
+segundos, a foto dele com a amostra aplicada. Decisões do Fábio
+(2026-09-09) no ROADMAP, Secção 16 — Simulador "como ficaria" (foto do
+cliente + amostras).
+
+- **Modelo:** `samples` (`Sample` em `models.ts`: nome, `category` Epoxy
+  Floors ou Automotive, `service` = sistema/serviço da Secção 13, `brand`,
+  `finish` nos carros, foto, `published`, `order`) — só a equipa escreve;
+  a app lê **só publicadas** (a query TEM de levar `where('published',
+  '==', true)`, como em `works`). `simulations` (`Simulation`): `clientId`,
+  `kind` ('floor' | 'car'), `photo` (foto do cliente no Cloudinary),
+  `source` (cópia da amostra ou da capa do trabalho: `type`, `id`, `name`,
+  `photoUrl`, tags), `status` ('pending' → 'done' | 'failed' | 'limited' |
+  'capped'), `result` (imagem gerada), `error`, `model`, `durationMs`,
+  `processedAt`, `requestId`. O cliente cria (validação campo a campo em
+  `validNewSimulation`), liga ao pedido (`requestId`, só isso) e apaga; o
+  resto é da Function e da equipa. Índice `simulations(clientId,
+  createdAt desc)`. `requests.simulation` (`RequestSimulation`: id, nome,
+  foto, resultado, miniatura) é a cópia anexada ao pedido. Consentimento:
+  `clients.consent.simulatorVersion` + `simulatorAcceptedAt` (uma vez por
+  conta, por versão dos textos legais). Limites em `SIMULATION_LIMITS`
+  (app) e `SIMULATION_PER_DAY` / `SIMULATION_RETENTION_DAYS` (Functions) —
+  se mudares um, muda o outro.
+- **App:** `src/data/samples.ts` (`usePublishedSamples(category)`, ordem
+  em memória), `src/data/simulations.ts` (`useMySimulations`,
+  `useSimulation`, `createSimulation`, `attachSimulationToRequest`,
+  `deleteSimulation`, `sourceFromSample`/`sourceFromWork`,
+  `dailyLimitReached`), `src/media/cloudinary.ts` →
+  `uploadSimulationPhoto` (preset `EXPO_PUBLIC_CLOUDINARY_PRESET_SIMULATIONS`,
+  tags `simulation,simulation_<id>`; sem a variável o simulador não aparece
+  em lado nenhum), `SimulatorScreen` (rota `Simulator`; web
+  `simulator?kind=floor|car`, `?workId=`, `?simulationId=`). O formulário
+  reutiliza o seletor de fotos dos pedidos (`media/requestPhotos.ts`, 1600
+  px). Sem sessão, "Entrar para simular" abre o `LoginScreen` num modal e
+  a foto/amostra escolhidas ficam. Primeira simulação: checkbox de
+  consentimento (não pré-marcada) → `acceptSimulatorConsent()`. A vista de
+  resultado escuta o doc: lado a lado (foto | amostra) enquanto `pending`
+  e sempre que não há `result`; com resultado, chips Antes/Depois; botões
+  "Pedir orçamento com esta simulação" (→ `RequestQuote { simulationId }`,
+  que grava `requests.simulation` e depois `simulations.requestId`),
+  "Experimentar outra amostra" (volta ao formulário com a foto da sessão)
+  e "Apagar simulação" (confirmação em `ActionSheet`, agora com
+  `description`). Textos em `S.simulator.*` (PT/EN).
+- **Cloud Function `onSimulationWritten`** (`functions/src/simulations.ts`,
+  512 MiB, 180 s): criada → (1) o cliente com `SIMULATION_PER_DAY` (5)
+  simulações nas últimas 24 h além desta → `limited`; (2) o projeto com
+  mais de `SIMULATION_DAILY_CAP` em 24 h → `capped` + UM `team_alert` por
+  dia (`system/simulationGuard`); (3) vai buscar a foto e a amostra ao
+  Cloudinary a 1024 px (`modelInputUrl`), pede ao Vertex AI
+  (`functions/src/vertex.ts`, REST `generateContent` com as duas imagens em
+  base64 e a instrução de `buildPrompt` — em inglês, por tipo e por
+  origem) a foto editada, sobe o resultado com o preset unsigned
+  (`CLOUDINARY_SIMULATION_PRESET`, tag da simulação) e grava `result` com o
+  selo "SIMULAÇÃO" na entrega (`l_text` no URL — é uma transformação de
+  URL, testada no cloud `demo`) → `done`; sem imagem (bloqueio de
+  segurança, só texto) ou erro → `failed` com o motivo em `error`, e a app
+  fica na comparação lado a lado. Apagada → ficheiros fora do Cloudinary
+  pela tag `simulation_<id>` (precisa de `CLOUDINARY_CLEANUP=on`; senão
+  fica nos logs, como as fotos de perfil). Conta apagada →
+  `deleteClientSimulations`; pedido anonimizado → `deleteRequestSimulations`;
+  job diário `simulations` → `runSimulationRetention` (90 dias sem
+  `requestId`). Parâmetros em `functions/.env`: `VERTEX_LOCATION` (global),
+  `VERTEX_IMAGE_MODEL` (gemini-3.1-flash-image), `SIMULATION_DAILY_CAP`
+  (60), `CLOUDINARY_SIMULATION_PRESET`. Sem segredo novo: a Function usa a
+  própria conta de serviço (ADC) para o Vertex AI.
+- **O que o Fábio faz uma vez por projeto (dev agora, prod no lançamento):**
+  1. **Cloudinary**, preset `marble-simulations` (Settings → Upload →
+     Upload presets → Add): Signing mode **Unsigned**, folder
+     `simulations`, allowed formats `jpg,png,webp,heic`, incoming
+     transformation `c_limit,w_2000,h_2000`. É o preset da app
+     (`EXPO_PUBLIC_CLOUDINARY_PRESET_SIMULATIONS=marble-simulations` no
+     `.env`) e da Function (`CLOUDINARY_SIMULATION_PRESET`).
+  2. **Vertex AI**: ativar a API em
+     https://console.cloud.google.com/apis/library/aiplatform.googleapis.com?project=marble-studios-dev
+     ("Ativar"). Depois, em IAM
+     (https://console.cloud.google.com/iam-admin/iam?project=marble-studios-dev),
+     "Conceder acesso" com o papel **Agent Platform User** (a Google
+     renomeou o Vertex AI para "Agent Platform" na consola em 2026 — é o
+     antigo "Vertex AI User"; pesquisa por "Platform User") a duas contas: a
+     das Functions (`<número do projeto>-compute@developer.gserviceaccount.com`
+     — no dev já tinha "Editor", por isso não foi preciso) e a da chave de
+     dev (`firebase-adminsdk-fbsvc@marble-studios-dev.iam.gserviceaccount.com`,
+     para o Claude testar localmente). A permissão demora uns 2 minutos a
+     propagar: o primeiro pedido pode dar 403 `aiplatform.endpoints.predict`
+     — espera e repete. Sem isto o Vertex responde 403 e a simulação fica
+     `failed` (a app mostra o lado a lado). Feito no dev a 2026-09-10; a
+     primeira simulação real (Jaguar + "Satin Dark Grey") demorou 12 s.
+  3. **Deploy das Functions**: `npx.cmd firebase-tools deploy --only functions --project dev`
+     (na pasta da app). As regras e o índice já foram publicados pelo Claude
+     a 2026-09-09 (`deploy --only firestore:rules,firestore:indexes`). Feito
+     no dev a 2026-09-10 — atenção: se a pasta `functions` do checkout não
+     tiver `node_modules`, o predeploy usa o TypeScript 6 da raiz e falha
+     com TS5107 (`moduleResolution=node10`); corre `npm ci` em `functions/`
+     primeiro.
+  4. **Backoffice**: `npm.cmd run deploy:dev` na pasta do backoffice. Feito
+     no dev a 2026-09-10.
+  5. **Páginas legais** (prod, quando quiser): `npx.cmd firebase-tools deploy --only hosting:legal --project prod`.
+- **Testar sem deploy:** `npm run functions:build` e depois
+  `npm run functions:jobs -- ../serviceAccountKey.dev.json --simulation <id>`
+  corre o handler contra o dev com a chave (Vertex AI com a conta da chave;
+  `VERTEX_LOCATION`/`VERTEX_IMAGE_MODEL`/`CLOUDINARY_SIMULATION_PRESET` no
+  ambiente; `--daily-cap N` liga o tecto). Como o trigger, ignora docs já
+  processados — para repetir, apaga `processedAt` e põe `status: 'pending'`.
+  `--only simulations` corre só a retenção. As regras testam-se com
+  `npm run check:firestore:auth -- <chave>` (bloco 8). No browser (8085) a
+  galeria abre um `<input type=file>` — injeta-se um `File` de um canvas
+  (como a foto de perfil, Secção 5b); no backoffice o mesmo truque na
+  página Amostras cria amostras com fotos geradas.
+- **Backoffice:** **Amostras** (`/amostras`): grelha por categoria, modal
+  com categoria, sistema/serviço, nome, marca (sugestões), acabamento
+  (carros), ordem, descrição (só equipa), foto (upload com o preset
+  `marble-works`, ou a capa de um trabalho publicado), publicada; apagar
+  não toca nas simulações já feitas (guardam a cópia). **Simulações**
+  (`/simulacoes`): todas, com cliente (selo "sem marketing" quando não pode
+  ser contactado por causa dela), estado, tempo do modelo, ligação ao
+  pedido, foto/resultado, apagar; contagens "hoje" na barra lateral e custo
+  estimado a 30 dias (`SIMULATION_COST_EUR`). Secção "Simulação" no pedido
+  (antes/depois) e na ficha do cliente. `models.ts` copiado tal e qual.
+- **RGPD:** política §2 (dados), §3 (finalidade, base legal =
+  consentimento; contactar sem pedido = marketing), §5 (Google Cloud
+  Vertex AI como subcontratante, no mesmo projeto; Cloudinary também
+  guarda estas imagens), §6 (90 dias; com pedido, o prazo do pedido; conta
+  apagada apaga tudo), §7 (retirar consentimento = apagar); termos §1 e
+  §5 (é uma simulação, não uma proposta; fotos só do próprio, sem pessoas).
+  `LEGAL_VERSION` 2026-09-09 → todas as contas veem o cartão "Termos
+  atualizados" uma vez; HTML em `docs/legal/` regenerado.
+- **Custos (2026-09):** ≈ 0,04–0,07 € por simulação (Gemini 3.1 Flash
+  Image, 1K; o Pro custa ≈ 3×); o pior caso com os tectos é ≈ 4 €/dia. As
+  imagens geradas trazem a marca de água invisível SynthID da Google.
+  Endpoint `global` = processamento fora da UE ao abrigo do contrato da
+  Google Cloud; se o modelo passar a existir em `europe-west1`, basta mudar
+  `VERTEX_LOCATION` e fazer deploy.
 
 ## Firebase: os dois projetos
 

@@ -13,6 +13,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import WorkDetailScreen from '../screens/WorkDetailScreen';
 import DepartmentScreen from '../screens/DepartmentScreen';
 import RequestQuoteScreen from '../screens/RequestQuoteScreen';
+import SimulatorScreen from '../screens/SimulatorScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
 import LegalScreen from '../screens/LegalScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
@@ -72,9 +73,12 @@ function Tabs() {
         tabBarStyle: {
           backgroundColor: colors.screen,
           borderTopColor: colors.hairline,
-          height: 62 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
-          paddingTop: 8,
+          // Mais baixa e com o ícone à mesma distância da linha de cima e do
+          // fundo (Fábio, 2026-09-09: antes havia mais ar em cima do que em
+          // baixo). O Início lê esta altura com useBottomTabBarHeight.
+          height: 54 + insets.bottom,
+          paddingBottom: 6 + insets.bottom,
+          paddingTop: 2,
         },
         tabBarActiveTintColor: colors.goldBright,
         tabBarInactiveTintColor: colors.inkFaint,
@@ -124,6 +128,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       Legal: 'legal/:doc',
       DeleteAccount: 'profile/delete-account',
       RequestQuote: 'request',
+      Simulator: 'simulator',
       NotificationsOnboarding: 'welcome/notifications',
     },
   },
@@ -171,6 +176,7 @@ export default function RootNavigator() {
         <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="Department" component={DepartmentScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="RequestQuote" component={RequestQuoteScreen} options={{ presentation: 'card' }} />
+        <Stack.Screen name="Simulator" component={SimulatorScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="PersonalData" component={PersonalDataScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'card' }} />
         <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />

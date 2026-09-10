@@ -4,7 +4,8 @@
 // src/data/vehicles.ts e src/data/requests.ts — e que as regras só deixam
 // marcar alertas como lidos, criar pedidos de orçamento bem formados
 // (Secção 7) e pedir/confirmar/cancelar o checkup de um carro/chão
-// (Secção 8), nada mais. Entra como o cliente com um custom token do Admin
+// (Secção 8), criar simulações "como ficaria" bem formadas e só as ligar a
+// um pedido ou apagá-las (Secção 16), nada mais. Entra como o cliente com um custom token do Admin
 // SDK, por isso não precisa de password; precisa da chave de service
 // account do dev.
 //
@@ -25,7 +26,7 @@ import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
+import { getFirestore, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
 
 const [keyPath, email = 'teste.seccao2@example.com'] = process.argv.slice(2);
 if (!keyPath) {
@@ -248,6 +249,93 @@ await admin.collection('requests').doc(requestId).delete();
 const spawned = await admin.collection('notifications').where('relatedRequestId', '==', requestId).get();
 for (const d of spawned.docs) await d.ref.delete();
 console.log(`  --   pedido de teste apagado (${spawned.size} alerta(s) da Function apagado(s))`);
+
+// 8. Simulador "como ficaria" (Secção 16): amostras publicadas legíveis (a
+//    query com published == true, como a app), escrita recusada; a
+//    simulação bem formada é permitida, ligar ao pedido é permitido, mudar o
+//    estado/resultado é recusado, variantes inválidas recusadas, apagar a
+//    própria é permitido.
+try {
+  const snap = await getDocs(query(collection(db, 'samples'), where('published', '==', true)));
+  pass(`samples: ${snap.size} amostra(s) publicada(s) legível(is)`);
+} catch (e) {
+  fail(`samples: ler as publicadas: ${e.code ?? e.message}`);
+}
+try {
+  await getDocs(collection(db, 'samples'));
+  fail('samples: o cliente conseguiu ler amostras NÃO publicadas — regras erradas');
+} catch (e) {
+  pass(`samples: ler todas (incl. rascunhos): recusado (${e.code}) — correto`);
+}
+try {
+  await setDoc(doc(db, 'samples', `check-${Date.now()}`), { name: 'hack', category: 'Automotive', photoUrl: 'x', published: true, order: 0, createdAt: serverTimestamp() });
+  fail('samples: o cliente conseguiu CRIAR uma amostra — regras erradas');
+} catch (e) {
+  pass(`samples: criar amostra: recusado (${e.code}) — correto`);
+}
+try {
+  const snap = await getDocs(query(collection(db, 'simulations'), where('clientId', '==', user.uid), orderBy('createdAt', 'desc'), limit(30)));
+  pass(`simulations: ${snap.size} simulação(ões) do cliente legível(is)`);
+} catch (e) {
+  fail(`simulations: ler as do cliente: ${e.code ?? e.message}` + (e.code === 'failed-precondition' ? ' — índice em falta (firestore.indexes.json)' : ''));
+}
+const img = (name) => ({
+  url: `https://res.cloudinary.com/demo/image/upload/c_limit,w_1600/${name}.jpg`,
+  thumbnailUrl: `https://res.cloudinary.com/demo/image/upload/c_fill,w_480,h_360/${name}.jpg`,
+  publicId: `simulations/${name}`,
+});
+const validSimulation = {
+  clientId: user.uid,
+  kind: 'floor',
+  photo: img('check-photo'),
+  source: { type: 'sample', id: 'sample-check', name: 'Amostra de teste', photoUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg', service: 'metallic-epoxy', brand: 'Xtreme' },
+  status: 'pending',
+  platform: 'web',
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
+};
+const simulationId = `check-${Date.now()}`;
+const simulationRef = doc(db, 'simulations', simulationId);
+try {
+  await setDoc(simulationRef, validSimulation);
+  pass('simulations: criar uma simulação válida — permitido');
+  try {
+    await updateDoc(simulationRef, { status: 'done', updatedAt: serverTimestamp() });
+    fail('simulations: o cliente conseguiu mudar o ESTADO — regras erradas');
+  } catch (e) {
+    pass(`simulations: mudar o estado: recusado (${e.code}) — correto`);
+  }
+  try {
+    await updateDoc(simulationRef, { requestId: requestId, updatedAt: serverTimestamp() });
+    pass('simulations: ligar ao pedido de orçamento (requestId) — permitido');
+  } catch (e) {
+    fail(`simulations: ligar ao pedido: ${e.code ?? e.message}`);
+  }
+} catch (e) {
+  fail(`simulations: criar uma simulação válida: ${e.code ?? e.message}`);
+}
+const invalidSimulations = {
+  'estado já done': { ...validSimulation, status: 'done' },
+  'clientId de outro cliente': { ...validSimulation, clientId: 'client-example' },
+  'campo da Function (result)': { ...validSimulation, result: img('hack') },
+  'tipo inventado': { ...validSimulation, kind: 'boat' },
+  'amostra sem foto': { ...validSimulation, source: { type: 'sample', id: 'x', name: 'x' } },
+};
+for (const [label, data] of Object.entries(invalidSimulations)) {
+  try {
+    await setDoc(doc(db, 'simulations', `${simulationId}-bad`), data);
+    fail(`simulations: simulação com ${label} foi PERMITIDA — regras erradas`);
+  } catch (e) {
+    pass(`simulations: simulação com ${label}: recusado (${e.code}) — correto`);
+  }
+}
+try {
+  await deleteDoc(simulationRef);
+  pass('simulations: apagar a própria simulação — permitido (a Function limpa os ficheiros)');
+} catch (e) {
+  fail(`simulations: apagar a própria: ${e.code ?? e.message}`);
+  await admin.collection('simulations').doc(simulationId).delete();
+}
 
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');
 process.exit(ok ? 0 : 1);

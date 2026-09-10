@@ -12,7 +12,9 @@ import { DEPARTMENTS } from '../data/departments';
 import { departmentContent, hasDepartmentContent, DepartmentCta, DepartmentLink } from '../data/departmentContent';
 import { useHomeSettings } from '../data/settings';
 import { hasService, usePublishedWorks } from '../data/works';
-import { DepartmentId, Work, WorkCategory, WorkServiceId } from '../firebase/models';
+import { usePublishedSamples } from '../data/samples';
+import { simulationUploadConfigured } from '../media/cloudinary';
+import { DepartmentId, SIMULATION_KIND_CATEGORY, SimulationKind, Work, WorkCategory, WorkServiceId, simulationKindOf } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { timeAgo } from '../utils/dates';
 import { useAppWidth } from '../utils/layout';
@@ -86,6 +88,8 @@ export default function DepartmentScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={[styles.hero, { width: heroW, height: heroH }]}>
+          {/* A foto enche o cabeçalho (cover) — o Fábio experimentou a foto
+              inteira aqui e voltou atrás (2026-09-09). */}
           <Photo url={cover?.photoUrl || cover?.thumbnailUrl} seed={department.id} />
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.9)']}
@@ -166,6 +170,8 @@ export default function DepartmentScreen() {
             onSeeAll={() => openPortfolio(department.category!)}
           />
         ) : null}
+
+        <SimulatorBlock kind={simulationKindOf(department.category)} onOpen={(kind) => navigation.navigate('Simulator', { kind })} />
 
         <RelatedLinks links={content.related} onOpen={(id) => navigation.push('Department', { id })} />
 
@@ -262,6 +268,43 @@ function RecentWorks({
   );
 }
 
+// Simulador "como ficaria" (Secção 16), só nas páginas com chãos ou carros
+// (Epoxy Floors, Xtreme, Automotive) e só quando a equipa já publicou
+// amostras dessa categoria — senão o simulador abria vazio — e o upload
+// está configurado. As miniaturas são as próprias amostras: a única imagem
+// é uma foto real (regra 5 do CLAUDE.md).
+function SimulatorBlock({ kind, onOpen }: { kind: SimulationKind | undefined; onOpen: (kind: SimulationKind) => void }) {
+  const T = useT();
+  const { data: samples } = usePublishedSamples(kind ? SIMULATION_KIND_CATEGORY[kind] : undefined);
+  if (!kind || !simulationUploadConfigured || samples.length === 0) return null;
+  const preview = samples.slice(0, 4);
+  return (
+    <>
+      <SectionLabel text={T.department.simulatorLabel} />
+      <View style={styles.blocks}>
+        <Pressable
+          style={({ pressed }) => [styles.block, styles.serviceCard, pressed && styles.relatedPressed]}
+          onPress={() => onOpen(kind)}
+          accessibilityRole="button"
+          accessibilityLabel={T.department.simulatorTitle[kind]}
+          accessibilityHint={T.department.simulatorOpen}
+        >
+          <View style={styles.simRow}>
+            {preview.map((s) => (
+              <View key={s.id} style={styles.simThumb}>
+                <Photo url={s.thumbnailUrl || s.photoUrl} seed={s.id} />
+              </View>
+            ))}
+          </View>
+          <Text style={styles.blockTitle}>{T.department.simulatorTitle[kind]}</Text>
+          <Text style={styles.blockText}>{T.department.simulatorDesc[kind]}</Text>
+          <Text style={styles.serviceLink}>{T.department.simulatorOpen}</Text>
+        </Pressable>
+      </View>
+    </>
+  );
+}
+
 // "Ver também" (Secção 10): cartões que abrem outra página de departamento
 // — da Xtreme para Epoxy Floors ("instalamos nós") e vice-versa ("compra os
 // materiais"). Só mostra destinos com conteúdo, para nunca abrir a página
@@ -304,6 +347,9 @@ const styles = StyleSheet.create({
   // contorno mais forte e a linha dourada "Ver trabalhos" dizem que se toca.
   serviceCard: { borderColor: colors.hairlineStrong },
   serviceLink: { fontFamily: fonts.eyebrow, fontSize: 10, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase', marginTop: 10 },
+  // Miniaturas das amostras no bloco do simulador (Secção 16).
+  simRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  simThumb: { width: 54, height: 54, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },
   relatedEyebrow: { fontFamily: fonts.eyebrow, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.inkMuted, marginBottom: 6 },
   relatedTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.goldBright, marginBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, minHeight: 42 },

@@ -145,5 +145,14 @@ Departamentos / áreas de negócio — **ordem final confirmada** das secções 
   vinil/PPF da Marble — escolhendo a partir de um trabalho do portfólio ou
   de **amostras** que a equipa carrega no backoffice (texturas de metallic,
   flake, cores sólidas; cores de vinil). Serve para vender: o cliente
-  experimenta em casa e pede orçamento com a simulação anexada. Detalhes
-  técnicos e decisões em aberto no ROADMAP, Secção 16.
+  experimenta em casa e pede orçamento com a simulação anexada. **Decidido
+  e construído a 2026-09-09 (Secção 16):** modelo de imagem da Google
+  (Vertex AI, no projeto Firebase) aplica a amostra real à foto do cliente,
+  com a comparação lado a lado enquanto gera e sempre que não há resultado;
+  chãos e carros; entradas nas páginas Epoxy Floors/Xtreme/Automotive, no
+  Detalhe de um trabalho ("Ver no meu chão/carro") e no Perfil, e a
+  simulação vai anexada ao pedido de orçamento; a equipa vê todas no
+  backoffice (Simulações) e gere as amostras (Amostras); 5 por cliente por
+  dia e 60 por dia no total; consentimento por checkbox uma vez por conta,
+  90 dias de retenção sem pedido, selo "SIMULAÇÃO" gravado na imagem.
+  Detalhes no ROADMAP, Secção 16, e em `DEVELOPMENT.md`, "Simulador".

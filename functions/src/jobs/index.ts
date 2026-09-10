@@ -6,6 +6,7 @@ import { JobLog, runFollowUps } from './followUps';
 import { runReceipts } from './receipts';
 import { runRetention } from './retention';
 import { runRequestRetention } from '../requests';
+import { runSimulationRetention } from '../simulations';
 
 // O job diário (10:00 Lisboa) — a ordem importa pouco, mas os recibos de
 // ontem vão primeiro para tirar tokens mortos antes dos envios de hoje.
@@ -39,5 +40,7 @@ export async function runDailyJobs(db: Firestore, deps: DailyDeps, now: Date, lo
   await run('retention', () => runRetention(db, { auth: deps.auth, cloudinary: deps.cloudinary }, now, log, clients));
   // Pedidos de orçamento fechados há mais de 12 meses (Secção 7).
   await run('requests', () => runRequestRetention(db, now, log));
+  // Simulações "como ficaria" sem pedido há mais de 90 dias (Secção 16).
+  await run('simulations', () => runSimulationRetention(db, now, log));
   return summary;
 }

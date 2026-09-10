@@ -20,6 +20,7 @@ import { categoryFullName } from '../data/categories';
 import { requestForm, RequestFormField } from '../data/requestForms';
 import { createRequest, deviceLimitReached, newRequestId, recordDeviceSend } from '../data/requests';
 import { useWork } from '../data/works';
+import { attachSimulationToRequest, useSimulation } from '../data/simulations';
 import { canUseCamera, pickRequestPhotos, takeRequestPhoto } from '../media/requestPhotos';
 import { requestUploadConfigured, uploadRequestPhoto } from '../media/cloudinary';
 import { ContactPreference, DepartmentId, REQUEST_LIMITS, RequestField, RequestPhoto } from '../firebase/models';
@@ -55,14 +56,18 @@ export default function RequestQuoteScreen() {
   const T = useT();
   const { user, client, signIn, createAccountFromRequest } = useAuth();
   const { data: work, loading: workLoading } = useWork(params.workId);
+  // Simulação "como ficaria" anexada (Secção 16): o departamento vem do
+  // tipo (chão → Epoxy Floors, carro → Automotive).
+  const { data: simulation, loading: simulationLoading } = useSimulation(params.simulationId);
+  const simDepartment: DepartmentId | undefined = simulation ? (simulation.kind === 'floor' ? 'epoxy' : 'automotive') : undefined;
 
-  // Departamento: do parâmetro, do trabalho (pela categoria), ou escolhido aqui.
+  // Departamento: do parâmetro, do trabalho (pela categoria), da simulação, ou escolhido aqui.
   const workDepartment = useMemo(() => (work ? DEPARTMENTS.find((d) => d.category === work.category)?.id : undefined), [work]);
   const [chosenDepartment, setChosenDepartment] = useState<DepartmentId | undefined>(params.department);
-  const department = params.department ?? workDepartment ?? chosenDepartment;
+  const department = params.department ?? workDepartment ?? simDepartment ?? chosenDepartment;
   const form = useMemo(() => (department ? requestForm(department) : null), [department]);
   const departmentMeta = department ? DEPARTMENTS.find((d) => d.id === department) : undefined;
-  const departmentLocked = !!params.department || !!params.workId;
+  const departmentLocked = !!params.department || !!params.workId || !!params.simulationId;
 
   const [services, setServices] = useState<string[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -218,7 +223,19 @@ export default function RequestQuoteScreen() {
         photos: uploaded,
         workId: work?.id,
         workTitle: work?.title,
+        simulation: simulation
+          ? {
+              id: simulation.id,
+              name: simulation.source.name,
+              photoUrl: simulation.photo.url,
+              resultUrl: simulation.result?.url,
+              thumbnailUrl: simulation.result?.thumbnailUrl ?? simulation.photo.thumbnailUrl,
+            }
+          : undefined,
       });
+      // A simulação fica a apontar para o pedido (só o dono pode fazê-lo;
+      // falhar aqui não é grave — a cópia já está no pedido).
+      if (simulation) await attachSimulationToRequest(simulation.id, id).catch(() => {});
       await recordDeviceSend();
       setDone({ accountCreated, email: email.trim(), contact, phone: phone.trim() });
     } catch (err) {
@@ -291,8 +308,27 @@ export default function RequestQuoteScreen() {
       ) : (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            {/* Contexto: o trabalho (foto real de capa), o departamento, ou a escolha. */}
-            {params.workId ? (
+            {/* Contexto: a simulação (Secção 16), o trabalho (foto real de capa), o departamento, ou a escolha. */}
+            {params.simulationId ? (
+              <View style={styles.contextCard}>
+                <View style={styles.contextThumb}>
+                  {simulation ? <Photo url={simulation.result?.thumbnailUrl || simulation.photo.thumbnailUrl} seed={simulation.id} /> : null}
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.contextEyebrow}>{T.request.withSimulation}</Text>
+                  {simulationLoading ? (
+                    <ActivityIndicator color={colors.gold} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                  ) : (
+                    <>
+                      <Text style={styles.contextTitle} numberOfLines={2}>
+                        {simulation?.source.name ?? T.request.simulationUnavailable}
+                      </Text>
+                      {simulation ? <Text style={styles.contextSub}>{T.request.simulationAttached}</Text> : null}
+                    </>
+                  )}
+                </View>
+              </View>
+            ) : params.workId ? (
               <View style={styles.contextCard}>
                 <View style={styles.contextThumb}>{work ? <Photo url={work.photoUrl} seed={work.id} /> : null}</View>
                 <View style={styles.flex}>

@@ -15,11 +15,12 @@ import { authErrorMessage } from '../auth/errors';
 import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
 import { checkupErrorMessage, checkupState, formatCheckupSlot } from '../data/checkups';
 import { useMyRequests } from '../data/requests';
+import { useMySimulations } from '../data/simulations';
 import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
-import { avatarUploadConfigured, uploadAvatar } from '../media/cloudinary';
-import { Client, ServiceRequest, Vehicle } from '../firebase/models';
+import { avatarUploadConfigured, simulationUploadConfigured, uploadAvatar } from '../media/cloudinary';
+import { Client, ServiceRequest, Simulation, Vehicle } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { formatDate, formatMonthYear, timeAgo } from '../utils/dates';
 import { S, useT } from '../i18n';
@@ -67,6 +68,34 @@ function RequestRow({ request }: { request: ServiceRequest }) {
   );
 }
 
+// Linha de uma simulação "como ficaria" (Secção 16): miniatura do resultado
+// (ou da foto, enquanto gera), a amostra aplicada, chão/carro e quando foi.
+function SimulationRow({ simulation: s, onPress }: { simulation: Simulation; onPress: () => void }) {
+  const T = useT();
+  const done = s.status === 'done';
+  const faint = s.status === 'failed' || s.status === 'limited' || s.status === 'capped';
+  const status = T.simulator.status[s.status] ?? s.status;
+  return (
+    <Pressable style={styles.assetRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={T.profile.simulationA11y(s.source.name, status)}>
+      <View style={styles.assetThumb}>
+        <Photo url={s.result?.thumbnailUrl || s.photo.thumbnailUrl} seed={s.id} />
+      </View>
+      <View style={styles.assetText}>
+        <Text style={styles.assetName} numberOfLines={1}>
+          {s.source.name}
+        </Text>
+        <Text style={styles.assetSub}>
+          {T.simulator.kind[s.kind]}
+          {s.createdAt ? ` · ${timeAgo(s.createdAt).toLowerCase()}` : ''}
+        </Text>
+      </View>
+      <View style={[styles.assetStatus, done ? styles.assetStatusOk : faint ? styles.assetStatusFaint : styles.assetStatusPending]}>
+        <Text style={[styles.assetStatusText, done ? styles.assetStatusTextOk : faint ? styles.assetStatusTextFaint : styles.assetStatusTextPending]}>{status}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 // Perfil do cliente: cabeçalho, ação pendente e carros/chãos vêm do
 // Firestore em tempo real (clients/{uid} via useAuth, vehicles por clientId).
 // Este ecrã está dentro de AuthGate — há sempre sessão aqui.
@@ -79,6 +108,9 @@ export default function ProfileScreen() {
   // Pedidos de orçamento (Secção 7), em tempo real — o estado muda quando a
   // equipa o altera no backoffice.
   const { data: requests } = useMyRequests(user?.uid);
+  // Simulações "como ficaria" (Secção 16), em tempo real (o estado muda
+  // quando a Cloud Function acaba).
+  const { data: simulations } = useMySimulations(user?.uid);
 
   // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
   const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
@@ -438,6 +470,26 @@ export default function ProfileScreen() {
             <Text style={styles.ghostBtnText}>{T.profile.requestQuote}</Text>
           </Pressable>
         </View>
+
+        {/* Simulador (Secção 16): só quando está configurado, ou quando já há simulações. */}
+        {simulationUploadConfigured || simulations.length > 0 ? (
+          <>
+            <Text style={styles.secTitle}>{T.profile.simulationsTitle}</Text>
+            <View style={styles.assetList}>
+              {simulations.length === 0 ? (
+                <View style={styles.assetEmpty}>
+                  <Text style={styles.assetEmptyTitle}>{T.profile.simulationsEmpty}</Text>
+                  <Text style={styles.assetEmptyDesc}>{T.profile.simulationsEmptyDesc}</Text>
+                </View>
+              ) : (
+                simulations.map((s) => <SimulationRow key={s.id} simulation={s} onPress={() => navigation.navigate('Simulator', { simulationId: s.id })} />)
+              )}
+              <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('Simulator')} accessibilityRole="button">
+                <Text style={styles.ghostBtnText}>{T.profile.openSimulator}</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
 
         <Text style={styles.secTitle}>{T.profile.notificationsTitle}</Text>
         <View style={styles.prefList}>

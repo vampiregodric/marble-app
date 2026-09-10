@@ -1,6 +1,6 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { LegalDoc } from '../legal/texts';
-import { DepartmentId, WorkCategory, WorkServiceId } from '../firebase/models';
+import { DepartmentId, SimulationKind, WorkCategory, WorkServiceId } from '../firebase/models';
 
 export type TabParamList = {
   Home: undefined;
@@ -30,8 +30,15 @@ export type RootStackParamList = {
   // Pedido de orçamento (Secção 7). A partir do Detalhe vem `workId`
   // ("orçamento semelhante"); a partir de uma página de departamento
   // (Secção 9: AI Business, Marble Ads; Secção 10: Xtreme) vem `department`.
-  // Sem nada, o formulário pede o departamento.
-  RequestQuote: { workId?: string; department?: DepartmentId } | undefined;
+  // Sem nada, o formulário pede o departamento. Com `simulationId` (Secção
+  // 16) o pedido leva a simulação anexada e o departamento fica pelo tipo
+  // (chão → Epoxy Floors, carro → Automotive).
+  RequestQuote: { workId?: string; department?: DepartmentId; simulationId?: string } | undefined;
+  // Simulador "como ficaria" (Secção 16). `kind` fixa chão/carro (páginas
+  // de departamento); `workId` usa a capa do trabalho como amostra ("Ver no
+  // meu chão/carro" no Detalhe); `simulationId` abre uma simulação já
+  // feita (Perfil). Sem nada, o cliente escolhe chão ou carro.
+  Simulator: { kind?: SimulationKind; workId?: string; simulationId?: string } | undefined;
   // Passo "Recebe os alertas no telemóvel" (Secção 15), uma vez por conta,
   // logo a seguir ao registo. Quem o abre é useNotificationsOnboardingTrigger
   // (src/push/onboarding.ts); na web também por URL (welcome/notifications).

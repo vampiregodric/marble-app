@@ -12,9 +12,11 @@ export type CategoryMeta = {
   prefKey: keyof Client['notificationPrefs'];
 };
 
+// Ordem = ordem dos chips do Portfólio e das preferências de novidades no
+// Perfil. Epoxy primeiro: é o negócio principal (Fábio, 2026-09-09).
 export const CATEGORIES: CategoryMeta[] = [
-  { key: 'Automotive', label: 'Automotive', fullName: 'Automotive Aesthetics', prefKey: 'automotive' },
   { key: 'Epoxy Floors', label: 'Epoxy Floors', fullName: 'Epoxy Floors', prefKey: 'epoxy' },
+  { key: 'Automotive', label: 'Automotive', fullName: 'Automotive Aesthetics', prefKey: 'automotive' },
   { key: 'Graphic', label: 'Graphic', fullName: 'Graphic Solutions', prefKey: 'graphic' },
 ];
 
