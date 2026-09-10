@@ -39,7 +39,17 @@ atribuído pela Informa D&B — por isso primeiro procura, só depois pedes.
   na procura do D-U-N-S e na inscrição do passo 3. A conta de developer
   fica ligada à empresa, não a uma pessoa.
 
-### 3. Apple Developer Program, como organização — SUBMETIDO (2026-09-06), à espera da Apple
+### 3. Apple Developer Program, como organização — ACEITE PELA APPLE (2026-09-11), falta aceitar o contrato e pagar
+
+**Estado a 2026-09-11: a Apple aceitou a inscrição** (email "Your enrollment
+request has been accepted"). Falta o último passo, que só tu podes dar:
+entrar em https://developer.apple.com/account/ com o `app@marble.pt` (ou na
+app "Apple Developer" do iPhone, se foi por lá que te inscreveste), aceitar
+o *Apple Developer Program License Agreement* e pagar os 99 €/ano. A conta
+fica ativa normalmente em minutos (no máximo 48 h) e chega o email "Welcome
+to the Apple Developer Program". Quando chegar, diz ao Claude: arranca a
+build iOS de produção (`eas build --platform ios`, pede o teu login Apple),
+a ficha no App Store Connect e o TestFlight.
 
 **Enrollment ID: KM69M55CW8**, Apple ID `app@marble.pt`, entidade
 "Company / Organization", site `https://app.marble.pt`, autoridade
