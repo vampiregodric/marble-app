@@ -950,12 +950,17 @@ cliente + amostras).
      https://console.cloud.google.com/apis/library/aiplatform.googleapis.com?project=marble-studios-dev
      ("Ativar"). Depois, em IAM
      (https://console.cloud.google.com/iam-admin/iam?project=marble-studios-dev),
-     "Conceder acesso" com o papel **Vertex AI User** a duas contas: a
+     "Conceder acesso" com o papel **Agent Platform User** (a Google
+     renomeou o Vertex AI para "Agent Platform" na consola em 2026 — é o
+     antigo "Vertex AI User"; pesquisa por "Platform User") a duas contas: a
      das Functions (`<número do projeto>-compute@developer.gserviceaccount.com`
-     — se já tiver "Editor", não é preciso) e a da chave de dev
-     (`firebase-adminsdk-fbsvc@marble-studios-dev.iam.gserviceaccount.com`,
-     para o Claude testar localmente). Sem isto o Vertex responde 403 e a
-     simulação fica `failed` (a app mostra o lado a lado).
+     — no dev já tinha "Editor", por isso não foi preciso) e a da chave de
+     dev (`firebase-adminsdk-fbsvc@marble-studios-dev.iam.gserviceaccount.com`,
+     para o Claude testar localmente). A permissão demora uns 2 minutos a
+     propagar: o primeiro pedido pode dar 403 `aiplatform.endpoints.predict`
+     — espera e repete. Sem isto o Vertex responde 403 e a simulação fica
+     `failed` (a app mostra o lado a lado). Feito no dev a 2026-09-10; a
+     primeira simulação real (Jaguar + "Satin Dark Grey") demorou 12 s.
   3. **Deploy das Functions**: `npx.cmd firebase-tools deploy --only functions --project dev`
      (na pasta da app). As regras e o índice já foram publicados pelo Claude
      a 2026-09-09 (`deploy --only firestore:rules,firestore:indexes`).

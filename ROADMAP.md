@@ -1419,11 +1419,16 @@ não existe); os ficheiros ficam no Cloudinary com a tag
 `simulation_SZxokGzfnyl2eP3AGN4k` até a limpeza (segredos) existir; o pedido
 de teste foi apagado, as duas amostras de teste (texturas geradas) ficaram
 para o Fábio substituir por fotos reais. `npm run typecheck` limpo (app,
-Functions e backoffice). **Falta o que só o Fábio faz** (passos e comandos em
-`DEVELOPMENT.md`, "Simulador"): preset `marble-simulations` no Cloudinary,
-ativar a API do Vertex AI no projeto dev e dar o papel "Vertex AI User"
-às contas de serviço, deploy das Functions no dev, `deploy:dev` do
-backoffice, páginas legais no prod. Por testar no telemóvel (Marble Dev,
+Functions e backoffice). **2026-09-10:** o Fábio criou o preset
+`marble-simulations` e ativou o Vertex AI no dev (a Google chama-lhe agora
+"Agent Platform"; o papel IAM é "Agent Platform User" e demora uns 2
+minutos a propagar); a primeira simulação real — o Jaguar do portfólio com
+a amostra "Satin Dark Grey", handler corrido localmente — ficou pronta em
+12 s, com o vinil roxo trocado por cinzento acetinado e jantes, interior,
+fundo e reflexos intactos, selo "SIMULAÇÃO" gravado (fica no dev como
+exemplo: `simulations/h9Hm36n5rIyBcXdI4ZNF`). **Falta o que só o Fábio
+faz** (comandos em `DEVELOPMENT.md`, "Simulador"): deploy das Functions no
+dev, `deploy:dev` do backoffice, páginas legais no prod. Por testar no telemóvel (Marble Dev,
 servidor da 8081). **Pós-lançamento** por decisão anterior — mas está
 pronto a entrar quando o Fábio quiser.
 **Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
