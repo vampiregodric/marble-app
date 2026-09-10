@@ -106,6 +106,15 @@ qualquer texto novo num ecrã.
   nunca chames o Firebase Auth diretamente.
 - Os tabs Perfil e Alertas estão envolvidos em `AuthGate`: sem sessão mostram
   o `LoginScreen` no lugar do tab. Início/Portfólio/Eventos ficam abertos.
+- **Doc em falta ≠ doc não visto.** O `onSnapshot` de `clients/{uid}` só
+  recria o doc (conta no Auth cujo doc falhou ao criar) quando o snapshot
+  vem do servidor (`!snap.metadata.fromCache`). Sem ligação, o SDK do
+  Firestore responde a partir da cache e um doc que nunca viu conta como
+  "não existe" — recriar aí apagava o doc verdadeiro (consentimento,
+  tokens de push, `onboardingSeenAt`) quando a rede voltava. Aconteceu à
+  conta do Fábio a 2026-09-09 (Secção 15); corrigido a 2026-09-10. Regra
+  geral para qualquer "se não existe, cria": olhar primeiro para
+  `metadata.fromCache`.
 - `src/firebase/authInstance.native.ts` (iOS/Android) usa
   `initializeAuth` + AsyncStorage para a sessão sobreviver a fechar a app;
   `authInstance.ts` (web) usa `getAuth`. O Metro escolhe pelo sufixo

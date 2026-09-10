@@ -165,11 +165,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = snap.data() as Omit<Client, 'id'>;
           setClient({ id: snap.id, ...data });
           touchLastActive(user.uid, data);
-        } else {
-          // Conta existe no Auth mas o doc falhou ao criar (ex: rede caiu a meio
-          // do registo). Cria com o que sabemos para o Perfil não ficar vazio.
+        } else if (!snap.metadata.fromCache) {
+          // O SERVIDOR confirmou que o doc não existe: a conta existe no Auth
+          // mas o doc falhou ao criar (ex: rede caiu a meio do registo). Cria
+          // com o que sabemos para o Perfil não ficar vazio.
           createClientDoc(user, { name: user.displayName ?? '', acceptedTerms: false }).catch(() => {});
         }
+        // `!exists && fromCache`: sem ligação (rede a alternar, app a voltar do
+        // fundo) o SDK responde a partir da cache, e um doc que nunca viu conta
+        // como "não existe". Recriar aqui apagava o doc verdadeiro quando a
+        // ligação voltava — consentimento, tokens de push, onboardingSeenAt
+        // (aconteceu à conta do Fábio, 2026-09-09). Espera-se pela resposta
+        // do servidor; `client` fica como estava até lá.
       },
       () => setClient(null)
     );

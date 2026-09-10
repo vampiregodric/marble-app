@@ -1328,10 +1328,19 @@ Pré-visualização web: `marble-app-web-8084`.
 passo abre só com o interruptor e "Continuar", grava `onboardingSeenAt`,
 "Ofertas e novidades" ligado no passo aparece ligado no Perfil, PT e EN,
 o gatilho automático não dispara no web para contas existentes,
-`npm run typecheck` limpo. **Falta o teste do Fábio na Marble Dev** (o
-critério de conclusão abaixo: criar conta → pedido de permissão do
-Android → token em `clients.pushTokens` → alerta do backoffice a chegar
-como push). Só JS — não precisa de build nova. O que ficou:
+`npm run typecheck` limpo. **Testado no telemóvel pelo Fábio
+(2026-09-09):** na Marble Dev, com a conta dele (sem push ativo), o passo
+apareceu ao abrir a app, "Ativar notificações" pediu a permissão do
+Android, o token ficou em `clients.pushTokens` e um alerta enviado do
+backoffice de dev chegou como push. Só JS — não precisou de build nova.
+**Bug antigo apanhado neste teste (corrigido 2026-09-10):** o
+`onboardingSeenAt` desaparecia porque o `AuthContext` recriava o doc
+`clients/{uid}` do zero (`setDoc` sem merge) sempre que o snapshot dizia
+"não existe" — e o SDK do Firestore também diz isso **a partir da cache**
+quando a app está momentaneamente sem ligação (rede a alternar, app a
+voltar do fundo). Cada quebra de rede podia apagar consentimento, tokens
+de push e o resto do doc (aconteceu à conta do Fábio). Agora só recria
+quando o servidor confirma (`!snap.metadata.fromCache`). O que ficou:
 - `src/screens/NotificationsOnboardingScreen.tsx` — o passo: cartão
   "Notificações no telemóvel" (só com `pushSupported`; recusada →
   "Notificações desligadas"; autorizada → selo "Ativas neste telemóvel"),
