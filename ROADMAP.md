@@ -1431,10 +1431,13 @@ exemplo: `simulations/h9Hm36n5rIyBcXdI4ZNF`). No mesmo dia o Fábio fez o
 `functions` do checkout principal não tinha `node_modules`, o `tsc` caía
 no TypeScript 6 da raiz e o predeploy falhava com TS5107 — resolvido com
 `npm ci` em `functions/`); a `onSimulationWritten` publicada tratou de uma
-simulação nova sozinha em 16 s. **Falta:** páginas legais no prod
-(`deploy --only hosting:legal --project prod`, quando o Fábio quiser),
-substituir as duas amostras de teste por fotos reais na página Amostras, e
-o teste no telemóvel com a build Marble Dev (chão real). Por testar no telemóvel (Marble Dev,
+simulação nova sozinha em 16 s. Páginas legais publicadas no prod pelo Fábio a 2026-09-10 (app.marble.pt já
+mostra a versão 2026-09-09 com o simulador e o Vertex AI); o backoffice dev
+foi republicado com as páginas novas e o hosting passou a servir as rotas
+com `no-cache`. O Fábio testou o simulador no telemóvel (Marble Dev) e
+ficou tudo certo. **Falta só conteúdo:** substituir as duas amostras de
+teste por fotos reais na página Amostras (o Fábio carrega-as) e repetir o
+teste com um chão real. Por testar no telemóvel (Marble Dev,
 servidor da 8081). **Pós-lançamento** por decisão anterior — mas está
 pronto a entrar quando o Fábio quiser.
 **Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
