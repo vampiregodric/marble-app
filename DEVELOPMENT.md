@@ -963,8 +963,13 @@ cliente + amostras).
      primeira simulação real (Jaguar + "Satin Dark Grey") demorou 12 s.
   3. **Deploy das Functions**: `npx.cmd firebase-tools deploy --only functions --project dev`
      (na pasta da app). As regras e o índice já foram publicados pelo Claude
-     a 2026-09-09 (`deploy --only firestore:rules,firestore:indexes`).
-  4. **Backoffice**: `npm.cmd run deploy:dev` na pasta do backoffice.
+     a 2026-09-09 (`deploy --only firestore:rules,firestore:indexes`). Feito
+     no dev a 2026-09-10 — atenção: se a pasta `functions` do checkout não
+     tiver `node_modules`, o predeploy usa o TypeScript 6 da raiz e falha
+     com TS5107 (`moduleResolution=node10`); corre `npm ci` em `functions/`
+     primeiro.
+  4. **Backoffice**: `npm.cmd run deploy:dev` na pasta do backoffice. Feito
+     no dev a 2026-09-10.
   5. **Páginas legais** (prod, quando quiser): `npx.cmd firebase-tools deploy --only hosting:legal --project prod`.
 - **Testar sem deploy:** `npm run functions:build` e depois
   `npm run functions:jobs -- ../serviceAccountKey.dev.json --simulation <id>`

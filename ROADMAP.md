@@ -1426,9 +1426,15 @@ minutos a propagar); a primeira simulação real — o Jaguar do portfólio com
 a amostra "Satin Dark Grey", handler corrido localmente — ficou pronta em
 12 s, com o vinil roxo trocado por cinzento acetinado e jantes, interior,
 fundo e reflexos intactos, selo "SIMULAÇÃO" gravado (fica no dev como
-exemplo: `simulations/h9Hm36n5rIyBcXdI4ZNF`). **Falta o que só o Fábio
-faz** (comandos em `DEVELOPMENT.md`, "Simulador"): deploy das Functions no
-dev, `deploy:dev` do backoffice, páginas legais no prod. Por testar no telemóvel (Marble Dev,
+exemplo: `simulations/h9Hm36n5rIyBcXdI4ZNF`). No mesmo dia o Fábio fez o
+`deploy:dev` do backoffice e o deploy das Functions no dev (a pasta
+`functions` do checkout principal não tinha `node_modules`, o `tsc` caía
+no TypeScript 6 da raiz e o predeploy falhava com TS5107 — resolvido com
+`npm ci` em `functions/`); a `onSimulationWritten` publicada tratou de uma
+simulação nova sozinha em 16 s. **Falta:** páginas legais no prod
+(`deploy --only hosting:legal --project prod`, quando o Fábio quiser),
+substituir as duas amostras de teste por fotos reais na página Amostras, e
+o teste no telemóvel com a build Marble Dev (chão real). Por testar no telemóvel (Marble Dev,
 servidor da 8081). **Pós-lançamento** por decisão anterior — mas está
 pronto a entrar quando o Fábio quiser.
 **Depende de:** Secções 5/5b (Cloudinary, upload de fotos pelo cliente já
