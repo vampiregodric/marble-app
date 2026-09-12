@@ -1472,6 +1472,19 @@ lado, pasta fora do OneDrive). Não muda nada — só lê. Repete-o até ficar
 tudo OK; o Claude também o pode correr (está autorizado em
 `.claude/settings.json`).
 
+Numa conversa do Claude (que corre num worktree em `.claude/worktrees/`)
+o que conta é o **checkout principal** — é de lá que o servidor do
+telemóvel arranca e é lá que ficam o `.env` e as chaves. As faltas
+marcadas "(só neste worktree)" (`node_modules`, `.env`) não são do PC: são
+as de qualquer worktree novo, e o Claude resolve-as sozinho (`npm ci` na
+raiz e em `functions/`, `.env` copiado do principal). A última linha diz
+o endereço `exp://<IP>:8081` a pôr no telemóvel e se o servidor da 8081
+já está a correr (uma conversa anterior pode tê-lo deixado ligado — não
+se arranca um segundo). Testado a 2026-09-12 no PC de casa com o prompt
+"Configurar este PC": a primeira versão acusava sete ramos "nunca
+enviados" que já estavam fundidos no `master` — agora conta commits que
+não estão em nenhum ramo do GitHub, não nomes de ramos.
+
 ### O que vem pelo git e o que não vem
 
 | Vem pelo git (basta `git pull`) | Fica só em cada PC (repor à mão) |
@@ -1526,7 +1539,8 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
 (`marble-app-phone`, 8081), mas o IP do PC é outro. No Expo Go lê-se o QR
 novo; na dev build "Marble Dev" abre-se o menu de desenvolvimento e
 escreve-se `exp://<IP do PC do escritório>:8081` (ou usa-se o QR). O
-telemóvel e o PC têm de estar na mesma rede Wi-Fi.
+telemóvel e o PC têm de estar na mesma rede Wi-Fi. O `npm run check:setup`
+imprime esse endereço na última linha — não é preciso ir ao `ipconfig`.
 
 ### Todos os dias, ao mudar de PC
 

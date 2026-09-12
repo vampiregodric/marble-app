@@ -9,20 +9,29 @@
 //       node scripts/check-setup.mjs --offline   (não contacta o GitHub)
 //
 // Sai com código 1 quando há algo em FALTA (o resto são avisos).
+//
+// Num worktree (as conversas do Claude correm em `.claude/worktrees/...`) o
+// que conta para "o PC está pronto" é o CHECKOUT PRINCIPAL: é de lá que o
+// servidor do telemóvel arranca e é lá que vivem o `.env` e as chaves. O
+// `node_modules` e o `.env` do próprio worktree aparecem à parte, marcados
+// "(só neste worktree)" — faltam em qualquer worktree novo, mesmo num PC
+// já configurado (2026-09-12, corrida de teste no PC de casa).
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { createConnection } from 'node:net';
+import { homedir, networkInterfaces, platform } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const offline = process.argv.includes('--offline');
 const results = [];
-const add = (level, what, fix) => results.push({ level, what, fix });
+const add = (level, what, fix, scope) => results.push({ level, what, fix, scope });
 const ok = (what) => add('ok', what);
 const aviso = (what, fix) => add('aviso', what, fix);
 const falta = (what, fix) => add('falta', what, fix);
+const faltaWorktree = (what, fix) => add('falta', `${what} (só neste worktree)`, fix, 'worktree');
 const info = (what, fix) => add('info', what, fix);
 
 function git(args, cwd = here, timeout = 30_000) {
@@ -97,24 +106,19 @@ if (common !== null) {
     if (behind > 0) aviso(`o ramo ${branch} está ${behind} commit(s) atrás de origin/master`, 'o outro PC enviou trabalho: faz `git pull` (no master) ou `git merge origin/master` (num ramo de secção).');
     else ok(`${branch} tem tudo o que está em origin/master`);
 
-    const refs = git(['for-each-ref', '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)', 'refs/heads']) || '';
+    // O que se perde ao mudar de PC são COMMITS que não estão em nenhum ramo
+    // do GitHub — não nomes de ramos. Um ramo de secção que já foi fundido no
+    // master (ff-merge) e nunca foi enviado com o seu nome não conta: o
+    // trabalho está lá. (A primeira versão olhava para o nome e acusava sete
+    // ramos já fundidos — 2026-09-12.)
+    const refs = git(['for-each-ref', '--format=%(refname:short)', 'refs/heads']) || '';
     const soAqui = [];
-    for (const line of refs.split('\n').filter(Boolean)) {
-      const [name, upstream, track] = line.split('\t');
-      if (upstream) {
-        if (/ahead/.test(track)) soAqui.push(`${name} (${track.replace(/[\[\]]/g, '')})`);
-        continue;
-      }
-      // Sem upstream configurado (ramos criados pelo Claude): compara à mão com origin/<ramo>.
-      const remoto = git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`]);
-      if (remoto === null || remoto === '') soAqui.push(`${name} (nunca enviado)`);
-      else {
-        const ahead = Number(git(['rev-list', '--count', `origin/${name}..${name}`]) || 0);
-        if (ahead > 0) soAqui.push(`${name} (${ahead} commit(s) por enviar)`);
-      }
+    for (const name of refs.split('\n').filter(Boolean)) {
+      const ahead = Number(git(['rev-list', '--count', name, '--not', '--remotes=origin']) || 0);
+      if (ahead > 0) soAqui.push(`${name} (${ahead} commit(s) por enviar)`);
     }
-    if (soAqui.length) aviso(`ramos com trabalho só neste PC: ${soAqui.join(', ')}`, 'envia-os antes de mudares de PC: git push -u origin <ramo> — mesmo com a secção a meio.');
-    else ok('todos os ramos locais estão no GitHub');
+    if (soAqui.length) aviso(`ramos com commits só neste PC: ${soAqui.join(', ')}`, 'envia-os antes de mudares de PC: git push -u origin <ramo> — mesmo com a secção a meio.');
+    else ok('todos os commits locais estão no GitHub (em algum ramo)');
   }
 
   const worktrees = (git(['worktree', 'list', '--porcelain'], main) || '').split('\n').filter((l) => l.startsWith('worktree ')).length;
@@ -123,25 +127,35 @@ if (common !== null) {
 
 // ---------------------------------------------------------------- dependências
 
-if (existsSync(join(here, 'node_modules', 'expo', 'bin', 'cli'))) ok('node_modules da app');
-else falta('node_modules da app', 'corre `npm ci` nesta pasta.');
-if (existsSync(join(here, 'functions', 'node_modules', 'firebase-functions'))) ok('functions/node_modules');
-else falta('functions/node_modules', 'corre `npm ci` dentro de functions/ (sem isto o `npm run typecheck` dá erros que não são do código).');
-if (isWorktree && !existsSync(join(main, 'node_modules', 'expo', 'bin', 'cli'))) {
-  falta('node_modules do checkout principal', `o servidor do telemóvel (marble-app-phone) arranca a partir de ${main}: corre \`npm ci\` lá também.`);
+// Checkout principal primeiro: é de lá que o servidor do telemóvel arranca.
+if (isWorktree) {
+  if (existsSync(join(main, 'node_modules', 'expo', 'bin', 'cli'))) ok('node_modules do checkout principal (servidor do telemóvel)');
+  else falta('node_modules do checkout principal', `o servidor do telemóvel (marble-app-phone) arranca a partir de ${main}: corre \`npm ci\` lá.`);
 }
+const nmFalta = isWorktree ? faltaWorktree : falta;
+if (existsSync(join(here, 'node_modules', 'expo', 'bin', 'cli'))) ok(`node_modules da app${isWorktree ? ' neste worktree' : ''}`);
+else nmFalta('node_modules da app', 'corre `npm ci` nesta pasta (a pré-visualização web e o typecheck correm daqui).');
+if (existsSync(join(here, 'functions', 'node_modules', 'firebase-functions'))) ok(`functions/node_modules${isWorktree ? ' neste worktree' : ''}`);
+else nmFalta('functions/node_modules', 'corre `npm ci` dentro de functions/ (sem isto o `npm run typecheck` dá erros que não são do código).');
 
 // ---------------------------------------------------------------- .env e chaves
 
+// O .env que conta é o do checkout principal (o servidor do telemóvel lê-o
+// de lá); num worktree é preciso uma cópia para a pré-visualização web.
 const example = join(here, '.env.example');
-const envPath = join(here, '.env');
-if (!existsSync(envPath)) {
-  falta('.env (config Firebase de DEV)', 'copia do outro PC, ou copia .env.example para .env e preenche com os valores de marble-studios-dev (consola Firebase > Project settings > Your apps). Não vem do git de propósito.');
+const envMain = join(main, '.env');
+if (!existsSync(envMain)) {
+  falta(`.env (config Firebase de DEV)${isWorktree ? ' no checkout principal' : ''}`, 'copia do outro PC, ou copia .env.example para .env e preenche com os valores de marble-studios-dev (consola Firebase > Project settings > Your apps). Não vem do git de propósito.');
 } else if (existsSync(example)) {
-  const env = parseEnv(envPath);
+  const env = parseEnv(envMain);
   const vazias = Object.keys(parseEnv(example)).filter((k) => !env[k]);
   if (vazias.length) falta(`.env sem valor em: ${vazias.join(', ')}`, 'preenche a partir da consola Firebase (dev) e do Cloudinary — ver os comentários em .env.example.');
-  else ok('.env com todas as variáveis de .env.example');
+  else ok(`.env com todas as variáveis de .env.example${isWorktree ? ' (checkout principal)' : ''}`);
+}
+if (isWorktree) {
+  if (existsSync(join(here, '.env'))) ok('.env neste worktree');
+  else if (existsSync(envMain)) faltaWorktree('.env', `copia-o do checkout principal para esta pasta: Copy-Item "${envMain}" .env`);
+  else faltaWorktree('.env', 'quando o .env do checkout principal existir, copia-o para esta pasta.');
 }
 if (existsSync(join(here, '.env.production'))) ok('.env.production (vem do git)');
 else aviso('.env.production não existe', 'devia vir do git — confirma que o checkout está completo (git status).');
@@ -187,6 +201,28 @@ if (existsSync(join(here, '.claude', 'settings.json')) && existsSync(join(here, 
 else aviso('faltam ficheiros em .claude/', 'deviam vir do git: git status / git checkout -- .claude');
 info('as CONVERSAS e a memória do Claude ficam no PC onde correram: o contexto do projeto está em CLAUDE.md, ROADMAP.md e DEVELOPMENT.md — é por isso que tudo o que se decide tem de ficar lá escrito.');
 
+// ---------------------------------------------------------------- telemóvel
+
+// O IP é diferente em cada PC (e o telemóvel tem de estar na mesma rede
+// Wi-Fi): imprime o endereço a pôr no Marble Dev / Expo Go e se a 8081 já
+// tem o servidor a correr (uma conversa anterior pode tê-lo deixado ligado).
+function listening(port) {
+  return new Promise((done) => {
+    const s = createConnection({ host: '127.0.0.1', port });
+    const finish = (up) => { s.destroy(); done(up); };
+    s.once('connect', () => finish(true));
+    s.once('error', () => finish(false));
+    s.setTimeout(1000, () => finish(false));
+  });
+}
+const ips = Object.values(networkInterfaces()).flat()
+  .filter((i) => i && i.family === 'IPv4' && !i.internal && !i.address.startsWith('169.254.'))
+  .map((i) => i.address);
+const phoneUp = await listening(8081);
+const enderecos = ips.length ? ips.map((ip) => `exp://${ip}:8081`).join('  ou  ') : 'exp://<IP deste PC>:8081 (sem rede?)';
+if (phoneUp) info(`servidor do telemóvel a correr na 8081 — no Marble Dev / Expo Go: ${enderecos}`);
+else info(`servidor do telemóvel parado — arranca-o com a configuração marble-app-phone (node scripts/launch-main.mjs phone) e no Marble Dev / Expo Go usa: ${enderecos}`);
+
 // ---------------------------------------------------------------- relatório
 
 const tag = { ok: ' OK    ', falta: ' FALTA ', aviso: ' AVISO ', info: '  --   ' };
@@ -196,7 +232,10 @@ for (const r of results) {
   console.log(`${tag[r.level]} ${r.what}`);
   if (r.fix) console.log(`         → ${r.fix}`);
 }
-const nFalta = results.filter((r) => r.level === 'falta').length;
+const faltas = results.filter((r) => r.level === 'falta');
+const nFalta = faltas.length;
+const nWorktree = faltas.filter((r) => r.scope === 'worktree').length;
 const nAviso = results.filter((r) => r.level === 'aviso').length;
-console.log(`\n${nFalta} em falta, ${nAviso} aviso(s). Passos completos em DEVELOPMENT.md, "Segundo PC (escritório)".`);
+const soWorktree = nFalta > 0 && nWorktree === nFalta ? ' — todas só deste worktree: o PC em si está pronto, é a conversa nova que precisa de `npm ci` e do `.env`' : '';
+console.log(`\n${nFalta} em falta${soWorktree}, ${nAviso} aviso(s). Passos completos em DEVELOPMENT.md, "Segundo PC (escritório)".`);
 process.exit(nFalta ? 1 : 0);
