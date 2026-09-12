@@ -159,7 +159,16 @@ Entrega:
 3. **Verificação própria:** para CADA Crítico e Alto abre o ficheiro e
    confirma o cenário de falha. Se não se confirma, baixa a severidade ou
    move para "Descartados" com o motivo. Um achado com confiança
-   "provável" não fica Crítico sem confirmação tua.
+   "provável" não fica Crítico sem confirmação tua. Verifica também o
+   contexto que os agentes não conseguem ver: se um achado depende de o
+   repositório ser privado, confirma com
+   `curl -s https://api.github.com/repos/<dono>/<repo>` (`"private"`);
+   se depende de uma funcionalidade existir em produção, confirma no
+   `.env.production`/`eas.json`. Na primeira corrida (2026-09-12) foi
+   assim que apareceu o achado mais urgente — o repositório estava
+   público — e que dois "Críticos" desceram a Alto.
+   Uma vertente com rubrica "um achado por ficheiro" (testes) produz
+   muitos Altos iguais: funde-os num só com "Também:".
 4. **Ordem:** severidade > superfície (regras, functions, app, backoffice,
    scripts, hosting, dependencias) > esforço (S antes de L).
 5. **Pacotes de correção:** agrupa os Crítico e Alto (e os Médio com a
@@ -176,7 +185,14 @@ Entrega:
 
 1. Escreve `auditorias/AAAA-MM-DD.md` (se já existir um de hoje,
    `AAAA-MM-DD-2.md`) com o modelo de `esquema.md`. O cabeçalho YAML é
-   obrigatório: é dele que o modo `desde` lê os SHAs.
+   obrigatório: é dele que o modo `desde` lê os SHAs. Copia os relatórios
+   dos agentes para `auditorias/AAAA-MM-DD/<vertente>[-parte].md` (só os
+   `.md`, não os ficheiros auxiliares que eles deixem no scratchpad): é lá
+   que fica o detalhe (esboços de código, matrizes, backlog) e é para lá
+   que os "Também:" e os pacotes apontam. No consolidado, os Alto e Médio
+   levam o formato completo; Baixo e Sugestão podem ir numa tabela (ID,
+   título, superfície, onde, correção, esforço) — o detalhe está no
+   relatório da vertente.
 2. Atualiza a tabela de corridas em `auditorias/README.md`.
 3. Página privada: `npm run auditoria:pagina` gera
    `scripts/out/auditoria.html` a partir do relatório mais recente (não vai
@@ -204,10 +220,12 @@ Entrega:
 
 ## Fase 5 — Fecho
 
-1. `ROADMAP.md`: secção `### Auditoria contínua` (cria-a antes de "Notas
-   para quem pega numa secção" se não existir) com uma linha
-   `**Estado:**` — data, modo, contagens por severidade, pacotes abertos.
-   É daí que a página de progresso lê.
+1. `ROADMAP.md`: a secção `### Secção 18 — Auditoria contínua` (criada na
+   primeira corrida, 2026-09-12; a página de progresso só lê cabeçalhos
+   "Secção N — …") ganha uma linha `**Estado:**` nova — data, modo,
+   contagens por severidade, pacotes abertos. Começa por "Em curso"
+   enquanto houver Alto aberto; "Feito (data)" quando a última corrida
+   não deixar nenhum Crítico nem Alto aberto.
 2. Commit (relatório, README, ROADMAP) com mensagem clara do que a
    auditoria encontrou em números; `git push`.
 3. Página de progresso — passos do `CLAUDE.md`, "Página de progresso".

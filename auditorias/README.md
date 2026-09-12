@@ -24,9 +24,14 @@ desempenho, dependências, testes, arquitetura e RGPD.
 
 ## Página privada
 
-(ainda não publicada — a primeira corrida escreve aqui o link)
+https://claude.ai/code/artifact/7c8e78ec-5e37-4d1c-889a-0bd3ad21aa6d — mostra
+sempre o relatório mais recente. Para republicar: `npm run auditoria:pagina`
+e a ferramenta `Artifact` com `action: "read"` neste link e depois publicar
+`scripts/out/auditoria.html` com `url` = este link (sem `url` cria-se uma
+página nova — errado).
 
 ## Corridas
 
 | Data | Modo | Crítico | Alto | Médio | Baixo | Sugestão | Pacotes | Relatório |
 |---|---|---|---|---|---|---|---|---|
+| 2026-09-12 | completo (8 agentes; app `691938a`, backoffice `1c532f2`) | 0 | 19 | 45 | 23 | 16 | 12 (botões) | [2026-09-12.md](2026-09-12.md) · por vertente em [2026-09-12/](2026-09-12/) |

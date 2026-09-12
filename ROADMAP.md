@@ -1600,6 +1600,28 @@ não mudou. Detalhes em `DEVELOPMENT.md`, "Tags nos trabalhos".
 
 ---
 
+### Secção 18 — Auditoria contínua
+**Estado:** Em curso — primeira corrida completa feita a 2026-09-12 com o
+workflow `/auditoria` (oito agentes em paralelo: segurança em duas partes,
+qualidade, desempenho, dependências, testes, arquitetura, RGPD; só
+leitura): 0 críticos, 19 altos, 45 médios, 23 baixos, 16 sugestões, em
+`auditorias/2026-09-12.md` (relatórios por vertente em
+`auditorias/2026-09-12/`). Doze pacotes de correção abertos como botões;
+o Pacote 1 (repositório da app público no GitHub contra a decisão de
+2026-09-03, password da conta de demonstração do prod no git, chaves do
+Resend/Cloudinary por rodar) é para hoje. Próxima corrida: `/auditoria`
+(modo `desde`) depois dos pacotes, para reverificar os achados abertos.
+
+O que é: uma auditoria que se repete. A skill em `.claude/skills/auditoria/`
+lança um agente por vertente sobre a app, as Cloud Functions, as regras,
+os scripts e o backoffice ao lado, consolida os achados num relatório
+datado, publica a página privada (link em `auditorias/README.md`) e
+propõe as correções como botões. Cada achado tem estado (`aberto`,
+`corrigido (commit)`, `aceite`, `descartado`) que as conversas de
+correção atualizam no relatório; a corrida seguinte só olha para o que
+mudou e para o que ficou aberto. Como funciona: `DEVELOPMENT.md`,
+"Auditoria dinâmica".
+
 ## Notas para quem pega numa secção
 
 - Todos os ecrãs seguem o mesmo sistema de cores/tipografia em

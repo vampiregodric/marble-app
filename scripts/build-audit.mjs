@@ -129,10 +129,10 @@ function render(md) {
         out.push(`<${tag}>`);
       }
       let text = li[3];
-      const sev = text.match(/^\*\*Severidade:\*\*\s*(Crítico|Alto|Médio|Baixo|Sugestão)\s*$/);
-      if (sev) text = `**Severidade:** <span class="sev ${SEV_CLASS[sev[1]]}">${sev[1]}</span>`;
-      const estado = text.match(/^\*\*Estado:\*\*\s*(aberto|corrigido|aceite|descartado)(.*)$/);
-      if (estado) text = `**Estado:** <span class="estado ${estado[1]}">${estado[1]}</span>${estado[2]}`;
+      // "**Severidade:** Alto" e "**Estado:** aberto" ganham cor, estejam
+      // sozinhos na linha ou juntos com a vertente e a superfície.
+      text = text.replace(/\*\*Severidade:\*\*\s*(Crítico|Alto|Médio|Baixo|Sugestão)/g, (_, s) => `**Severidade:** <span class="sev ${SEV_CLASS[s]}">${s}</span>`);
+      text = text.replace(/\*\*Estado:\*\*\s*(aberto|corrigido|aceite|descartado)/g, (_, s) => `**Estado:** <span class="estado ${s}">${s}</span>`);
       // Continuações indentadas da mesma entrada.
       let j = i + 1;
       while (j < lines.length && /^\s{2,}\S/.test(lines[j]) && !/^\s*([-*]|\d+[.)])\s+/.test(lines[j])) text += ' ' + lines[j++].trim();

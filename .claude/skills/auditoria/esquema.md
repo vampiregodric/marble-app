@@ -126,7 +126,12 @@ o que está bem. Depois a tabela severidade × vertente.
 - **Botão:** criado | não criado (motivo)
 
 ## Achados
-Por severidade decrescente, depois por superfície. Formato de um achado.
+Por severidade decrescente, depois por superfície. Formato de um achado
+para Crítico, Alto e Médio; Baixo e Sugestão numa tabela (ID | título |
+superfície | onde | correção | esforço) — o detalhe fica no relatório da
+vertente em `auditorias/AAAA-MM-DD/`. Um achado encontrado pelo próprio
+orquestrador na consolidação usa o prefixo da vertente com a letra `C`
+(ex.: `SEG-C-01`) e diz na confiança como foi confirmado.
 
 ## Descartados na consolidação
 ID — motivo (o orquestrador verificou e não se confirma).
