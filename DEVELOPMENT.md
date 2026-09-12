@@ -15,8 +15,15 @@ contorna a política de execução sem mexer em definições do Windows.
 de o Fábio correr `expo start` numa janela dele, o Claude arranca-o com a
 configuração `marble-app-phone` de `.claude/launch.json` (porta 8081,
 projeto principal, `--clear`), mesmo estando num worktree — o Expo aceita
-`expo start <pasta>`. Vantagens: reinícios e limpeza de cache ficam do lado
-do Claude, sem pedir nada ao Fábio. Regras: (1) só um servidor na 8081 —
+`expo start <pasta>`. Desde 2026-09-12 essa configuração corre
+`node scripts/launch-main.mjs phone`, que descobre sozinho o checkout
+principal pelo git (`--git-common-dir`); antes tinha o caminho
+`C:\Users\VGodr\...` escrito à mão e não funcionava noutro PC. O mesmo
+script arranca o backoffice (`marble-backoffice-web` →
+`launch-main.mjs backoffice`, pasta `marble-backoffice` ao lado do checkout
+principal). `--dry-run` mostra o comando sem o correr. Vantagens:
+reinícios e limpeza de cache ficam do lado do Claude, sem pedir nada ao
+Fábio. Regras: (1) só um servidor na 8081 —
 se houver um `expo start` manual a correr, o Claude para-o com autorização
 antes de arrancar o dele; (2) o servidor morre quando a conversa fecha, por
 isso cada conversa nova arranca-o outra vez; (3) no telemóvel o Expo Go
@@ -96,8 +103,11 @@ qualquer texto novo num ecrã.
 3. **Ligar os ecrãs ao Firestore** — feito (2026-09-03): ver "Dados reais"
    abaixo.
 4. **Painel da equipa (backoffice)** — feito (2026-09-03): projeto
-   separado em `C:\Users\VGodr\Projects\marble-backoffice`, publicado em
-   https://marble-studios-backoffice-dev.web.app. Ver "Backoffice" abaixo.
+   separado em `C:\Users\VGodr\Projects\marble-backoffice` (em qualquer
+   PC: a pasta `marble-backoffice` **ao lado** da `marble-app` — o
+   `npm run progress` e a configuração `marble-backoffice-web` contam com
+   isso), publicado em https://marble-studios-backoffice-dev.web.app. Ver
+   "Backoffice" abaixo.
 5. **Notificações push** — feito (Secção 6, 2026-09-04): Cloud Functions
    em `functions/` (acompanhamento por trabalho, novo trabalho, eventos,
    retenção, Cloudinary) + `expo-notifications` na app. Ver "Notificações
@@ -1425,7 +1435,7 @@ ideias.
 ## GitHub: cópia de segurança e trabalhar noutro computador
 
 O repositório está em **https://github.com/vampiregodric/marble-app**
-(privado, conta `vampiregodric`). É a única cópia fora deste PC — por isso
+(privado, conta `vampiregodric`). É a única cópia fora dos PCs — por isso
 **cada commit tem de ser enviado**:
 
 ```bash
@@ -1440,14 +1450,101 @@ máquina abre-se uma janela "Connect to GitHub": escolhe "Sign in with your
 browser". Se a fechares por engano e o terminal pedir `Username`, faz
 Ctrl+C e corre o push outra vez.
 
-Para continuar o trabalho **noutro computador** (o tablet só serve para
-acompanhar a conversa — não corre código):
+O tablet só serve para acompanhar a conversa — não corre código. Para um
+segundo PC a sério, ver o capítulo seguinte.
+
+## Segundo PC (escritório): pôr tudo igual a casa
+
+Escrito a 2026-09-12, depois de o Fábio chegar ao escritório e não ter lá
+nada: nem o projeto atualizado, nem o `.env`, nem as chaves, nem o Claude
+com o contexto das secções. O que passa de um PC para o outro é **só o que
+está no git**; tudo o resto é por desenho local a cada máquina, e a lista
+abaixo diz como se repõe. O ponto de partida em qualquer PC é sempre:
 
 ```bash
-git clone https://github.com/vampiregodric/marble-app.git
+npm run check:setup
 ```
 
-Depois, dentro da pasta: `npm install`, copia `.env.example` para `.env` e
-preenche com os valores do projeto `marble-studios-dev` (consola Firebase >
-Definições do projeto > Your apps). O `.env` não vem do git de propósito.
-Node.js tem de estar instalado (versão LTS).
+Diz, linha a linha, o que está OK, o que FALTA e o que é só aviso, com a
+instrução para cada caso (Node, git em dia com o GitHub, ramos por enviar,
+`npm ci`, `.env`, chaves, logins da Firebase CLI e do EAS, backoffice ao
+lado, pasta fora do OneDrive). Não muda nada — só lê. Repete-o até ficar
+tudo OK; o Claude também o pode correr (está autorizado em
+`.claude/settings.json`).
+
+### O que vem pelo git e o que não vem
+
+| Vem pelo git (basta `git pull`) | Fica só em cada PC (repor à mão) |
+|---|---|
+| Código, `functions/src`, `docs/`, `scripts/` | `node_modules/` (raiz e `functions/`) — `npm ci` |
+| `CLAUDE.md`, `ROADMAP.md`, `DEVELOPMENT.md`, `SPEC.md` — o contexto do projeto | `.env` (Firebase de DEV) — copiar ou preencher a partir de `.env.example` |
+| `.claude/settings.json` (permissões, modo automático, plugin Expo) e `.claude/launch.json` (servidores) | `serviceAccountKey.dev.json` / `.prod.json`, `google-services.prod.json`, `credentials.json` — chaves reais, nunca no git |
+| `.env.production`, `google-services.json` (dev), `firebase.json`, `.firebaserc`, `eas.json` | Sessões da Firebase CLI e do EAS CLI (`login` em cada PC) e do Git com o GitHub |
+| Ramos enviados com `git push` (incluindo secções a meio) | Ramos e worktrees que ninguém enviou; alterações por commitar |
+| — | **Conversas, memória e definições pessoais do Claude Code** (`~/.claude`, `.claude/settings.local.json`) |
+
+A última linha é a que engana: o Claude do escritório **não se lembra** de
+nada do que se conversou em casa, e vice-versa. Não há sincronização
+possível dessa parte — por isso é que cada decisão tem de ficar escrita no
+`ROADMAP.md`/`DEVELOPMENT.md` (regra do `CLAUDE.md`). Uma conversa nova em
+qualquer PC começa por ler esses três ficheiros e fica com o mesmo contexto
+que a de casa tinha. Se uma conversa de casa ainda está a meio de uma
+secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
+`ROADMAP.md` + as mensagens de commit. Nada mais — escreve-os bem.
+
+### Instalar uma vez (PC novo)
+
+1. **Node.js LTS** (https://nodejs.org, instalador oficial — o
+   `.claude/launch.json` conta com `C:\Program Files\nodejs\node.exe`),
+   **Git** (https://git-scm.com) e a **app Claude Code**, com sessão na
+   mesma conta Claude e o GitHub ligado (Settings → Connectors).
+2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
+   repositórios **lado a lado**, com estes nomes exatos:
+   ```bash
+   git clone https://github.com/vampiregodric/marble-app.git
+   git clone https://github.com/vampiregodric/marble.backoffice.git marble-backoffice
+   ```
+   (o repositório do backoffice chama-se `marble.backoffice`, com ponto;
+   a pasta local tem de se chamar `marble-backoffice`, com hífen)
+3. Dependências: `npm ci` em `marble-app`, em `marble-app/functions` e em
+   `marble-backoffice`.
+4. Ficheiros que o git não leva, copiados do PC de casa **por pen ou pelo
+   gestor de passwords** (nunca por email/chat — são chaves):
+   `marble-app/.env`, `marble-app/serviceAccountKey.dev.json` e o `.env`
+   do backoffice. Os do prod (`serviceAccountKey.prod.json`,
+   `google-services.prod.json`) só quando houver uma tarefa de prod nesse
+   PC. Se não tiveres o `.env` à mão, preenche-o a partir do
+   `.env.example` com os valores da consola Firebase (projeto
+   `marble-studios-dev` → Project settings → Your apps) e do Cloudinary.
+5. Logins das CLIs, no PowerShell do próprio PC: `npx.cmd firebase-tools login`
+   (deploys) e `npx.cmd eas-cli login` (só para builds). O `git push` pede
+   a janela "Connect to GitHub" na primeira vez.
+6. `npm run check:setup` até estar tudo OK. Depois, a primeira conversa do
+   Claude nesse PC lê o `CLAUDE.md` sozinha e fica igual à de casa.
+
+**Telemóvel no escritório:** o servidor continua a ser o mesmo
+(`marble-app-phone`, 8081), mas o IP do PC é outro. No Expo Go lê-se o QR
+novo; na dev build "Marble Dev" abre-se o menu de desenvolvimento e
+escreve-se `exp://<IP do PC do escritório>:8081` (ou usa-se o QR). O
+telemóvel e o PC têm de estar na mesma rede Wi-Fi.
+
+### Todos os dias, ao mudar de PC
+
+- **Ao sair** (Claude ou tu): commit + `git push` de **tudo**, incluindo o
+  ramo de uma secção a meio — `git push -u origin <ramo>` — e o estado
+  atual escrito no `ROADMAP.md` ("em curso: falta X e Y"). O
+  `npm run check:setup` avisa se ficou algum ramo só neste PC.
+- **Ao chegar**: `git pull` no `master` (ou `git fetch` + `git checkout
+  <ramo>` para retomar uma secção) e `npm run check:setup`. Se o `git pull`
+  trouxer ficheiros novos, o Metro que já estava a correr pode não os ver —
+  `npx.cmd expo start --clear` (ver "Onde vive o projeto").
+- Para retomar uma secção noutro PC, abre a conversa com "lê o
+  `ROADMAP.md`, a secção N — Nome; o trabalho está no ramo `<ramo>`, vê
+  o `git log` dele e continua". É o mesmo prompt que o botão `spawn_task`
+  cria, mais o nome do ramo.
+
+**Caminhos nesta documentação:** os `C:\Users\VGodr\Projects\...` que
+aparecem em vários sítios são do PC de casa. Noutro PC lê-se "a pasta do
+projeto" / "a pasta `marble-backoffice` ao lado". Nada em `.claude/` nem
+nos scripts depende desse caminho desde 2026-09-12 — não voltes a escrever
+caminhos absolutos em ficheiros que vão para o git.

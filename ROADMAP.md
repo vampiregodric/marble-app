@@ -1606,4 +1606,8 @@ não mudou. Detalhes em `DEVELOPMENT.md`, "Tags nos trabalhos".
   `src/theme/theme.ts` — usa sempre esses tokens, não cores à mão.
 - O projeto vive fora do OneDrive de propósito (ver aviso em
   `DEVELOPMENT.md`) — nunca movas a pasta de volta para lá.
-- Faz commit no fim da tua secção, com mensagem clara do que ficou feito.
+- Faz commit no fim da tua secção, com mensagem clara do que ficou feito,
+  e `git push` — também a meio da secção, se a conversa vai fechar: o
+  Fábio trabalha em dois PCs e só o GitHub passa de um para o outro (ver
+  `CLAUDE.md`, "Dois PCs"). Num PC onde algo não funcione,
+  `npm run check:setup` diz o que falta.

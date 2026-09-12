@@ -17,14 +17,21 @@
       "Bash(npm run seed *)",
       "Bash(npm run check:firestore*)",
       "Bash(node scripts/seed-firestore.mjs *)",
-      "Bash(node scripts/check-firestore*)"
+      "Bash(node scripts/check-firestore*)",
+      "PowerShell(npm.cmd run check:setup*)",
+      "PowerShell(node scripts/check-setup.mjs*)",
+      "PowerShell(node scripts/launch-main.mjs*)",
+      "Bash(npm run check:setup*)",
+      "Bash(node scripts/check-setup.mjs*)",
+      "Bash(node scripts/launch-main.mjs*)"
     ]
   },
   "autoMode": {
     "allow": [
       "$defaults",
       "Deploying Firestore rules and indexes to the DEV Firebase project of this repo (`firebase-tools deploy ... --project dev`, project id marble-studios-dev, config in firebase.json/.firebaserc) is routine and safe. Deploys to `--project prod` are NOT covered and still need the user.",
-      "Running this repo's own scripts scripts/seed-firestore.mjs, scripts/check-firestore.mjs and scripts/check-firestore-auth.mjs against the dev project with serviceAccountKey.dev.json is safe, including the `--client <email>` flag: it only relabels test fixtures in the dev database with an email the user supplied in chat."
+      "Running this repo's own scripts scripts/seed-firestore.mjs, scripts/check-firestore.mjs and scripts/check-firestore-auth.mjs against the dev project with serviceAccountKey.dev.json is safe, including the `--client <email>` flag: it only relabels test fixtures in the dev database with an email the user supplied in chat.",
+      "Running scripts/check-setup.mjs (`npm run check:setup`) is read-only: it only reports what is missing on this machine (Node, .env, keys, CLI logins). scripts/launch-main.mjs only starts the Expo dev server / backoffice Vite server from the main checkout, the same thing .claude/launch.json did before."
     ]
   }
 }

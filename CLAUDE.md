@@ -67,12 +67,41 @@ está certa se cada secção a atualizar ao terminar. Depois do commit e push:
 Secções que só tocam no backoffice (ex: 12c) também precisam de uma entrada
 curta no `ROADMAP.md` da app — é dele que a página lê.
 
+## Dois PCs (casa e escritório) — o git é a única memória partilhada
+
+O Fábio trabalha em dois PCs. Só passa de um para o outro o que está no
+GitHub; as conversas e a memória do Claude ficam no PC onde correram
+(constatado a 2026-09-12: no escritório o Claude não sabia de nada). Daí:
+
+1. **Tudo o que se decide fica escrito** no `ROADMAP.md` (estado e
+   decisões da secção) ou no `DEVELOPMENT.md` (como se faz) — nunca só na
+   conversa. É isso que a conversa do outro PC vai ler.
+2. **No fim de cada conversa, `git push` — mesmo com a secção a meio.**
+   Trabalho só no disco ou só num worktree não existe para o outro PC.
+   Antes de fechar, escreve no `ROADMAP.md` o que falta ("em curso: falta X
+   e Y") e envia o ramo (`git push -u origin <ramo>`).
+3. **Ao começar uma conversa, `git fetch`**: se o ramo/master estiver
+   atrás de `origin/master`, o outro PC enviou trabalho — integra-o antes
+   de mexer. Se algo "não funciona nesta máquina", corre
+   `npm run check:setup` e segue as instruções que ele imprime.
+4. **Nunca escrevas caminhos absolutos de um PC** (`C:\Users\...`) em
+   ficheiros que vão para o git (`.claude/launch.json`, scripts, docs de
+   passos). Usa caminhos relativos à pasta do projeto; para o checkout
+   principal ou o backoffice ao lado, `scripts/launch-main.mjs` mostra como
+   se descobrem.
+5. Para retomar no outro PC uma secção a meio, o prompt é o do
+   `spawn_task` mais o nome do ramo onde o trabalho está.
+
+Passos de instalação e a lista do que o git não leva: `DEVELOPMENT.md`,
+"Segundo PC (escritório): pôr tudo igual a casa".
+
 ## Outras
 
 - No fim da tua secção, atualiza o estado dela no `ROADMAP.md`, faz commit
   com uma mensagem clara do que ficou feito, e corre **`git push`** — está
   autorizado nas definições do projeto (`.claude/settings.json`) e o GitHub
-  é a única cópia fora deste PC (ver `DEVELOPMENT.md`). Se o push for
-  bloqueado, pede ao Fábio para o correr; não deixes trabalho só no disco.
+  é a única cópia fora deste PC e a única que o outro PC vê (ver
+  `DEVELOPMENT.md`). Se o push for bloqueado, pede ao Fábio para o correr;
+  não deixes trabalho só no disco.
 - O projeto vive fora do OneDrive de propósito (ver `DEVELOPMENT.md`) —
   nunca o movas de volta para lá.
