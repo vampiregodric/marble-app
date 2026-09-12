@@ -105,3 +105,8 @@ Passos de instalação e a lista do que o git não leva: `DEVELOPMENT.md`,
   não deixes trabalho só no disco.
 - O projeto vive fora do OneDrive de propósito (ver `DEVELOPMENT.md`) —
   nunca o movas de volta para lá.
+- Auditoria do projeto (segurança, qualidade, desempenho, dependências,
+  testes, arquitetura, RGPD): skill `/auditoria` em
+  `.claude/skills/auditoria/`; relatórios em `auditorias/`; como funciona
+  em `DEVELOPMENT.md`, "Auditoria dinâmica". Depois de uma secção grande,
+  propõe correr `/auditoria` (modo `desde`) em escolha múltipla.

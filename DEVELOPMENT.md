@@ -1432,6 +1432,30 @@ Estados reconhecidos, pela primeira palavra: "Feito", "Parte N feita" /
 "em curso" / "bloqueada", "Por fazer", "Ideia"; a percentagem não conta as
 ideias.
 
+## Auditoria dinâmica (segurança, qualidade, desempenho, dependências, testes, arquitetura, RGPD)
+
+`/auditoria` numa conversa do Claude na pasta da app lança agentes em
+paralelo (um por vertente; a segurança leva dois) sobre a app, as Cloud
+Functions, as regras, os scripts e o backoffice ao lado, consolida os
+achados num relatório em `auditorias/AAAA-MM-DD.md`, publica a página
+privada (link em `auditorias/README.md`) e propõe as correções como
+botões (`spawn_task`, um por pacote de Crítico/Alto). Tudo só leitura: os
+agentes nunca alteram código nem o Firebase (`npm audit` sem `fix`,
+`tsc --noEmit`, `git log`); as permissões estão em `.claude/settings.json`.
+
+- Modos: sem argumento é `desde` quando já há relatórios (só o que mudou
+  desde os commits do último relatório, mais a reverificação dos achados
+  abertos) e `completo` na primeira vez; `/auditoria completo`,
+  `/auditoria verificar`, `/auditoria vertentes=seguranca,rgpd`,
+  `--sem-backoffice`.
+- A skill vive em `.claude/skills/auditoria/` (`SKILL.md` orquestra,
+  `esquema.md` fixa o formato dos achados, `vertentes/*.md` é a
+  metodologia de cada vertente) e vai pelo git — corre igual nos dois PCs.
+- `npm run auditoria:pagina` gera `scripts/out/auditoria.html` (fora do
+  git) a partir do relatório mais recente, para publicar como Artifact.
+- Os relatórios ficam em `auditorias/`, nunca em `docs/` (é a pasta
+  pública do Hosting).
+
 ## GitHub: cópia de segurança e trabalhar noutro computador
 
 O repositório está em **https://github.com/vampiregodric/marble-app**

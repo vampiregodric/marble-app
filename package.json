@@ -52,6 +52,7 @@
     "build:legal": "node --no-warnings scripts/build-legal-html.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "progress": "node scripts/build-progress.mjs",
+    "auditoria:pagina": "node scripts/build-audit.mjs",
     "demo:account": "node scripts/demo-account.mjs",
     "dev-token": "node scripts/dev-token.mjs",
     "auth:emails": "node scripts/auth-email-config.mjs",

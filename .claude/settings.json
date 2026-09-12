@@ -23,7 +23,23 @@
       "PowerShell(node scripts/launch-main.mjs*)",
       "Bash(npm run check:setup*)",
       "Bash(node scripts/check-setup.mjs*)",
-      "Bash(node scripts/launch-main.mjs*)"
+      "Bash(node scripts/launch-main.mjs*)",
+      "Bash(npm audit*)",
+      "PowerShell(npm.cmd audit*)",
+      "Bash(npm outdated*)",
+      "PowerShell(npm.cmd outdated*)",
+      "Bash(npm ls*)",
+      "PowerShell(npm.cmd ls*)",
+      "Bash(npx tsc --noEmit*)",
+      "PowerShell(npx.cmd tsc --noEmit*)",
+      "Bash(npm run typecheck*)",
+      "PowerShell(npm.cmd run typecheck*)",
+      "Bash(npx expo install --check*)",
+      "PowerShell(npx.cmd expo install --check*)",
+      "Bash(npm run auditoria:pagina*)",
+      "PowerShell(npm.cmd run auditoria:pagina*)",
+      "Bash(node scripts/build-audit.mjs*)",
+      "PowerShell(node scripts/build-audit.mjs*)"
     ]
   },
   "autoMode": {
@@ -31,7 +47,8 @@
       "$defaults",
       "Deploying Firestore rules and indexes to the DEV Firebase project of this repo (`firebase-tools deploy ... --project dev`, project id marble-studios-dev, config in firebase.json/.firebaserc) is routine and safe. Deploys to `--project prod` are NOT covered and still need the user.",
       "Running this repo's own scripts scripts/seed-firestore.mjs, scripts/check-firestore.mjs and scripts/check-firestore-auth.mjs against the dev project with serviceAccountKey.dev.json is safe, including the `--client <email>` flag: it only relabels test fixtures in the dev database with an email the user supplied in chat.",
-      "Running scripts/check-setup.mjs (`npm run check:setup`) is read-only: it only reports what is missing on this machine (Node, .env, keys, CLI logins). scripts/launch-main.mjs only starts the Expo dev server / backoffice Vite server from the main checkout, the same thing .claude/launch.json did before."
+      "Running scripts/check-setup.mjs (`npm run check:setup`) is read-only: it only reports what is missing on this machine (Node, .env, keys, CLI logins). scripts/launch-main.mjs only starts the Expo dev server / backoffice Vite server from the main checkout, the same thing .claude/launch.json did before.",
+      "The /auditoria skill (.claude/skills/auditoria/) and the agents it launches only read: npm audit (never `audit fix`), npm outdated, npm ls, npx expo install --check, npx tsc --noEmit, git log/diff/blame, grep, and scripts/build-audit.mjs (writes scripts/out/auditoria.html, which is gitignored). None of them change code, dependencies, package.json or the Firebase projects."
     ]
   }
 }
