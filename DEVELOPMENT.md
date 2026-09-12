@@ -1468,7 +1468,7 @@ npm run check:setup
 Diz, linha a linha, o que está OK, o que FALTA e o que é só aviso, com a
 instrução para cada caso (Node, git em dia com o GitHub, ramos por enviar,
 `npm ci`, `.env`, chaves, logins da Firebase CLI e do EAS, backoffice ao
-lado, pasta fora do OneDrive). Não muda nada — só lê. Repete-o até ficar
+lado, pasta fora do OneDrive, Python 3.13+ e uv). Não muda nada — só lê. Repete-o até ficar
 tudo OK; o Claude também o pode correr (está autorizado em
 `.claude/settings.json`).
 
@@ -1495,6 +1495,7 @@ não estão em nenhum ramo do GitHub, não nomes de ramos.
 | `.env.production`, `google-services.json` (dev), `firebase.json`, `.firebaserc`, `eas.json` | Sessões da Firebase CLI e do EAS CLI (`login` em cada PC) e do Git com o GitHub |
 | Ramos enviados com `git push` (incluindo secções a meio) | Ramos e worktrees que ninguém enviou; alterações por commitar |
 | — | **Conversas, memória e definições pessoais do Claude Code** (`~/.claude`, `.claude/settings.local.json`) |
+| — | Python 3.13+ e uv (ferramentas fora do projeto — passo 1b abaixo) |
 
 A última linha é a que engana: o Claude do escritório **não se lembra** de
 nada do que se conversou em casa, e vice-versa. Não há sincronização
@@ -1511,6 +1512,19 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    `.claude/launch.json` conta com `C:\Program Files\nodejs\node.exe`),
    **Git** (https://git-scm.com) e a **app Claude Code**, com sessão na
    mesma conta Claude e o GitHub ligado (Settings → Connectors).
+   1b. **Python 3.13+ e uv** — não são do projeto (a app e as Functions são
+   só Node), são para ferramentas que o Fábio quis nos dois PCs
+   (instalados em casa a 2026-09-12: Python 3.13.15, uv 0.12.13). No
+   PowerShell:
+   ```powershell
+   winget install --id Python.Python.3.13 --exact --override "/quiet InstallAllUsers=0 PrependPath=1 Include_launcher=1 Include_pip=1"
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+   (o `curl ... install.sh | sh` da documentação do uv é para Linux/macOS;
+   no Windows é o `install.ps1`, que põe `uv.exe` em
+   `%USERPROFILE%\.local\bin`). Abre um terminal novo para o PATH ser
+   visto; confirma com `py --version` e `uv --version`. O
+   `npm run check:setup` avisa se faltarem.
 2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
    repositórios **lado a lado**, com estes nomes exatos:
    ```bash

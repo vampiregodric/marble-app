@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Diz o que falta NESTE PC para trabalhar no projeto como em casa: Node,
 // git em dia com o GitHub, dependências, `.env`, chaves que o git não leva
-// de propósito, logins da Firebase CLI e do EAS, backoffice ao lado.
+// de propósito, logins da Firebase CLI e do EAS, backoffice ao lado,
+// Python 3.13+ e uv (ferramentas fora do projeto — só aviso).
 // Não muda nada; só lê. Corre-se num PC novo (ou sempre que algo "não
 // funciona no escritório") e segue-se as instruções linha a linha.
 //
@@ -73,6 +74,39 @@ if (platform() === 'win32') {
   if (existsSync(exe)) ok('node.exe no caminho que .claude/launch.json usa');
   else aviso('node.exe não está em C:\\Program Files\\nodejs\\', 'as configurações de .claude/launch.json apontam para lá: instala o Node com o instalador oficial (caminho por defeito) ou muda `runtimeExecutable` nesse ficheiro.');
 }
+
+// ---------------------------------------------------------------- Python + uv
+// Não são do projeto (Expo/Functions são só Node): servem ferramentas que o
+// Fábio quis ter nos dois PCs (2026-09-12, instalados em casa). Por isso é
+// aviso, não falta. No Windows o `python` sem nada instalado é o atalho da
+// Microsoft Store (sai com 49) — pergunta-se ao launcher `py` primeiro.
+
+function versao(cmd, args = ['--version']) {
+  try {
+    return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000 }).trim();
+  } catch {
+    return null;
+  }
+}
+
+const pyLauncher = join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Launcher', 'py.exe');
+const pyNoPath = platform() === 'win32' ? versao('py') : null;
+const pyOut = pyNoPath || versao('python3') || versao('python') || (platform() === 'win32' && existsSync(pyLauncher) ? versao(pyLauncher) : null);
+const pyVer = pyOut?.match(/(\d+)\.(\d+)\.(\d+)/);
+const pyForaPath = pyOut && !pyNoPath && !versao('python3') && !versao('python') ? ' (instalado mas ainda fora do PATH — abre um terminal novo)' : '';
+const pyInstalar = platform() === 'win32'
+  ? 'winget install --id Python.Python.3.13 --exact --override "/quiet InstallAllUsers=0 PrependPath=1 Include_launcher=1 Include_pip=1" (depois abre um terminal novo).'
+  : 'instala o Python 3.13 ou mais recente (https://www.python.org/downloads/).';
+if (pyVer && (Number(pyVer[1]) > 3 || (Number(pyVer[1]) === 3 && Number(pyVer[2]) >= 13))) ok(`Python ${pyVer[0]}${pyForaPath}`);
+else if (pyVer) aviso(`Python ${pyVer[0]} é antigo (precisa de 3.13+)`, pyInstalar);
+else aviso('Python não está instalado neste PC', pyInstalar);
+
+const uvExe = platform() === 'win32' ? join(homedir(), '.local', 'bin', 'uv.exe') : join(homedir(), '.local', 'bin', 'uv');
+const uvOut = versao('uv') || (existsSync(uvExe) ? versao(uvExe) : null);
+if (uvOut) ok(uvOut.split(' (')[0] + (versao('uv') ? '' : ' (instalado mas ainda fora do PATH — abre um terminal novo)'));
+else aviso('uv não está instalado neste PC', platform() === 'win32'
+  ? 'no PowerShell: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" — fica em %USERPROFILE%\\.local\\bin.'
+  : 'curl -LsSf https://astral.sh/uv/install.sh | sh');
 
 if (/onedrive|dropbox|google ?drive/i.test(here)) {
   falta(`o projeto está numa pasta sincronizada (${here})`, 'move-o para fora (ex.: C:\\Users\\<tu>\\Projects\\marble-app) — o Metro não vê alterações dentro do OneDrive (DEVELOPMENT.md, "Onde vive o projeto").');
