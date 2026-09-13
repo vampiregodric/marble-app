@@ -1549,6 +1549,22 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    `%USERPROFILE%\.local\bin`). Abre um terminal novo para o PATH ser
    visto; confirma com `py --version` e `uv --version`. O
    `npm run check:setup` avisa se faltarem.
+   Servem para o **Windows-MCP** (https://github.com/CursorTouch/Windows-MCP),
+   o servidor MCP que dá ao Claude rato, teclado, janelas, PowerShell e
+   ficheiros do Windows inteiro — o Fábio quer que o Claude faça as tarefas
+   de secretária que hoje lhe pede. Na loja de conectores da app aparece
+   "Not compatible" (é um servidor local, não se instala dali; a etiqueta
+   não olha para o PC), por isso regista-se à mão, **só neste PC**, em
+   `%USERPROFILE%\.claude.json` (não vai para o git), dentro de
+   `"mcpServers"`:
+   ```json
+   "windows-mcp": { "type": "stdio", "command": "C:\\Users\\<tu>\\.local\\bin\\uvx.exe", "args": ["windows-mcp", "serve"] }
+   ```
+   Antes disso, uma vez no PowerShell, `uvx windows-mcp serve` (descarrega
+   o pacote; Ctrl+C quando arrancar). Depois fecha e abre a app Claude
+   Code — a conversa nova passa a ter as ferramentas `windows-mcp`. Feito
+   em casa a 2026-09-13. Nota do projeto: prefere Windows em inglês para a
+   ferramenta que abre apps pelo nome; o resto funciona em português.
 2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
    repositórios **lado a lado**, com estes nomes exatos:
    ```bash
