@@ -1564,12 +1564,16 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    `%USERPROFILE%\.claude.json` (não vai para o git), dentro de
    `"mcpServers"`:
    ```json
-   "windows-mcp": { "type": "stdio", "command": "C:\\Users\\<tu>\\.local\\bin\\uvx.exe", "args": ["windows-mcp", "serve"] }
+   "windows-mcp": { "type": "stdio", "command": "C:\\Users\\<tu>\\.local\\bin\\uvx.exe", "args": ["windows-mcp", "serve", "--exclude-tools", "PowerShell,Registry"] }
    ```
-   Antes disso, uma vez no PowerShell, `uvx windows-mcp serve` (descarrega
-   o pacote; Ctrl+C quando arrancar). Depois fecha e abre a app Claude
-   Code — a conversa nova passa a ter as ferramentas `windows-mcp`. Feito
-   em casa a 2026-09-13. Nota do projeto: prefere Windows em inglês para a
+   (`--exclude-tools PowerShell,Registry`: decisão do Fábio a 2026-09-13 —
+   o PowerShell o Claude já tem pela app, e o Registo do Windows é onde um
+   clique errado faz estragos; ficam rato, teclado, janelas, apps, capturas
+   e ficheiros.) Antes disso, uma vez no PowerShell, `uvx windows-mcp --help`
+   (descarrega o pacote e termina; o Claude pode correr isto). Depois fecha
+   e abre a app Claude Code — a conversa nova passa a ter as ferramentas
+   `windows-mcp`. Feito em casa a 2026-09-13: o pacote descarregou e
+   `serve` arrancou em stdio. Nota do projeto: prefere Windows em inglês para a
    ferramenta que abre apps pelo nome; o resto funciona em português.
 2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
    repositórios **lado a lado**, com estes nomes exatos:
