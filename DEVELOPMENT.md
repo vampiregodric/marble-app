@@ -625,6 +625,45 @@ Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
   preset na consola do Cloudinary (Unsigned, folder `requests`, só imagens,
   incoming transformation `c_limit,w_2000,h_2000`) — até lá, juntar fotos
   dá o erro "Upload preset not found" do Cloudinary e o pedido não sai.
+- **Validação do conteúdo e emails (Auditoria 2026-09-12, Pacote 7 —
+  SEG-A-02, SEG-A-08, SEG-B-03):** o que as regras verificam e o que fica
+  para a Function, porque as regras não iteram listas.
+  - *Regras (`validNewRequest`):* `email` com formato e **igual ao email
+    da conta** (`request.auth.token.email`, comparado em minúsculas) — é
+    para lá que a Function manda a confirmação assinada como marble.pt;
+    `phone` só com dígitos, espaços e `+()./-` (9–30 caracteres; a app
+    valida o mesmo em `src/auth/validation.ts` com a mensagem
+    `phoneInvalid`, e o formulário volta a mostrar o campo se o telemóvel
+    da ficha estiver fora do formato); os URLs de `simulation` com o
+    prefixo do Cloudinary da Marble (`isCdnUrl`:
+    `https://res.cloudinary.com/kr9bmaqh/image/upload/`). Nada muda para a
+    app: com sessão o email vem de `user.email`; sem sessão a conta nasce
+    com o email escrito.
+  - *Function (`invalidRequestReason` em `requests.ts`), antes de qualquer
+    leitura, alerta ou email:* `services[]` só texto até 60 caracteres sem
+    `://`/`www.`; `fields[]` mapas `{key?, label, value}` com 40/60/200
+    caracteres; `photos[]` mapas `{url, thumbnailUrl, publicId}` com os
+    URLs no prefixo do Cloudinary; `simulation.*Url` idem. Fora disto →
+    `flagged: 'invalid'` + `processedAt`, sem alerta interno, confirmação
+    nem email ("conteúdo inválido" na página Pedidos). Só um doc escrito
+    pelo SDK à mão chega aqui — a app nunca produz nada disto.
+  - *Emails:* a confirmação ao cliente (e o "responder a" do email à
+    equipa) só saem quando `email` é o da conta do Auth
+    (`auth.getUser(clientId).email`) — segunda barreira além das regras; o
+    email de confirmação deixou de levar a linha `Pediste: …` (texto que
+    veio do cliente não entra num email assinado pela Marble; o que pediu
+    está em "Os teus pedidos" e no email à equipa). `notifications.photoUrl`
+    só com URL do Cloudinary.
+  - *Backoffice:* `isOurCdn(url)` (`src/media/cloudinary.ts`) em `Thumb` e
+    no novo `CdnLink` (`components/ui.tsx`): fotos do pedido, simulação
+    anexada, botões Foto/Resultado das simulações e a foto de perfil do
+    cliente só carregam/abrem URLs do nosso Cloudinary; outro URL mostra
+    "URL inválido" sem pedir nada a lado nenhum. `mailto:` só depois de
+    `mailtoHref` validar o email (sem `?subject=` à boleia).
+  - *Ficou por decidir (SEG-B-02, QUA-05):* email link sign-in no fluxo
+    "pedido cria conta" (a conta só nasce quando o dono do email clica) e
+    o que fazer às fotos órfãs quando o `createRequest` falha depois dos
+    uploads — ver `auditorias/2026-09-12.md`.
 - **Anti-spam na app:** `REQUEST_LIMITS.perDayMax` (3) pedidos por
   dispositivo em 24 h, em AsyncStorage (`src/data/requests.ts`). Não é
   segurança — a Function marca do lado dela.
@@ -655,7 +694,19 @@ Consequência: **todos os pedidos têm `clientId` = uid** e as regras exigem-no.
   sincronizado (`src/firebase/models.ts`).
 - **Testar:** `npm run check:firestore` (sem login: nada em `requests`) e
   `npm run check:firestore:auth -- ./serviceAccountKey.dev.json` (cria um
-  pedido válido, tenta cinco inválidos, tenta alterar; apaga tudo no fim).
+  pedido válido, tenta nove inválidos — entre eles email diferente do da
+  conta, telemóvel com texto e simulação com URL de fora —, tenta alterar;
+  e cria um pedido com `photos[0].url` fora do Cloudinary, que as regras
+  deixam passar, para confirmar que a Function publicada no dev o marca
+  `flagged: 'invalid'` sem alertas; apaga tudo no fim. Com `--keep` deixa
+  esse pedido inválido no dev para o veres no backoffice — apaga-o lá).
+  Antes de testar regras, `npm run check:firestore:rules --
+  ./serviceAccountKey.dev.json` diz se as regras **publicadas** no dev são
+  as deste ficheiro: com várias conversas do Claude a publicar para o mesmo
+  dev (cada worktree faz o seu deploy, o último ganha, e a propagação leva
+  até um minuto), um `check:firestore:auth` pode estar a testar as regras
+  de outra conversa — foi o que aconteceu a 2026-09-13 no Pacote 7 da
+  auditoria. `--show` imprime as publicadas.
   No browser (8082): o Firebase guarda a sessão por origem — se o tab já
   esteve com sessão, o formulário aparece na versão "com conta"; termina
   sessão no Perfil para ver a criação de conta. `npm run functions:jobs --

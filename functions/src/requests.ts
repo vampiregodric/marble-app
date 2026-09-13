@@ -1,5 +1,6 @@
+import { Auth } from 'firebase-admin/auth';
 import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
-import { CloudinaryConfig, deleteFilesByTag } from './cloudinary';
+import { CloudinaryConfig, deleteFilesByTag, isCdnUrl } from './cloudinary';
 import { hasAppAccount } from './consent';
 import { EmailConfig, sendEmail } from './email';
 import { createNotification } from './notify';
@@ -10,12 +11,16 @@ import { Client, ServiceRequest, Work } from './types';
 
 // Pedidos de orçamento (Secção 7; a Secção 8 junta os de checkup). Reage a
 // `requests/{id}` criado/alterado/apagado:
-// - criado → anti-spam (3 pedidos/24 h por cliente marca `flagged`; e, com
-//   REQUEST_DAILY_CAP ligado, um tecto global de pedidos por dia — Secção
-//   11), alerta interno no Painel do backoffice, alerta "Recebemos o teu
-//   pedido" ao cliente (push pela onNotificationCreated), email à equipa
-//   (quotes@marble.pt) e ao cliente pelo Resend, quando ligado — o alerta
-//   e o email ao cliente no idioma dele (`clients.locale`, Secção 12b);
+// - criado → validação do conteúdo que as regras não conseguem ver (os
+//   elementos das listas e os URLs: `flagged: 'invalid'` sem alerta nem
+//   email — Auditoria 2026-09-12), anti-spam (3 pedidos/24 h por cliente
+//   marca `flagged`; e, com REQUEST_DAILY_CAP ligado, um tecto global de
+//   pedidos por dia — Secção 11), alerta interno no Painel do backoffice,
+//   alerta "Recebemos o teu pedido" ao cliente (push pela
+//   onNotificationCreated), email à equipa (quotes@marble.pt) e ao cliente
+//   pelo Resend, quando ligado — este último só para o email da conta do
+//   Auth — o alerta e o email ao cliente no idioma dele (`clients.locale`,
+//   Secção 12b);
 // - fotos removidas (anonimização) ou pedido apagado → ficheiros fora do
 //   Cloudinary pela tag `request_<id>`.
 // E o job diário: 12 meses depois de fechado, o pedido perde os dados
@@ -58,6 +63,12 @@ export type RequestEmailConfig = EmailConfig & {
 export type RequestDeps = {
   email?: RequestEmailConfig | null;
   cloudinary?: CloudinaryConfig | null;
+  // Cloud name do Cloudinary (só para reconhecer os URLs; não precisa de
+  // segredos — CLOUDINARY_CLOUD_NAME em functions/.env).
+  cloudName: string;
+  // Firebase Auth, para confirmar que `email` é o da conta antes de lhe
+  // escrever. Sem ele, o email ao cliente não sai.
+  auth?: Auth | null;
   // Tecto global de pedidos por 24 h (REQUEST_DAILY_CAP); 0/ausente = desligado.
   dailyCap?: number | null;
 };
@@ -68,6 +79,83 @@ function clean(data: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(data)) if (v !== undefined) out[k] = v;
   return out;
+}
+
+// ---------- Validação do conteúdo (Auditoria 2026-09-12, SEG-A-02/SEG-A-08) ----------
+//
+// As regras (validNewRequest) validam tipos, tamanhos e o email da conta,
+// mas não iteram listas: `services[]`, `fields[]` e `photos[]` chegavam aqui
+// tal como o cliente os escrevesse. A app nunca produz nada fora disto — só
+// um doc escrito pelo SDK à mão — por isso um pedido inválido fica
+// `flagged: 'invalid'` na página Pedidos e nada mais acontece: nem alerta,
+// nem confirmação, nem email. Os limites são os da app (REQUEST_LIMITS em
+// src/firebase/models.ts; as opções de src/data/requestForms.ts são
+// texto curto em PT).
+export const CONTENT_LIMITS = {
+  // A opção mais longa dos chips tem 35 caracteres ("Meta Ads (Instagram / Facebook)").
+  serviceMax: 60,
+  fieldKeyMax: 40,
+  fieldLabelMax: 60,
+  fieldValueMax: 200, // = REQUEST_LIMITS.fieldMax
+  publicIdMax: 300, // = validImage nas regras
+} as const;
+
+function isText(v: unknown, max: number): v is string {
+  return typeof v === 'string' && v.length <= max;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function hasOnlyKeys(o: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(o).every((k) => allowed.includes(k));
+}
+
+// Uma opção dos chips: texto curto sem link — um URL num "serviço" é spam
+// a caminho do email da equipa.
+function isServiceOption(v: unknown): boolean {
+  return isText(v, CONTENT_LIMITS.serviceMax) && !/:\/\/|www\./i.test(v);
+}
+
+// Porque é que o pedido é inválido (o campo em causa), ou null se está bem
+// formado. Só olha ao que as regras não conseguem verificar.
+export function invalidRequestReason(req: ServiceRequest, cloudName: string): string | null {
+  const cdn = (u: unknown) => isCdnUrl(cloudName, u);
+  if (!Array.isArray(req.services) || !req.services.every(isServiceOption)) return 'services';
+  if (!Array.isArray(req.fields)) return 'fields';
+  for (const f of req.fields as unknown[]) {
+    if (!isPlainObject(f) || !hasOnlyKeys(f, ['key', 'label', 'value'])) return 'fields';
+    if (f.key !== undefined && !isText(f.key, CONTENT_LIMITS.fieldKeyMax)) return 'fields';
+    if (!isText(f.label, CONTENT_LIMITS.fieldLabelMax) || !isText(f.value, CONTENT_LIMITS.fieldValueMax)) return 'fields';
+  }
+  if (req.photos !== undefined) {
+    if (!Array.isArray(req.photos)) return 'photos';
+    for (const p of req.photos as unknown[]) {
+      if (!isPlainObject(p) || !hasOnlyKeys(p, ['url', 'thumbnailUrl', 'publicId'])) return 'photos';
+      if (!cdn(p.url) || !cdn(p.thumbnailUrl) || !isText(p.publicId, CONTENT_LIMITS.publicIdMax)) return 'photos';
+    }
+  }
+  if (req.simulation !== undefined) {
+    const s = req.simulation as unknown;
+    if (!isPlainObject(s) || !cdn(s.photoUrl)) return 'simulation';
+    if (s.resultUrl !== undefined && !cdn(s.resultUrl)) return 'simulation';
+    if (s.thumbnailUrl !== undefined && !cdn(s.thumbnailUrl)) return 'simulation';
+  }
+  return null;
+}
+
+// O email da conta do Auth, em minúsculas; null se não há Auth, a conta
+// não existe ou não tem email. A confirmação ao cliente só vai para aqui:
+// as regras já obrigam `email` a ser o do token, isto é a segunda barreira
+// (um pedido criado por outra via, ou regras antigas ainda publicadas).
+async function accountEmail(auth: Auth | null | undefined, uid: string): Promise<string | null> {
+  if (!auth) return null;
+  try {
+    return (await auth.getUser(uid)).email?.toLowerCase() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function handleRequestWritten(
@@ -105,6 +193,16 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   if (!fresh.exists || fresh.data()?.processedAt) return;
   const ts = Timestamp.fromDate(now);
 
+  // 0. Conteúdo fora do formato da app (URL fora do Cloudinary, elementos
+  //    de lista sem forma): marca e sai, antes de qualquer leitura, alerta
+  //    ou email. Só o nome do campo vai para o log — o conteúdo é do cliente.
+  const invalid = invalidRequestReason(req, deps.cloudName);
+  if (invalid) {
+    await ref.update({ flagged: 'invalid', processedAt: ts, updatedAt: ts });
+    log(`pedido ${req.id}: marcado inválido (${invalid} fora do formato da app) — sem alerta nem email`);
+    return;
+  }
+
   // 1. Anti-spam: o mesmo cliente com RATE_LIMIT_PER_DAY pedidos nas últimas
   //    24 h (além deste) fica marcado — aparece na página Pedidos com aviso,
   //    sem alerta interno nem email. Usa o índice clientId/createdAt.
@@ -140,8 +238,12 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   ]);
   const client = clientSnap.exists ? ({ id: clientSnap.id, ...clientSnap.data() } as Client) : null;
   const work = workSnap?.exists ? ({ id: workSnap.id, ...workSnap.data() } as Work) : null;
-  const photoUrl = work?.photoUrl || req.photos?.[0]?.thumbnailUrl;
+  // A miniatura dos alertas (app e Painel) só do Cloudinary da Marble.
+  const photoUrl = [work?.photoUrl, req.photos?.[0]?.thumbnailUrl].find((u) => isCdnUrl(deps.cloudName, u));
   const locale = clientLocale(client);
+  // Só se escreve ao email da conta do Auth (SEG-A-02).
+  const ownEmail = await accountEmail(deps.auth, req.clientId);
+  const clientEmail = req.email && ownEmail && req.email.trim().toLowerCase() === ownEmail ? req.email.trim() : null;
 
   // 2. Alerta interno (Painel do backoffice) e confirmação ao cliente.
   const teamAlertId = await createNotification(
@@ -158,13 +260,16 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
     );
   }
 
-  // 3. Emails (equipa + cliente), quando o Resend está ligado.
+  // 3. Emails (equipa + cliente), quando o Resend está ligado. "Responder
+  //    a" e a confirmação só com o email da conta; com outro email no doc,
+  //    a equipa recebe o pedido na mesma, sem "responder a", e fica no log.
   const patch: Record<string, unknown> = { processedAt: ts, teamAlertId, confirmationId, updatedAt: ts };
   if (deps.email) {
     try {
       const url = `${deps.email.backofficeUrl.replace(/\/$/, '')}/pedidos/${req.id}`;
-      await sendEmail(deps.email, { to: deps.email.to, replyTo: req.email || undefined, ...TEXTS.requestTeamEmail(req, url) });
-      if (req.email) await sendEmail(deps.email, { to: req.email, replyTo: deps.email.to, ...TEXTS.requestClientEmail(locale, req) });
+      await sendEmail(deps.email, { to: deps.email.to, replyTo: clientEmail ?? undefined, ...TEXTS.requestTeamEmail(req, url) });
+      if (clientEmail) await sendEmail(deps.email, { to: clientEmail, replyTo: deps.email.to, ...TEXTS.requestClientEmail(locale, req) });
+      else log(`pedido ${req.id}: sem email ao cliente — ${req.email ? 'o email do pedido não é o da conta' : 'pedido sem email'}`);
       patch.emailSentAt = ts;
     } catch (err) {
       patch.emailError = err instanceof Error ? err.message : String(err);

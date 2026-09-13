@@ -22,10 +22,17 @@ export function validateName(name: string): string | undefined {
   return undefined;
 }
 
-// Aceita "912 345 678", "+351 912345678", etc. — pede pelo menos 9 dígitos.
+// Aceita "912 345 678", "+351 912345678", "(+351) 912-345-678" — pede pelo
+// menos 9 dígitos e só a pontuação habitual: é o formato que as regras do
+// Firestore exigem num pedido de orçamento (validNewRequest), por isso um
+// texto como "liga-me depois das 18h" tem de ser travado aqui com uma
+// mensagem, não lá com um erro genérico.
+const PHONE_RE = /^[0-9 +()./-]{9,30}$/;
+
 export function validatePhone(phone: string): string | undefined {
   const digits = phone.replace(/\D/g, '');
   if (!digits) return S.validation.phoneRequired;
   if (digits.length < 9) return S.validation.phoneShort;
+  if (!PHONE_RE.test(phone.trim())) return S.validation.phoneInvalid;
   return undefined;
 }

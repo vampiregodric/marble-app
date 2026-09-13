@@ -552,6 +552,7 @@ export const pt = {
     nameRequired: 'Escreve o teu nome.',
     phoneRequired: 'Escreve o teu telemóvel — é como a equipa te contacta.',
     phoneShort: 'Esse número parece curto demais.',
+    phoneInvalid: 'Escreve só o número (dígitos, espaços, + ou -).',
   },
 
   dates: {

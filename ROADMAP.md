@@ -1612,6 +1612,19 @@ o Pacote 1 (repositório da app público no GitHub contra a decisão de
 Resend/Cloudinary por rodar) é para hoje. Próxima corrida: `/auditoria`
 (modo `desde`) depois dos pacotes, para reverificar os achados abertos.
 
+Pacote 7 — Pedidos: emails e validação (2026-09-13): regras com o
+`email` do pedido igual ao da conta, formato de email/telemóvel e prefixo
+do Cloudinary na simulação anexada; a Function valida `services`,
+`fields`, `photos` e `simulation` antes de qualquer alerta ou email e
+marca `flagged: 'invalid'`; a confirmação ao cliente só sai para o email
+da conta do Auth e deixou de levar `Pediste:`; o backoffice só carrega e
+abre URLs do nosso Cloudinary (`Thumb`/`CdnLink`, "URL inválido") e só
+faz `mailto:` a emails válidos. `check:firestore:auth` cobre os casos
+novos. Ficaram por decidir pelo Fábio: SEG-B-02 (email link sign-in no
+fluxo "pedido cria conta") e QUA-05 (fotos órfãs: doc rascunho antes dos
+uploads vs. job diário). Detalhes em `DEVELOPMENT.md`, "Pedidos de
+orçamento", "Validação do conteúdo e emails".
+
 O que é: uma auditoria que se repete. A skill em `.claude/skills/auditoria/`
 lança um agente por vertente sobre a app, as Cloud Functions, as regras,
 os scripts e o backoffice ao lado, consolida os achados num relatório

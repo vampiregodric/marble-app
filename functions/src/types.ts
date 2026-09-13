@@ -218,8 +218,11 @@ export interface ServiceRequest {
   contactedAt?: Timestamp;
   closedAt?: Timestamp;
   // 'rate_limit' = 3+ pedidos do mesmo cliente em 24 h; 'daily_cap' = o
-  // projeto inteiro passou REQUEST_DAILY_CAP (Secção 11). Ver requests.ts.
-  flagged?: 'rate_limit' | 'daily_cap';
+  // projeto inteiro passou REQUEST_DAILY_CAP (Secção 11); 'invalid' =
+  // conteúdo fora do formato da app (URL fora do Cloudinary, texto acima
+  // dos limites — só um doc escrito pelo SDK à mão; Auditoria 2026-09-12).
+  // Ver requests.ts.
+  flagged?: 'rate_limit' | 'daily_cap' | 'invalid';
   processedAt?: Timestamp;
   teamAlertId?: string;
   confirmationId?: string;

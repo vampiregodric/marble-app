@@ -15,22 +15,26 @@
 // do checkup é reposto no fim tal como estava.
 //
 // Uso:
-//   node scripts/check-firestore-auth.mjs ./serviceAccountKey.dev.json [email]
-// (email por defeito: teste.seccao2@example.com)
+//   node scripts/check-firestore-auth.mjs ./serviceAccountKey.dev.json [email] [--keep]
+// (email por defeito: teste.seccao2@example.com; --keep deixa no dev o
+// pedido com foto fora do Cloudinary, marcado 'invalid' pela Function, para
+// o veres na página Pedidos do backoffice — apaga-o lá)
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { FieldPath, getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
 
-const [keyPath, email = 'teste.seccao2@example.com'] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const keepInvalid = argv.includes('--keep');
+const [keyPath, email = 'teste.seccao2@example.com'] = argv.filter((a) => !a.startsWith('--'));
 if (!keyPath) {
-  console.error('Uso: node scripts/check-firestore-auth.mjs <service-account.json> [email]');
+  console.error('Uso: node scripts/check-firestore-auth.mjs <service-account.json> [email] [--keep]');
   process.exit(1);
 }
 
@@ -195,8 +199,28 @@ try {
 }
 
 // 7. Criar um pedido bem formado tem de ser permitido; variantes que a app
-//    nunca envia (estado já fechado, clientId de outro, campos da equipa)
-//    têm de ser recusadas; alterar depois de criado também.
+//    nunca envia (estado já fechado, clientId de outro, campos da equipa,
+//    email que não é o da conta, telemóvel com texto, simulação com URL
+//    fora do Cloudinary — Auditoria 2026-09-12) têm de ser recusadas;
+//    alterar depois de criado também.
+const cloudName = env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'kr9bmaqh';
+const cdnUrl = (name) => `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_480,h_360,q_auto,f_auto/requests/${name}.jpg`;
+const admin = getAdminFirestore();
+// Restos de corridas anteriores (um pedido "inválido" que foi permitido
+// porque as regras publicadas não eram as deste ficheiro, um --keep, uma
+// corrida interrompida): pedidos `check-*` e os alertas que a Function lhes
+// criou saem antes de começar, para não ficarem na página Pedidos do dev.
+{
+  const stale = await admin.collection('requests').orderBy(FieldPath.documentId()).startAt('check-').endAt('check-').get();
+  let alertsRemoved = 0;
+  for (const d of stale.docs) {
+    const alerts = await admin.collection('notifications').where('relatedRequestId', '==', d.id).get();
+    for (const a of alerts.docs) await a.ref.delete();
+    alertsRemoved += alerts.size;
+    await d.ref.delete();
+  }
+  if (stale.size) console.log(`  --   ${stale.size} pedido(s) de teste de corridas anteriores apagado(s) (${alertsRemoved} alerta(s))`);
+}
 const validRequest = {
   type: 'quote',
   status: 'new',
@@ -233,22 +257,61 @@ const invalid = {
   'campo da equipa (notes)': { ...validRequest, notes: 'hack' },
   'departamento inventado': { ...validRequest, department: 'spa' },
   'sem telemóvel': { ...validRequest, phone: '' },
+  'email diferente do da conta': { ...validRequest, email: 'outra.pessoa@example.com' },
+  'email sem formato': { ...validRequest, email: 'nao-e-um-email' },
+  'telemóvel com texto': { ...validRequest, phone: 'liga-me depois das 18h' },
+  'simulação com URL fora do Cloudinary': { ...validRequest, simulation: { id: 'sim-check', name: 'Amostra de teste', photoUrl: 'https://evil.example/login.jpg' } },
 };
 for (const [label, data] of Object.entries(invalid)) {
   try {
     await setDoc(doc(db, 'requests', `${requestId}-bad`), data);
-    fail(`requests: pedido com ${label} foi PERMITIDO — regras erradas`);
+    fail(`requests: pedido com ${label} foi PERMITIDO — regras erradas (as publicadas no dev são as deste ficheiro? npm run check:firestore:rules)`);
   } catch (e) {
     pass(`requests: pedido com ${label}: recusado (${e.code}) — correto`);
   }
 }
-// Limpeza (Admin SDK): o pedido de teste e o que a Cloud Function tenha criado.
-const admin = getAdminFirestore();
+// Limpeza (Admin SDK): o pedido de teste (e um "-bad" que tenha passado) e o
+// que a Cloud Function tenha criado.
 await new Promise((r) => setTimeout(r, 4000));
-await admin.collection('requests').doc(requestId).delete();
-const spawned = await admin.collection('notifications').where('relatedRequestId', '==', requestId).get();
-for (const d of spawned.docs) await d.ref.delete();
-console.log(`  --   pedido de teste apagado (${spawned.size} alerta(s) da Function apagado(s))`);
+let spawnedCount = 0;
+for (const id of [requestId, `${requestId}-bad`]) {
+  await admin.collection('requests').doc(id).delete();
+  const spawned = await admin.collection('notifications').where('relatedRequestId', '==', id).get();
+  for (const d of spawned.docs) await d.ref.delete();
+  spawnedCount += spawned.size;
+}
+console.log(`  --   pedido de teste apagado (${spawnedCount} alerta(s) da Function apagado(s))`);
+
+// 7b. As regras não iteram listas: um pedido com `photos[0].url` fora do
+//     Cloudinary passa nas regras, mas a Cloud Function publicada no dev
+//     marca-o `flagged: 'invalid'` sem alerta interno nem confirmação
+//     (Auditoria 2026-09-12, SEG-A-02/SEG-A-08). Espera até 20 s pela
+//     Function; sem Functions publicadas fica só um aviso.
+const badPhotoId = `${requestId}-url`;
+try {
+  await setDoc(doc(db, 'requests', badPhotoId), {
+    ...validRequest,
+    photos: [{ url: 'https://evil.example/sessao-expirada', thumbnailUrl: cdnUrl('check'), publicId: 'requests/check' }],
+  });
+  let processed = null;
+  for (let i = 0; i < 8 && !processed?.processedAt; i++) {
+    await new Promise((r) => setTimeout(r, 2500));
+    processed = (await admin.collection('requests').doc(badPhotoId).get()).data();
+  }
+  const alerts = await admin.collection('notifications').where('relatedRequestId', '==', badPhotoId).get();
+  if (!processed?.processedAt) {
+    console.log('  --   pedido com foto fora do Cloudinary: a Function não o processou em 20 s — as Functions estão publicadas no dev?');
+  } else if (processed.flagged === 'invalid' && alerts.empty) {
+    pass("requests: pedido com foto fora do Cloudinary → flagged: 'invalid' pela Function, sem alertas — correto");
+  } else {
+    fail(`requests: pedido com foto fora do Cloudinary ficou flagged: ${processed.flagged ?? 'nenhum'} com ${alerts.size} alerta(s) — a Function devia marcar 'invalid' sem alertas`);
+  }
+  for (const d of alerts.docs) await d.ref.delete();
+  if (keepInvalid) console.log(`  --   --keep: requests/${badPhotoId} fica no dev — vê-o em Pedidos no backoffice e apaga-o lá`);
+  else await admin.collection('requests').doc(badPhotoId).delete();
+} catch (e) {
+  fail(`requests: pedido com foto fora do Cloudinary: ${e.code ?? e.message}`);
+}
 
 // 8. Simulador "como ficaria" (Secção 16): amostras publicadas legíveis (a
 //    query com published == true, como a app), escrita recusada; a

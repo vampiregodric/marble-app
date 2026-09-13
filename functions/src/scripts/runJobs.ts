@@ -131,7 +131,14 @@ async function main(): Promise<void> {
     if (!snap.exists) throw new Error(`requests/${requestId} não existe`);
     // Como o trigger: se já foi processado, não repete (apaga `processedAt` no doc para forçar).
     const dailyCap = Number(flag('daily-cap') ?? process.env.REQUEST_DAILY_CAP ?? 0) || 0;
-    await handleRequestWritten(db, null, { id: snap.id, ...snap.data() } as ServiceRequest, { email, cloudinary, dailyCap }, now, log);
+    await handleRequestWritten(
+      db,
+      null,
+      { id: snap.id, ...snap.data() } as ServiceRequest,
+      { email, cloudinary, cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'kr9bmaqh', auth: getAuth(), dailyCap },
+      now,
+      log
+    );
     console.log(email ? 'email: Resend ligado (RESEND_API_KEY no ambiente)' : 'email: desligado (sem RESEND_API_KEY no ambiente)');
     console.log(dailyCap ? `tecto diário: ${dailyCap} pedidos/24 h` : 'tecto diário: desligado (--daily-cap N ou REQUEST_DAILY_CAP)');
     return;

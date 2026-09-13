@@ -118,7 +118,14 @@ export const onClientUpdated = onDocumentUpdated({ document: 'clients/{uid}', se
 export const onRequestWritten = onDocumentWritten({ document: 'requests/{id}', secrets: [...emailSecrets, ...cloudinarySecrets] }, async (event) => {
   const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as ServiceRequest) : null;
   const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as ServiceRequest) : null;
-  await handleRequestWritten(getFirestore(), before, after, { email: emailConfig(), cloudinary: cloudinaryConfig(), dailyCap: REQUEST_DAILY_CAP.value() }, new Date(), log);
+  await handleRequestWritten(
+    getFirestore(),
+    before,
+    after,
+    { email: emailConfig(), cloudinary: cloudinaryConfig(), cloudName: CLOUDINARY_CLOUD_NAME.value(), auth: getAuth(), dailyCap: REQUEST_DAILY_CAP.value() },
+    new Date(),
+    log
+  );
 });
 
 // Simulador (Secção 16): simulação criada → tectos, modelo de imagem,

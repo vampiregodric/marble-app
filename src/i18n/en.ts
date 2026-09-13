@@ -505,6 +505,7 @@ export const en: Strings = {
     nameRequired: 'Enter your name.',
     phoneRequired: 'Enter your mobile number — it is how the team contacts you.',
     phoneShort: 'That number looks too short.',
+    phoneInvalid: 'Enter just the number (digits, spaces, + or -).',
   },
 
   dates: {

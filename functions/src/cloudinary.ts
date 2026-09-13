@@ -16,6 +16,19 @@ export function avatarTag(uid: string): string {
   return `uid_${uid}`;
 }
 
+// URL de entrega de IMAGEM do Cloudinary da Marble — o único formato que a
+// app escreve (src/media/cloudinary.ts). Tudo o que entra em emails, em
+// `notifications.photoUrl` ou no backoffice passa por aqui: um doc escrito
+// pelo SDK à mão pode trazer qualquer URL (Auditoria 2026-09-12, SEG-A-02,
+// SEG-A-08, SEG-B-03). O mesmo prefixo está em firestore.rules (isCdnUrl).
+export function cdnPrefix(cloudName: string): string {
+  return `https://res.cloudinary.com/${cloudName}/image/upload/`;
+}
+
+export function isCdnUrl(cloudName: string, url: unknown): url is string {
+  return typeof url === 'string' && url.length <= 600 && url.length > cdnPrefix(cloudName).length && url.startsWith(cdnPrefix(cloudName));
+}
+
 // public_id a partir de um URL de entrega gerado por src/media/cloudinary.ts
 // da app: .../image/upload/<transformações>/v<versão>/<public_id>[.ext].
 // A pasta faz parte do public_id (ex: "avatars/abc123"). null se não parece

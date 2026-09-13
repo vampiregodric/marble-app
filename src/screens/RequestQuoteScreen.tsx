@@ -133,7 +133,10 @@ export default function RequestQuoteScreen() {
   ];
 
   const needsName = !user || !name.trim();
-  const needsPhone = !user || !phone.trim();
+  // Com sessão, o telemóvel vem da ficha; se estiver fora do formato que as
+  // regras exigem (conta antiga com texto no número), o campo aparece com
+  // o erro depois de "Enviar", em vez de o pedido falhar sem explicação.
+  const needsPhone = !user || !phone.trim() || !!errors.phone;
   const showContactBlock = !user || needsName || needsPhone;
 
   const validate = (): boolean => {
@@ -156,7 +159,7 @@ export default function RequestQuoteScreen() {
       else if (!acceptedTerms) next.terms = T.request.termsRequired;
     } else {
       if (needsName) next.name = validateName(name);
-      if (needsPhone) next.phone = validatePhone(phone);
+      next.phone = validatePhone(phone);
     }
     setErrors(next);
     return !Object.values(next).some(Boolean);

@@ -27,7 +27,12 @@ rules_version = '2';
 //   fica com uma na hora — e lê-os; nunca os altera. A criação é validada
 //   campo a campo (validNewRequest): tipos, tamanhos (REQUEST_LIMITS em
 //   src/firebase/models.ts) e só os campos do formulário — `status` nasce
-//   'new', e `notes`, `flagged`, etc. são da equipa e das Functions.
+//   'new', e `notes`, `flagged`, etc. são da equipa e das Functions. O
+//   `email` tem de ser o da conta (Auditoria 2026-09-12, SEG-A-02): é para
+//   lá que a Function manda a confirmação assinada como marble.pt. O
+//   conteúdo das listas (`services`, `fields`, `photos`) não se valida aqui
+//   (as regras não iteram listas) — valida-o a Function na criação e marca
+//   `flagged: 'invalid'` sem alerta nem email (functions/src/requests.ts).
 // - `samples` (Secção 16, 2026-09-09): amostras do simulador "como ficaria",
 //   carregadas pela equipa; a app só lê as publicadas (a query TEM de
 //   incluir `where('published', '==', true)`, como em `works`).
@@ -64,19 +69,29 @@ service cloud.firestore {
       return v is string && v.size() <= max;
     }
 
+    // URL de entrega de imagem do Cloudinary da Marble — o único que a app
+    // escreve e o único que o backoffice, os emails e os alertas mostram
+    // (Auditoria 2026-09-12, SEG-A-02/SEG-B-03). O cloud name é o mesmo
+    // no dev e no prod (CLOUDINARY_CLOUD_NAME em functions/.env).
+    function isCdnUrl(u) {
+      return u is string && u.size() <= 600
+        && u.matches('^https://res\\.cloudinary\\.com/kr9bmaqh/image/upload/.+$');
+    }
+
     // Simulação "como ficaria" anexada a um pedido (Secção 16): cópia do
     // essencial (RequestSimulation em src/firebase/models.ts).
     function validRequestSimulation(s) {
       return s.keys().hasOnly(['id', 'name', 'photoUrl', 'resultUrl', 'thumbnailUrl'])
         && s.keys().hasAll(['id', 'name', 'photoUrl'])
-        && isStr(s.id, 100) && isStr(s.name, 120) && isStr(s.photoUrl, 600)
-        && (!('resultUrl' in s) || isStr(s.resultUrl, 600))
-        && (!('thumbnailUrl' in s) || isStr(s.thumbnailUrl, 600));
+        && isStr(s.id, 100) && isStr(s.name, 120) && isCdnUrl(s.photoUrl)
+        && (!('resultUrl' in s) || isCdnUrl(s.resultUrl))
+        && (!('thumbnailUrl' in s) || isCdnUrl(s.thumbnailUrl));
     }
 
     // Um pedido acabado de criar pela app (Secção 7). As regras não iteram
     // listas, por isso `services`, `fields` e `photos` só têm o tamanho
-    // limitado; o conteúdo é texto que a equipa lê no backoffice.
+    // limitado aqui; o conteúdo dos elementos é validado pela Function na
+    // criação (functions/src/requests.ts → invalidRequestReason).
     function validNewRequest(d) {
       return d.keys().hasOnly(['type', 'status', 'clientId', 'name', 'email', 'phone', 'contactPreference', 'department',
           'workId', 'workTitle', 'services', 'fields', 'message', 'photos', 'simulation', 'platform', 'createdAt', 'updatedAt'])
@@ -86,8 +101,15 @@ service cloud.firestore {
         && d.type == 'quote'
         && d.status == 'new'
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        // O email do pedido é o da conta com sessão (a app preenche-o a
+        // partir de user.email; sem sessão, a conta nasce com o email
+        // escrito). Comparado em minúsculas: o Firebase Auth guarda-o como
+        // veio, a app grava-o em minúsculas.
         && isStr(d.email, 120)
-        && d.phone is string && d.phone.size() >= 9 && d.phone.size() <= 30
+        && d.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$')
+        && d.email.lower() == request.auth.token.email.lower()
+        // Telemóvel: só dígitos, espaços e a pontuação habitual (+, (), ., -, /).
+        && d.phone is string && d.phone.matches('^[0-9 +()./-]{9,30}$')
         && d.contactPreference in ['call', 'whatsapp', 'email']
         && d.department in ['automotive', 'epoxy', 'graphic', 'ai', 'ads', 'xps']
         && d.services is list && d.services.size() <= 12

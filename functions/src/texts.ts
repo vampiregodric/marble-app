@@ -220,9 +220,11 @@ export const TEXTS = {
       description: withName(name, `obrigado pelo pedido de orçamento (${dept}). A equipa da Marble Studios responde ${RESPONSE_PROMISE.pt}, por ${contactLabel(r, 'pt')}.`),
     };
   },
-  // Email de confirmação ao cliente. Em EN não vai a linha das opções
-  // escolhidas: guardam-se em PT (Secção 12) e sairiam misturadas — decisão
-  // do Fábio (2026-09-06).
+  // Email de confirmação ao cliente. Não leva a lista das opções escolhidas:
+  // em EN sairiam misturadas (guardam-se em PT, Secção 12 — decisão do Fábio,
+  // 2026-09-06) e, desde a Auditoria 2026-09-12 (SEG-A-02), também não em PT
+  // — texto que veio do cliente não entra num email assinado como marble.pt;
+  // o que pediu está em "Os teus pedidos" no Perfil e no email à equipa.
   requestClientEmail(locale: Locale, r: ServiceRequest) {
     const dept = DEPARTMENT_NAME[r.department] ?? r.department;
     const name = firstName(r);
@@ -243,7 +245,6 @@ export const TEXTS = {
       '',
       `Recebemos o teu pedido de orçamento (${dept}). A equipa da Marble Studios responde ${RESPONSE_PROMISE.pt}, por ${contactLabel(r, 'pt')}.`,
       '',
-      ...(r.services.length ? [`Pediste: ${r.services.join(', ')}.`, ''] : []),
       'Se quiseres acrescentar alguma coisa, responde a este email.',
       '',
       'Marble Studios',

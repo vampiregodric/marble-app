@@ -579,10 +579,13 @@ export interface ServiceRequest {
   closedAt?: Timestamp;
   // --- Cloud Function onRequestWritten ---
   // Marcado quando o mesmo cliente já fez 3 pedidos nas últimas 24 h
-  // ('rate_limit') ou quando o projeto inteiro passou o tecto diário de
-  // pedidos ('daily_cap', REQUEST_DAILY_CAP em functions/.env — Secção 11):
-  // fica na página Pedidos com aviso, sem alerta interno nem email.
-  flagged?: 'rate_limit' | 'daily_cap';
+  // ('rate_limit'), quando o projeto inteiro passou o tecto diário de
+  // pedidos ('daily_cap', REQUEST_DAILY_CAP em functions/.env — Secção 11)
+  // ou quando o conteúdo está fora do formato da app ('invalid': URL fora
+  // do Cloudinary, elementos de lista sem forma — só um doc escrito pelo
+  // SDK à mão; Auditoria 2026-09-12): fica na página Pedidos com aviso,
+  // sem alerta interno nem email.
+  flagged?: 'rate_limit' | 'daily_cap' | 'invalid';
   processedAt?: Timestamp;
   teamAlertId?: string;
   confirmationId?: string;
