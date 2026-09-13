@@ -108,6 +108,18 @@ else aviso('uv não está instalado neste PC', platform() === 'win32'
   ? 'no PowerShell: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex" — fica em %USERPROFILE%\\.local\\bin.'
   : 'curl -LsSf https://astral.sh/uv/install.sh | sh');
 
+// Windows-MCP: registado em ~/.claude.json (por PC; o Claude Code lê-o ao
+// arrancar). `npm run setup:windows-mcp` faz Python + uv + pacote + registo.
+if (platform() === 'win32') {
+  const claudeCfg = readJson(join(homedir(), '.claude.json'));
+  const wm = claudeCfg?.mcpServers?.['windows-mcp'];
+  if (wm?.command && existsSync(wm.command)) {
+    const excl = wm.args?.includes('--exclude-tools') ? ` (sem ${wm.args[wm.args.indexOf('--exclude-tools') + 1]})` : '';
+    ok(`Windows-MCP registado em ~/.claude.json${excl}`);
+  } else if (wm) aviso(`Windows-MCP registado mas o comando não existe (${wm.command})`, 'corre `npm run setup:windows-mcp` — reescreve a entrada com o uvx deste PC.');
+  else aviso('Windows-MCP não está registado neste PC', 'corre `npm run setup:windows-mcp` (instala Python/uv se faltarem, descarrega o pacote, regista) e depois fecha e abre a app Claude Code.');
+}
+
 if (/onedrive|dropbox|google ?drive/i.test(here)) {
   falta(`o projeto está numa pasta sincronizada (${here})`, 'move-o para fora (ex.: C:\\Users\\<tu>\\Projects\\marble-app) — o Metro não vê alterações dentro do OneDrive (DEVELOPMENT.md, "Onde vive o projeto").');
 } else ok(`pasta fora de OneDrive/Dropbox/Drive: ${here}`);

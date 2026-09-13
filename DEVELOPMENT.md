@@ -1542,7 +1542,19 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    `.claude/launch.json` conta com `C:\Program Files\nodejs\node.exe`),
    **Git** (https://git-scm.com) e a **app Claude Code**, com sessão na
    mesma conta Claude e o GitHub ligado (Settings → Connectors).
-   1b. **Python 3.13+ e uv** — não são do projeto (a app e as Functions são
+   1b. **Python 3.13+, uv e Windows-MCP — um só comando:**
+   ```bash
+   npm run setup:windows-mcp
+   ```
+   (`scripts/setup-windows-mcp.mjs`: instala o Python e o uv se faltarem,
+   descarrega o pacote e escreve a entrada no `~/.claude.json`, com cópia
+   de segurança. Corre-o tu no PowerShell do PC, ou pede ao Claude de lá —
+   ele pergunta antes, porque o classificador não deixou pôr este script na
+   lista de autorizados do `.claude/settings.json` (é um script que escreve
+   no `~/.claude.json`). Depois fecha e abre a app. O `npm run check:setup`
+   diz se ficou registado.) O que o script faz, por
+   partes, para quem precisar à mão:
+   Python 3.13+ e uv não são do projeto (a app e as Functions são
    só Node), são para ferramentas que o Fábio quis nos dois PCs
    (instalados em casa a 2026-09-12: Python 3.13.15, uv 0.12.13). No
    PowerShell:

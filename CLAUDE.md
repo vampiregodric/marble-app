@@ -91,6 +91,23 @@ GitHub; as conversas e a memória do Claude ficam no PC onde correram
    se descobrem.
 5. Para retomar no outro PC uma secção a meio, o prompt é o do
    `spawn_task` mais o nome do ramo onde o trabalho está.
+6. **"Quero que estejas igual ao PC de casa"** (ou "configura este PC",
+   ou qualquer frase nesse sentido) é um pedido completo — o Fábio não
+   quer dar mais passos do que essa frase (dito a 2026-09-13). Faz tu:
+   `git fetch` + `git pull` no `master`; `npm run check:setup`; e resolve
+   **tudo** o que ele listar sem voltar a perguntar: `npm ci` (raiz,
+   `functions/`, backoffice ao lado), `npm run setup:windows-mcp`
+   (Python, uv e o servidor Windows-MCP — pode pedir confirmação, é
+   normal), clone do backoffice se faltar. Só ficam para ele, e pedes-lhe
+   **uma coisa de cada vez** em escolha múltipla: o `.env` e as chaves
+   (vêm por pen ou gestor de passwords, nunca por chat), os logins da
+   Firebase CLI e do EAS (abrem o browser), e fechar/abrir a app no fim.
+   Repete o `check:setup` até estar tudo OK e diz-lhe o endereço
+   `exp://<IP>:8081` da última linha para o telemóvel. O que **não** passa
+   de um PC para o outro, e ele deve saber que é assim de propósito: as
+   conversas, os títulos na barra lateral e a memória do Claude — a
+   primeira conversa em cada PC começa do zero e é este ficheiro, o
+   `ROADMAP.md` e o `DEVELOPMENT.md` que lhe dão o contexto.
 
 Passos de instalação e a lista do que o git não leva: `DEVELOPMENT.md`,
 "Segundo PC (escritório): pôr tudo igual a casa".
