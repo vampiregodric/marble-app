@@ -515,6 +515,52 @@ Passos (uma vez):
 Depois disto, `expo-dev-client` faz com que `expo start` sirva a dev build
 e o Expo Go ao mesmo tempo — os dois continuam a funcionar (o Expo Go sem
 push).
+### Emulador Android no PC (2026-09-13)
+
+Instalado no PC de casa a 2026-09-13 (decisão do Fábio, opção "Android
+Studio completo") para o Claude testar a Marble Dev sem o telemóvel — a
+primeira vez a app abriu no emulador com o bundle do servidor 8081 ao fim
+de ~35 min de instalação. O que existe e como se usa:
+
+- **Android Studio 2026.1.4** (winget `Google.AndroidStudio`) em
+  `C:\Program Files\Android\Android Studio`; só serve pelo **JBR** (Java 25,
+  em `jbr\`), que também desbloqueia o emulador do Firestore (TES-12 da
+  auditoria). O assistente de primeira execução nunca foi corrido.
+- **SDK** em `%LOCALAPPDATA%\Android\Sdk`: `cmdline-tools\latest` (versão
+  16111833, zip verificado pela SHA-1 do `repository2-3.xml`),
+  `platform-tools` (adb 37.0.1), `emulator` 37.1.11, `platforms;android-36`,
+  `build-tools;36.0.0` e a imagem `system-images;android-36;google_apis;x86_64`
+  (tem Google Play services, por isso o push FCM funciona; sem Play Store).
+- **Variáveis de utilizador** (`[Environment]::SetEnvironmentVariable(..., 'User')`):
+  `ANDROID_HOME` = o SDK, `JAVA_HOME` = o JBR, e no `Path` `platform-tools`,
+  `emulator`, `cmdline-tools\latest\bin` e `jbr\bin`. Terminais abertos antes
+  não as vêem (as ferramentas do Claude põem-nas à mão com `$env:`).
+- **AVD `Marble_Pixel8`** (Pixel 8, Android 16/API 36, x86_64), criado com
+  `avdmanager create avd --name Marble_Pixel8 --package "system-images;android-36;google_apis;x86_64" --device pixel_8`.
+  Aceleração: `emulator -accel-check` → "WHPX is installed and usable" (o
+  Hyper-V está ligado neste PC; a Windows Hypervisor Platform já estava ativa).
+
+Correr a app no emulador (o Claude faz isto sozinho):
+
+```powershell
+emulator -avd Marble_Pixel8            # janela aparece no monitor principal; boot ~70 s
+adb wait-for-device shell getprop sys.boot_completed   # até dar 1
+adb install -r <Marble Dev>.apk        # só na primeira vez ou quando há build nova
+adb reverse tcp:8081 tcp:8081          # o emulador vê o servidor 8081 como localhost
+adb shell am start -a android.intent.action.VIEW -d "exp+marble-studios://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+```
+
+O servidor é o de sempre (`marble-app-phone`, 8081, checkout principal).
+O APK da Marble Dev vem da build `419b6df0` do EAS (`npx.cmd eas-cli
+build:view <id> --json` dá o `applicationArchiveUrl`; o link expira ~14
+dias depois da build, a 2026-09-20 para esta). Captura do ecrã do Android:
+`adb exec-out screencap -p > ficheiro.png` (mais fiável do que a captura
+do Windows). Fechar o menu de desenvolvimento do dev client: `adb shell
+input keyevent 4` (Back). O `sdkmanager` está marcado como obsoleto e
+delega no novo `android sdk ...`; o `android sdk list` devolve listas
+vazias e rebenta (0xC0000409) mas `android sdk install <pacotes>` funciona
+— se deixar de funcionar, o zip 13114758 das cmdline-tools ainda traz o
+`sdkmanager` clássico.
 
 ### Blaze no dev — o que aconteceu a 2026-09-04 (para não repetir no prod)
 
@@ -1606,6 +1652,20 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    - `WaitFor active_window` é pouco fiável com vários monitores (reporta
      outra janela como ativa); confirmar com `text_exists`, `Process list`
      ou uma captura.
+   - **O servidor corre dentro do pacote MSIX da app Claude**: um
+     `App launch_executable` com um caminho em `%LOCALAPPDATA%` é
+     redirecionado para `...\Packages\Claude_...\LocalCache\Local\...`
+     (visto ao lançar o emulador Android a 2026-09-13 — arrancou na mesma,
+     porque a virtualização lê a pasta real). Para programas em AppData é
+     mais seguro lançar pela ferramenta PowerShell da app (`Start-Process`)
+     e usar o Windows-MCP para ver e clicar. `FileSystem` sofre do mesmo.
+   1c. **Android Studio + SDK + emulador** (opcional: só para testar a app
+   sem telemóvel; ~5 GB). Passos em "Emulador Android no PC", acima:
+   `winget install --id Google.AndroidStudio --exact`, cmdline-tools no
+   SDK, `android sdk install` dos cinco pacotes, variáveis de utilizador,
+   `avdmanager create avd`. O Claude fez isto sozinho em casa; no
+   escritório é copiar os mesmos comandos. O APK da Marble Dev instala-se
+   com `adb install` a partir do link da build do EAS.
 2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
    repositórios **lado a lado**, com estes nomes exatos:
    ```bash
