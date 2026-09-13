@@ -1572,9 +1572,28 @@ secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
    e ficheiros.) Antes disso, uma vez no PowerShell, `uvx windows-mcp --help`
    (descarrega o pacote e termina; o Claude pode correr isto). Depois fecha
    e abre a app Claude Code — a conversa nova passa a ter as ferramentas
-   `windows-mcp`. Feito em casa a 2026-09-13: o pacote descarregou e
-   `serve` arrancou em stdio. Nota do projeto: prefere Windows em inglês para a
-   ferramenta que abre apps pelo nome; o resto funciona em português.
+   `windows-mcp`. Feito em casa a 2026-09-13: o pacote descarregou, `serve`
+   arrancou em stdio e, depois de reiniciar a app, a conversa seguinte tinha
+   as ferramentas `windows-mcp` (sem PowerShell nem Registry, como pedido).
+   Teste inofensivo nessa conversa (captura do ecrã, abrir a Calculadora,
+   fazer 7 + 2 por cliques, fechá-la) — **funcionou**. O que se aprendeu:
+   - `Screenshot` apanha os 4 monitores numa imagem reduzida (indica a
+     escala, ex. 3,125×); `Snapshot` dá as janelas abertas e a árvore de UI
+     com coordenadas, com limite de 500 elementos — filtrar com
+     `display=[n]`. As coordenadas são as do ecrã virtual: o monitor
+     principal começa em (0,0) e os outros ficam em negativo/positivo.
+   - Funcionam: `Click`, `Type`, `Shortcut`, `WaitFor text_exists`,
+     `Process list`, `App switch` (pelo título da janela, em português).
+   - **`App launch` pelo nome do Menu Iniciar falha** ("Calculator" e
+     "Calculadora" dão a exceção COM -2147417851) — é o ponto que depende do
+     Windows em inglês. Alternativa que funciona: `Shortcut win+r` e
+     `Type "calc"` com Enter no diálogo Executar.
+   - `App launch_executable` exige caminho absoluto (o relativo é resolvido
+     na pasta do projeto); com `C:\Windows\System32\calc.exe` arranca mas a
+     Calculadora não aparece (o stub passa a mão à app da loja).
+   - `WaitFor active_window` é pouco fiável com vários monitores (reporta
+     outra janela como ativa); confirmar com `text_exists`, `Process list`
+     ou uma captura.
 2. Pasta fora do OneDrive (ex.: `C:\Users\<tu>\Projects`) e os dois
    repositórios **lado a lado**, com estes nomes exatos:
    ```bash
