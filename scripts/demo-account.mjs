@@ -170,7 +170,7 @@ async function main() {
   await batch.commit();
 
   console.log(`\nFeito no projeto ${projectId}: conta ${EMAIL} (uid ${realUid}), 2 carros/chãos, 2 alertas.`);
-  console.log('Copia agora o email e a password para docs/store/ficha-loja.md (conta de demonstração) — a password não fica guardada em mais lado nenhum.');
+  console.log('Guarda a password em docs/store/acesso-revisao.local.md (fora do git) — nunca na ficha-loja.md nem noutro ficheiro versionado.');
 }
 
 main()

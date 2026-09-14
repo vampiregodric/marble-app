@@ -1572,6 +1572,7 @@ não estão em nenhum ramo do GitHub, não nomes de ramos.
 | Ramos enviados com `git push` (incluindo secções a meio) | Ramos e worktrees que ninguém enviou; alterações por commitar |
 | — | **Conversas, memória e definições pessoais do Claude Code** (`~/.claude`, `.claude/settings.local.json`) |
 | — | Python 3.13+ e uv (ferramentas fora do projeto — passo 1b abaixo) |
+| — | `docs/store/acesso-revisao.local.md` — password da conta de demonstração do prod (fora do git desde 2026-09-14; se não existir neste PC, corre `npm run demo:account -- ./serviceAccountKey.prod.json --email revisao@marble.pt --password <nova> --apply` e cria-o) |
 
 A última linha é a que engana: o Claude do escritório **não se lembra** de
 nada do que se conversou em casa, e vice-versa. Não há sincronização
