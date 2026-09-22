@@ -170,9 +170,9 @@ Não lidos: `data/{DataContext,hooks}.ts` (as queries são o ponto A.1.2 da part
 - **Onde:** `docs/store/ficha-loja.md:125`, `docs/store/ficha-loja.md:134`, `firebase.json:25-29`
 - **Confiança:** confirmado
 - **Estado:** aberto
-- **O que está mal:** `revisao@marble.pt / Marble-Revisao-2026!` está no ficheiro versionado. O Hosting não a publica (`ignore: ["store/**", "**/*.md"]` — confirmado), mas o repositório é a única cópia partilhada entre dois PCs e a conta vai existir no prod para a Apple e o Google entrarem: quem tiver acesso ao repositório (ou a um clone num PC) entra na app como esse cliente, vê os alertas e pode pedir orçamentos em nome dele.
+- **O que está mal:** `revisao@marble.pt / [password redigida a 2026-09-13; trocada nesse dia]` está no ficheiro versionado. O Hosting não a publica (`ignore: ["store/**", "**/*.md"]` — confirmado), mas o repositório é a única cópia partilhada entre dois PCs e a conta vai existir no prod para a Apple e o Google entrarem: quem tiver acesso ao repositório (ou a um clone num PC) entra na app como esse cliente, vê os alertas e pode pedir orçamentos em nome dele.
 - **Cenário de falha:** clone do repositório num PC partilhado → login na app de produção com a conta de revisão → pedidos de orçamento falsos que chegam à equipa como se fossem reais.
-- **Evidência:** `docs/store/ficha-loja.md:125`: "Conta de teste: revisao@marble.pt / Marble-Revisao-2026!". `firebase.json:25-29`: `"ignore": ["store/**", "**/*.md", "**/.*"]`.
+- **Evidência:** `docs/store/ficha-loja.md:125`: "Conta de teste: revisao@marble.pt / [password redigida a 2026-09-13; trocada nesse dia]". `firebase.json:25-29`: `"ignore": ["store/**", "**/*.md", "**/.*"]`.
 - **Correção proposta:** guardar a password no gestor de passwords e deixar no ficheiro só "ver gestor de passwords"; trocar a password depois de cada revisão das lojas (o script de seed da conta já é referido em `ficha-loja.md:120` — basta correr com uma nova).
 - **Esforço:** S
 

@@ -12,8 +12,10 @@
 //
 // Idempotente: se o utilizador já existir, mantém o uid e repõe a password;
 // os docs têm IDs fixos e são sobrescritos. A password nunca é gravada em
-// lado nenhum além do Firebase Auth — copia-a para a ficha das lojas
-// (docs/store/ficha-loja.md) por fora.
+// lado nenhum além do Firebase Auth — guarda-a no gestor de passwords e
+// cola-a nas duas consolas das lojas. NUNCA em ficheiros do repositório
+// (docs/store/ficha-loja.md tem só o email): o git é a cópia partilhada
+// entre os dois PCs e esteve público sem se saber (auditoria 2026-09-12).
 
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -40,7 +42,7 @@ if (!keyPath) {
   process.exit(1);
 }
 if (!PASSWORD || PASSWORD.length < 8) {
-  console.error('Falta --password (mínimo 8 caracteres). A password não é gerada aqui de propósito: és tu que a escolhes e a copias para a ficha das lojas.');
+  console.error('Falta --password (mínimo 8 caracteres). A password não é gerada aqui de propósito: és tu que a escolhes e a guardas no gestor de passwords (nunca em ficheiros do repositório).');
   process.exit(1);
 }
 
@@ -170,7 +172,7 @@ async function main() {
   await batch.commit();
 
   console.log(`\nFeito no projeto ${projectId}: conta ${EMAIL} (uid ${realUid}), 2 carros/chãos, 2 alertas.`);
-  console.log('Copia agora o email e a password para docs/store/ficha-loja.md (conta de demonstração) — a password não fica guardada em mais lado nenhum.');
+  console.log('Guarda agora a password no gestor de passwords e atualiza-a nas consolas das lojas — não fica guardada em mais lado nenhum (e não a escrevas em docs/store/ficha-loja.md: só o email fica lá).');
 }
 
 main()

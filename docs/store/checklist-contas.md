@@ -244,8 +244,10 @@ que falta está no ROADMAP, Secção 11, "Bloqueado nas contas". Do teu lado:
   e os formulários `data-safety.md` / `app-privacy.md`.
 - **Conta de demonstração** para os revisores — FEITO (2026-09-08):
   `revisao@marble.pt`, criada no prod por `npm run demo:account` com um carro
-  com checkup pendente, um chão em dia e dois alertas; email e password na
-  `ficha-loja.md` (secção "Acesso à app").
+  com checkup pendente, um chão em dia e dois alertas; o email está na
+  `ficha-loja.md` (secção "Acesso à app"), a password só no gestor de
+  passwords do Fábio (saiu do git a 2026-09-13 — auditoria 2026-09-12,
+  SEG-C-01).
 - **Equipa com acesso ao backoffice no prod**: correr `scripts/set-admin.mjs`
   do backoffice com a chave do prod; publicar o backoffice num site de
   Hosting do prod (repositório do backoffice).

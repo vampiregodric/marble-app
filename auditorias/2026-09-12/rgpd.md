@@ -635,7 +635,7 @@ em código, não o que a política promete (a comparação está na secção seg
     chat com o Claude a 2026-09-06. Não é grave (a conversa é privada), mas
     antes do lançamento convém rodá-los:
   docs/store/ficha-loja.md:118
-    (`scripts/demo-account.mjs`): `revisao@marble.pt` / `Marble-Revisao-2026!`,
+    (`scripts/demo-account.mjs`): `revisao@marble.pt` / `[password redigida a 2026-09-13; trocada nesse dia]`,
   ```
   `git ls-files docs/store/` confirma que os dois ficheiros estão versionados. `DEVELOPMENT.md:1395` continua a marcar a rotação como pendente: "**Rodar antes do lançamento** (ficaram colados na conversa — checklist 6d)".
 - **Correção proposta:** (1) executar a checklist 6d — rodar o par do Cloudinary e a chave do Resend, repor os segredos no Secret Manager dos dois projetos e voltar a publicar as Functions; (2) tirar a password de `ficha-loja.md` e de `checklist-contas.md`, deixando só o email e uma nota a dizer onde vive a password (gestor de passwords do Fábio, ou as duas consolas das lojas), e correr `npm run demo:account -- … --apply` com uma password nova. O histórico do git guarda a antiga, o que é mais um motivo para a trocar. O `demo-account.mjs:173` já diz "a password não fica guardada em mais lado nenhum" — a instrução de a copiar para `ficha-loja.md` (linha 16 do script) é que devia mudar.

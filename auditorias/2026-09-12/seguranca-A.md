@@ -16,7 +16,7 @@ Comandos corridos (só leitura), um resultado por linha:
 - `git ls-files | grep -iE 'serviceAccount|adminsdk|\.env|\.key$|\.pem$|credentials'` (app e backoffice) → nenhum ficheiro de chave versionado; só `.env.example`, `.env.production`, `functions/.env*`, `google-services.json` (dev, identificadores públicos).
 - `git log --all -S 'private_key'`, `-S 'BEGIN PRIVATE KEY'`, `-S 'serviceAccountKey'` (só nomes de ficheiro adicionados), `-S 'CLOUDINARY_API_SECRET='`, `-S 'RESEND_API_KEY='`, `-S 'api_secret'` (app e backoffice) → 0 commits com chaves.
 - `git log --all -p | grep -E 're_[A-Za-z0-9_]{20,}|CLOUDINARY_API_(KEY|SECRET)\s*[=:]\s*[0-9A-Za-z]|"private_key"|AKIA…|BEGIN … PRIVATE'` (app e backoffice) → só as linhas `defineSecret('CLOUDINARY_API_KEY')` (nomes, não valores).
-- `git log --all -S 'Marble-Revisao'` → commit `87c1231` (password da conta de demonstração em `docs/store/ficha-loja.md`, ainda no HEAD — SEG-A-16); `-S 'Teste1234'` → `18f9b38` (conta de teste do dev em `DEVELOPMENT.md`).
+- `git log --all -S '<password antiga da conta de demonstração>'` → commit `87c1231` (password da conta de demonstração em `docs/store/ficha-loja.md`, ainda no HEAD — SEG-A-16); `-S 'Teste1234'` → `18f9b38` (conta de teste do dev em `DEVELOPMENT.md`).
 - `git log --all --name-only | grep -iE 'serviceAccount|adminsdk|credentials\.json|\.p8$|\.jks$'` → nada.
 - `npm audit --json` em `functions/` → 8 moderate, todas transitivas de `firebase-admin` 13.10.0 (`uuid` <11.1.1, `retry-request`, `teeny-request`, `google-gax`, `gaxios`); nenhuma high/critical; fica para a vertente dependências.
 - `grep` em `src/` por chamadas Firestore fora de `src/data/` → só `AuthContext.tsx` (doc do próprio cliente) e `push.native.ts` (`pushTokens`).
@@ -368,12 +368,12 @@ try { await deps.auth.deleteUser(client.id); }
 - **Onde:** `docs/store/ficha-loja.md:118`, `docs/store/ficha-loja.md:125`, `docs/store/ficha-loja.md:134`
 - **Confiança:** confirmado
 - **Estado:** aberto
-- **O que está mal:** `revisao@marble.pt / Marble-Revisao-2026!` está em três sítios do ficheiro e no histórico desde `87c1231`. O repositório é privado e a conta é uma persona com dados fictícios — mas é uma conta **de produção** com marketing ligado e todos os poderes de um cliente: criar pedidos (emails a quotes@marble.pt e ao endereço do pedido, SEG-A-02), simulações (custo Vertex, SEG-A-01), alterar o próprio doc (SEG-A-03). O `demo-account.mjs` diz de propósito "copia-a … por fora" (`scripts/demo-account.mjs:15-16`). O `firebase.json` ignora `store/**` no Hosting, por isso não sai publicado.
+- **O que está mal:** `revisao@marble.pt / [password redigida a 2026-09-13; trocada nesse dia]` está em três sítios do ficheiro e no histórico desde `87c1231`. O repositório é privado e a conta é uma persona com dados fictícios — mas é uma conta **de produção** com marketing ligado e todos os poderes de um cliente: criar pedidos (emails a quotes@marble.pt e ao endereço do pedido, SEG-A-02), simulações (custo Vertex, SEG-A-01), alterar o próprio doc (SEG-A-03). O `demo-account.mjs` diz de propósito "copia-a … por fora" (`scripts/demo-account.mjs:15-16`). O `firebase.json` ignora `store/**` no Hosting, por isso não sai publicado.
 - **Cenário de falha:** acesso ao GitHub (colaborador, token de CI, laptop) → login em produção como revisor.
 - **Evidência:**
 ```
 docs/store/ficha-loja.md:118
-(`scripts/demo-account.mjs`): `revisao@marble.pt` / `Marble-Revisao-2026!`,
+(`scripts/demo-account.mjs`): `revisao@marble.pt` / `[password redigida a 2026-09-13; trocada nesse dia]`,
 ```
 - **Correção proposta:** substituir no `.md` por "(password no gestor de passwords / na consola da loja)"; rodar a password com `npm run demo:account -- ./serviceAccountKey.prod.json --email revisao@marble.pt --password '…' --apply` depois de os revisores acabarem; desligar `marketing` na persona se não for preciso.
 - **Esforço:** S
