@@ -2,6 +2,10 @@
 
 # Regras para qualquer conversa neste projeto
 
+Numa máquina nova (ou na primeira conversa do dia), começa pelo
+`ARRANQUE.md` — onde estão os URLs da app e do backoffice a correr, o que o
+git não traz, o que está a meio em cada ramo e os pendentes.
+
 Este é o projeto da app Marble Studios (React Native / Expo). O trabalho está
 dividido em secções, cada uma feita numa conversa própria. Antes de tocar em
 código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
