@@ -1583,6 +1583,58 @@ que a de casa tinha. Se uma conversa de casa ainda está a meio de uma
 secção, o que o escritório recebe é: o ramo enviado + o estado escrito no
 `ROADMAP.md` + as mensagens de commit. Nada mais — escreve-os bem.
 
+### 2026-09-22 — o escritório passa a ser o PC principal
+
+Decisão do Fábio nesse dia: passa a trabalhar ~12 h por dia no escritório
+e, quando muito, uma hora em casa. O PC de casa deixa de ser o sítio onde
+as coisas "estão" — passa a ser mais um checkout. Daí duas consequências
+práticas, e ambas já estão feitas:
+
+1. **Nada de código ficou por enviar.** Os sete worktrees da app que
+   tinham trabalho por commitar e o checkout partilhado do backoffice
+   foram commitados tal como estavam no disco e enviados. As mensagens
+   começam todas por `Em curso (snapshot para o PC do escritório,
+   2026-09-22)` e listam os ficheiros tocados — descrevem o que estava no
+   disco, não uma funcionalidade acabada. Ramos:
+
+   | Ramo | O que lá está a meio |
+   |---|---|
+   | `claude/upbeat-solomon-30a96c` | Secção 16 — simulador: `SimulatorScreen`, dados/modelos das simulações, Functions (`simulations`, `vertex`, `requests`, `types`), regras do Firestore, i18n, ROADMAP |
+   | `claude/nervous-lamarr-a104e4` | Simulações (app e Functions), `vertex`, `AuthContext`, modelos, i18n, textos legais, ecrã Perfil, `check-setup` |
+   | `claude/modest-cohen-538c30` | Consentimento, jobs (`events`, `followUps`, `retention`), simulações, `runJobs`, índices do Firestore, `functions/src/reads.ts` novo |
+   | `claude/silly-liskov-6b20e4` | Ecrãs (Início, Portfólio, Departamento, Eventos, Alertas, Perfil, Pedido de orçamento), `Photo`/`WorkGallery`/`ListState`, cloudinary, tema, `config.native.ts` e `utils/concurrency.ts` novos |
+   | `claude/sharp-zhukovsky-e70834` | Relatórios da auditoria de 2026-09-12 (geral, RGPD, segurança A e B), checklist de contas, ficha das lojas, `demo-account.mjs` |
+   | `claude/keen-bassi-f617ad` | `functions/src/texts.ts` |
+   | `claude/quirky-hypatia-021bd4` | `.env.production` com `EXPO_PUBLIC_CLOUDINARY_PRESET_SIMULATIONS` (preset da Secção 16) |
+   | backoffice: `claude/wip-escritorio-2026-09-22` | Modelos, ficha do cliente, página Simulações, `utils/format` |
+
+   Para pegar num deles: `git fetch` e `git switch <ramo>`; o contexto é a
+   mensagem de commit + o que a secção diz no `ROADMAP.md`. O ramo do
+   backoffice foi criado com `git commit-tree` fora do `HEAD` — o checkout
+   do backoffice é partilhado por várias conversas e não tem worktrees, por
+   isso não se lhe mexe no `master` nem na árvore de trabalho (ver a nota
+   do README do backoffice sobre staging parcial).
+
+2. **O que continua a não passar pelo git, e é de propósito.** A tabela
+   acima ("O que vem pelo git e o que não vem") mantém-se. Em concreto, o
+   que existe hoje só no PC de casa e tem de ser reposto no escritório:
+   `.env` da app, `.env` e `.env.production` do backoffice,
+   `serviceAccountKey.dev.json`, `serviceAccountKey.prod.json`,
+   `docs/store/acesso-revisao.local.md`, as sessões da Firebase CLI e do
+   EAS CLI, o SDK/AVD do Android, e as conversas e memória do Claude.
+   As chaves viajam por pen ou gestor de passwords — nunca por chat, nunca
+   por git.
+
+**Trabalhar de qualquer lado (telemóvel incluído).** O que já tem endereço
+público: o backoffice do dev em
+<https://marble-studios-backoffice-dev.web.app> (entra-se com a conta de
+admin do Firebase Auth; quem nunca definiu password usa "esqueci-me da
+password" no login). O backoffice de produção ainda não está publicado. A
+**app não tem versão web publicada** — só corre em `expo start` na máquina,
+e a Marble Dev do telemóvel aponta para o servidor 8081 dessa máquina, por
+isso de fora não há nada para abrir. Publicar o export web da app no
+Hosting do dev é o passo que falta para a ver de qualquer sítio.
+
 ### Instalar uma vez (PC novo)
 
 1. **Node.js LTS** (https://nodejs.org, instalador oficial — o

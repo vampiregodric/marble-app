@@ -17,9 +17,32 @@ secção específica, faz isto primeiro:
    saber onde ficámos.
 
 Diz ao Claude, no início dessa conversa, algo como: *"Estou a trabalhar no
-projeto Marble Studios em C:\Users\VGodr\Projects\marble-app — lê o
+projeto Marble Studios (a pasta `marble-app` deste PC) — lê o
 ROADMAP.md e ataca a Secção 4 — Ligar os 6 ecrãs a dados reais."* (usa
 sempre o nome completo da secção, nunca só o número)
+
+---
+
+## Transporte para o escritório (2026-09-22)
+
+O Fábio passou a trabalhar quase sempre no escritório (~12 h por dia) e
+quase nunca em casa. Nesse dia foi enviado para o GitHub **todo** o
+trabalho que existia só no disco de casa: sete ramos da app com secções a
+meio e um ramo do backoffice, com mensagens que começam por `Em curso
+(snapshot para o PC do escritório, 2026-09-22)`. A lista ramo a ramo, o
+que falta repor à mão em cada PC e o que já tem endereço público estão no
+`DEVELOPMENT.md`, "Segundo PC (escritório)" → "2026-09-22 — o escritório
+passa a ser o PC principal".
+
+Pendentes desse dia, que precisam do Fábio:
+
+- **Repositório `marble-app` ainda PÚBLICO no GitHub** (achado da auditoria
+  de 2026-09-12; confirmado outra vez a 2026-09-22 pela API sem
+  autenticação). Settings → General → Danger Zone → Change visibility.
+- **Chaves e `.env`** por levar para o escritório (pen ou gestor de
+  passwords).
+- **App sem versão web publicada** — é o que falta para a ver do escritório
+  ou do telemóvel sem o servidor de casa ligado.
 
 ---
 
