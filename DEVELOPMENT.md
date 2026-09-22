@@ -1630,10 +1630,73 @@ público: o backoffice do dev em
 <https://marble-studios-backoffice-dev.web.app> (entra-se com a conta de
 admin do Firebase Auth; quem nunca definiu password usa "esqueci-me da
 password" no login). O backoffice de produção ainda não está publicado. A
-**app não tem versão web publicada** — só corre em `expo start` na máquina,
+**app já tem versão web publicada** (no mesmo dia, ver a secção "A app na
+web (dev)" mais abaixo): <https://marble-studios-dev.web.app>. Sem ela a app
+só corria em `expo start` na máquina,
 e a Marble Dev do telemóvel aponta para o servidor 8081 dessa máquina, por
 isso de fora não há nada para abrir. Publicar o export web da app no
 Hosting do dev é o passo que falta para a ver de qualquer sítio.
+
+### A app na web (dev): marble-studios-dev.web.app
+
+Feito a 2026-09-22, para o Fábio poder abrir a app fora do PC onde ela
+corre (escritório, telemóvel, qualquer browser). É o **export web da app**
+publicado no site por usar do projeto **dev** — dados do
+`marble-studios-dev`, login normal, e o `#token=` do `npm run dev-token`
+também funciona neste domínio (testado: sessão de
+`teste.seccao2@example.com` ficou ativa).
+
+```bash
+npm run web:build     # exporta para dist/ e verifica o projeto do bundle
+npm run web:deploy    # o mesmo + publica no Hosting do dev
+```
+
+É uma **fotografia** do código no momento do deploy: depois de mudares
+alguma coisa, corre outra vez `npm run web:deploy`, senão o URL continua a
+mostrar a versão antiga. `dist/` não vai para o git.
+
+Três armadilhas que já custaram caro neste deploy — o `scripts/build-web.mjs`
+existe por causa delas:
+
+1. **`expo export` força sempre `NODE_ENV=production`** (documentado em
+   docs.expo.dev/guides/environment-variables) e a resolução normal dos
+   `.env` dá prioridade ao `.env.production`. Um export feito à mão sai a
+   apontar para o **projeto de produção** mesmo que o queiras para o dev —
+   foi o que aconteceu à primeira e esteve alguns minutos publicado assim.
+   O script copia o `.env` para um `.env.production.local` temporário (que
+   tem prioridade sobre o `.env.production`), exporta, e apaga-o sempre,
+   mesmo se o export falhar. No fim procura o nome do projeto errado dentro
+   do bundle e recusa-se a continuar se o encontrar.
+2. **Sem `--clear` o Metro reaproveita a cache** e o bundle sai com os
+   `EXPO_PUBLIC_*` do export anterior — o mesmo ficheiro, o mesmo hash, o
+   projeto errado lá dentro. O script passa sempre `--clear`.
+3. **O `ignore` do Hosting não pode ter `**/node_modules/**`** para este
+   alvo: as fontes exportadas ficam em
+   `dist/assets/node_modules/@expo-google-fonts/...`. Com essa regra o
+   deploy publicava 5 ficheiros em vez de 42, o servidor respondia o
+   `index.html` a cada pedido de `.ttf` (erro "OTS parsing error: invalid
+   sfntVersion: 1008813135" na consola — 1008813135 é `<!DO` em hexadecimal)
+   e a app ficava presa no spinner à espera das fontes. Está anotado dentro
+   do `firebase.json`.
+
+Nota de cache: `/_expo/**` e `/assets/**` vão com `max-age` de um ano
+(`immutable`) porque os nomes têm hash; o `index.html` vai com `no-cache`.
+Se um deploy mau chegar a ser servido, o browser fica com ele — foi preciso
+voltar a pedir as fontes com `fetch(url, {cache: "reload"})` para o corrigir
+sem esperar um ano.
+
+**Configuração** (já no git): `firebase.json` tem agora dois alvos de
+hosting — `legal` (as páginas legais, em `docs/`, no prod) e `app`
+(`dist/`); o `.firebaserc` liga o alvo `app` ao site `marble-studios-dev`.
+A CLI do Firebase não está instalada neste projeto: o script chama-a com
+`npx --yes --package firebase-tools firebase ...` (o pacote `firebase` das
+dependências é o SDK do cliente e não tem executável — `npx firebase` dá
+"could not determine executable to run").
+
+**Ainda não está feito:** não há versão web do **prod**. O
+`npm run web:build -- --prod` exporta com o `.env.production`, mas não há
+site nem alvo criado para isso, e a decisão de expor a app de produção num
+URL é do Fábio.
 
 ### Instalar uma vez (PC novo)
 

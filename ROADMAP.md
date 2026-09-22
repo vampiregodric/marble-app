@@ -41,8 +41,11 @@ Pendentes desse dia, que precisam do Fábio:
   autenticação). Settings → General → Danger Zone → Change visibility.
 - **Chaves e `.env`** por levar para o escritório (pen ou gestor de
   passwords).
-- **App sem versão web publicada** — é o que falta para a ver do escritório
-  ou do telemóvel sem o servidor de casa ligado.
+- ~~App sem versão web publicada~~ — **feito** a 2026-09-22:
+  <https://marble-studios-dev.web.app> (export web da app no Hosting do dev,
+  `npm run web:deploy` para atualizar). Abre no browser do escritório e no
+  telemóvel, com os dados do projeto dev. Falta decidir se alguma vez se
+  publica a versão de **produção** num URL.
 
 ---
 

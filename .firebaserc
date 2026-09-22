@@ -11,6 +11,13 @@
           "marble-studios-app"
         ]
       }
+    },
+    "marble-studios-dev": {
+      "hosting": {
+        "app": [
+          "marble-studios-dev"
+        ]
+      }
     }
   }
 }

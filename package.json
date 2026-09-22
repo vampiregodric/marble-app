@@ -59,7 +59,9 @@
     "auth:emails": "node scripts/auth-email-config.mjs",
     "functions:build": "npm --prefix functions run build",
     "functions:jobs": "npm --prefix functions run run-jobs --",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "web:build": "node scripts/build-web.mjs",
+    "web:deploy": "node scripts/build-web.mjs --deploy"
   },
   "private": true
 }
