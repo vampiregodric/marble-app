@@ -1547,6 +1547,26 @@ de tratamento de dados da Google Cloud cobre; se o modelo passar a existir
 em `europe-west1`, muda `VERTEX_LOCATION`); as imagens geradas trazem a
 marca de água SynthID da Google (invisível); App Check continua a ser a
 defesa a sério contra abuso do preset unsigned (Secção 11).
+**Endurecimento (Auditoria 2026-09-12, Pacote 5 — 2026-09-13):** os tectos
+do simulador passaram a contar em `system/simulationGuard.days.{dia}`
+(global) e `system/simulationUsage/clients/{uid}.days.{dia}` (por cliente),
+incrementados numa transação ANTES do Vertex e por dia civil de Lisboa —
+apagar simulações já não os zera (SEG-A-01). "Apagar simulação" na app é
+agora um `hiddenAt` (o cliente já não faz `delete`; o job diário apaga de
+facto o doc e os ficheiros), e a ligação ao pedido (`requestId`) é escrita
+pela Function `onRequestWritten`, não pela app (QUA-01). A Function recusa
+`photo.url`/amostras fora do Cloudinary da Marble sem sequer as ir buscar,
+com prazo de 15 s e tecto de 10 MB por imagem (SEG-A-06); resolve a
+amostra/trabalho em `samples/{id}`/`works/{id}` publicado e usa o texto da
+equipa no prompt, nunca o do cliente (SEG-A-07); exige
+`consent.simulatorVersion` na ficha (RGPD-07); grava só um código curto em
+`error` (o detalhe fica nos logs — SEG-A-13); e tem prazo interno de 150 s,
+com o job diário a fechar `pending` preso há mais de 1 h como
+`failed: 'timeout'` (SEG-A-18). Regras, Functions e página Simulações do
+backoffice atualizadas; casos novos em `scripts/check-firestore-auth.mjs`.
+Falta o Fábio: pôr um **alerta de orçamento** no Billing do Google Cloud
+(Billing → Budgets) do projeto prod — é o único tecto que trava o custo do
+Vertex de verdade se algo furar os limites da app.
 
 ### Secção 17 — Filtro por marca no Portfólio
 **Estado:** Feito (2026-09-08), verificado na app web (8084, dados do dev)

@@ -32,10 +32,16 @@ rules_version = '2';
 //   carregadas pela equipa; a app só lê as publicadas (a query TEM de
 //   incluir `where('published', '==', true)`, como em `works`).
 // - `simulations` (Secção 16): o cliente cria as suas (foto já no
-//   Cloudinary, estado 'pending', validada campo a campo), lê-as, liga-as a
-//   um pedido de orçamento (`requestId`, só isso) e apaga-as. O resultado e
-//   o estado são da Cloud Function (Admin SDK). A equipa lê todas (decisão
-//   do Fábio, 2026-09-09) e pode apagar.
+//   Cloudinary DA MARBLE, estado 'pending', validada campo a campo), lê-as
+//   e esconde-as ("Apagar simulação" na app = `hiddenAt`, só isso). O
+//   resultado, o estado e a ligação ao pedido (`requestId`) são da Cloud
+//   Function (Admin SDK); apagar de facto é da equipa e das Functions
+//   (retenção). A equipa lê todas (decisão do Fábio, 2026-09-09).
+//   Endurecido a 2026-09-13 (auditoria 2026-09-12, Pacote 5): sem
+//   `delete` do cliente, os tectos do simulador contam em `system/`, onde
+//   ele não chega, e um pedido nunca perde as imagens da simulação.
+// - `system`: contadores e estado interno das Functions — ninguém lê nem
+//   escreve pelo SDK de cliente.
 //
 // "Apagar conta" (RGPD) NÃO usa delete: o cliente anonimiza o próprio doc
 // (update, já permitido) e apaga o utilizador do Auth. `delete: false`
@@ -212,19 +218,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Só URLs de entrega do Cloudinary da Marble (cloud name kr9bmaqh, é
+    // público): a Function vai buscar estas imagens para as mandar ao
+    // modelo, e nunca pode ir a um URL escolhido pelo cliente (SSRF,
+    // ficheiros gigantes — auditoria 2026-09-12, SEG-A-06).
+    function isMarbleImage(u) {
+      return u is string && u.size() <= 600
+        && u.matches('^https://res\\.cloudinary\\.com/kr9bmaqh/image/upload/.+');
+    }
     // Uma imagem no Cloudinary, no formato que a app escreve (SimulationImage).
     function validImage(p) {
       return p.keys().hasOnly(['url', 'thumbnailUrl', 'publicId'])
         && p.keys().hasAll(['url', 'thumbnailUrl', 'publicId'])
-        && isStr(p.url, 600) && isStr(p.thumbnailUrl, 600) && isStr(p.publicId, 300);
+        && isMarbleImage(p.url) && isMarbleImage(p.thumbnailUrl) && isStr(p.publicId, 300);
     }
-    // A amostra ou o trabalho aplicado (SimulationSource): cópia na altura.
+    // A amostra ou o trabalho aplicado (SimulationSource): cópia na altura,
+    // para a app mostrar. A Function não confia nela: relê `samples/{id}` ou
+    // `works/{id}` e usa o texto e a foto da equipa (SEG-A-07).
     function validSimulationSource(s) {
       return s.keys().hasOnly(['type', 'id', 'name', 'photoUrl', 'thumbnailUrl', 'service', 'brand', 'finish'])
         && s.keys().hasAll(['type', 'id', 'name', 'photoUrl'])
         && s.type in ['sample', 'work']
-        && isStr(s.id, 100) && isStr(s.name, 120) && isStr(s.photoUrl, 600)
-        && (!('thumbnailUrl' in s) || isStr(s.thumbnailUrl, 600))
+        && isStr(s.id, 100) && isStr(s.name, 120) && isMarbleImage(s.photoUrl)
+        && (!('thumbnailUrl' in s) || isMarbleImage(s.thumbnailUrl))
         // `service` é palavra reservada na linguagem das regras — por índice.
         && (!('service' in s) || isStr(s['service'], 40))
         && (!('brand' in s) || isStr(s.brand, 60))
@@ -249,15 +265,27 @@ service cloud.firestore {
     match /simulations/{simulationId} {
       allow read: if ownsResource() || isAdmin();
       allow create: if signedIn() && validNewSimulation(request.resource.data);
-      // O dono só liga a simulação ao pedido de orçamento que acabou de
-      // enviar. Estado e resultado são da Function; apagar é do dono ou da
-      // equipa (a Function limpa os ficheiros no Cloudinary).
+      // O dono só ESCONDE a simulação ("Apagar simulação" na app): escreve
+      // `hiddenAt` = agora e nada mais. O job diário apaga-a de facto (doc e
+      // ficheiros). Estado, resultado e `requestId` (escrito pela Function
+      // ao criar o pedido de orçamento) são das Functions.
       allow update: if isAdmin()
         || (ownsResource()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requestId', 'updatedAt'])
-          && isStr(request.resource.data.requestId, 100)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hiddenAt', 'updatedAt'])
+          && request.resource.data.hiddenAt == request.time
           && request.resource.data.updatedAt == request.time);
-      allow delete: if ownsResource() || isAdmin();
+      // Apagar de facto: só a equipa e as Functions. Se o cliente pudesse
+      // apagar, os tectos e a ligação ao pedido dependiam de o doc existir
+      // (SEG-A-01, QUA-01).
+      allow delete: if isAdmin();
+    }
+
+    // Estado interno das Functions: contadores dos tectos do simulador
+    // (`system/simulationGuard`, `system/simulationUsage/clients/{uid}`) e
+    // dos pedidos (`system/requestGuard`). Só o Admin SDK — sem esta regra
+    // já era recusado (não há match), fica explícito.
+    match /system/{document=**} {
+      allow read, write: if false;
     }
   }
 }

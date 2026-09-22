@@ -20,7 +20,7 @@ import { categoryFullName } from '../data/categories';
 import { requestForm, RequestFormField } from '../data/requestForms';
 import { createRequest, deviceLimitReached, newRequestId, recordDeviceSend } from '../data/requests';
 import { useWork } from '../data/works';
-import { attachSimulationToRequest, useSimulation } from '../data/simulations';
+import { useSimulation } from '../data/simulations';
 import { canUseCamera, pickRequestPhotos, takeRequestPhoto } from '../media/requestPhotos';
 import { requestUploadConfigured, uploadRequestPhoto } from '../media/cloudinary';
 import { ContactPreference, DepartmentId, REQUEST_LIMITS, RequestField, RequestPhoto } from '../firebase/models';
@@ -233,9 +233,9 @@ export default function RequestQuoteScreen() {
             }
           : undefined,
       });
-      // A simulação fica a apontar para o pedido (só o dono pode fazê-lo;
-      // falhar aqui não é grave — a cópia já está no pedido).
-      if (simulation) await attachSimulationToRequest(simulation.id, id).catch(() => {});
+      // A ligação `simulations.requestId` é escrita pela Cloud Function ao
+      // processar o pedido (Admin SDK) — não depende da rede do telemóvel
+      // aguentar uma segunda escrita (auditoria 2026-09-12, QUA-01).
       await recordDeviceSend();
       setDone({ accountCreated, email: email.trim(), contact, phone: phone.trim() });
     } catch (err) {

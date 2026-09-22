@@ -17,7 +17,8 @@ import { usePublishedSamples } from '../data/samples';
 import {
   createSimulation,
   dailyLimitReached,
-  deleteSimulation,
+  hideSimulation,
+  isHidden,
   newSimulationId,
   sourceFromSample,
   sourceFromWork,
@@ -436,7 +437,9 @@ function ResultView({
     );
   }
   if (error) return <ErrorState error={error} />;
-  if (missing || !sim) {
+  // Escondida ("apagada" pelo cliente) conta como indisponível: o doc ainda
+  // existe até o job diário o apagar, mas a app não a mostra.
+  if (missing || !sim || isHidden(sim)) {
     return <EmptyState title={T.simulator.unavailableTitle} description={T.simulator.unavailableDesc} actionLabel={T.common.back} onAction={onBack} />;
   }
 
@@ -452,11 +455,14 @@ function ResultView({
     .filter(Boolean)
     .join(' · ');
 
+  // "Apagar" = esconder (hiddenAt); as Functions apagam de facto no job
+  // diário. Com pedido de orçamento anexado, a equipa continua a vê-la no
+  // pedido — o texto da confirmação diz isso.
   const remove = async () => {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteSimulation(sim.id);
+      await hideSimulation(sim.id);
       onDeleted();
     } catch {
       setDeleteError(T.simulator.deleteFailed);
@@ -538,7 +544,7 @@ function ResultView({
       <ActionSheet
         visible={confirmDelete}
         title={T.simulator.deleteTitle}
-        description={T.simulator.deleteDesc}
+        description={sim.requestId ? T.simulator.deleteDescAttached : T.simulator.deleteDesc}
         actions={[{ label: T.simulator.deleteYes, destructive: true, onPress: remove }]}
         onClose={() => setConfirmDelete(false)}
       />

@@ -685,11 +685,40 @@ export const SAMPLE_LIMITS = {
 } as const;
 
 // 'pending' → a Cloud Function ainda não correu; 'done' → `result` tem a
-// imagem; 'failed' → o modelo não devolveu imagem (a app mostra a
-// comparação lado a lado); 'limited' → o cliente passou
-// SIMULATION_LIMITS.perDayMax em 24 h; 'capped' → o projeto inteiro passou
-// o tecto diário (SIMULATION_DAILY_CAP em functions/.env).
+// imagem; 'failed' → não houve imagem (a app mostra a comparação lado a
+// lado; o motivo está em `error`); 'limited' → o cliente passou
+// SIMULATION_LIMITS.perDayMax hoje (dia de Lisboa); 'capped' → o projeto
+// inteiro passou o tecto diário (SIMULATION_DAILY_CAP em functions/.env).
 export type SimulationStatus = 'pending' | 'done' | 'failed' | 'limited' | 'capped';
+
+// Motivo de um 'failed', em código curto (auditoria 2026-09-12, SEG-A-13):
+// o cliente lê o doc, por isso a mensagem do Vertex/Cloudinary fica só nos
+// logs da Function. A app mostra sempre o mesmo texto; o backoffice
+// traduz com SIMULATION_ERROR_LABEL.
+export type SimulationErrorCode =
+  | 'no_consent' // sem consent.simulatorVersion na ficha (a Function recusa)
+  | 'bad_photo' // photo.url fora do Cloudinary da Marble
+  | 'bad_source' // amostra/trabalho inexistente, não publicado ou de outra categoria
+  | 'fetch_failed' // não foi possível obter uma das imagens (15 s, 10 MB)
+  | 'vertex_unavailable' // Vertex AI desligado, sem permissão ou em erro
+  | 'blocked' // filtros de segurança da Google
+  | 'no_image' // resposta sem imagem
+  | 'upload_failed' // o resultado não subiu para o Cloudinary
+  | 'timeout' // prazo da Function (150 s) ou 'pending' há mais de 1 h
+  | 'error';
+
+export const SIMULATION_ERROR_LABEL: Record<SimulationErrorCode, string> = {
+  no_consent: 'Sem consentimento do simulador na ficha',
+  bad_photo: 'Foto fora do Cloudinary da Marble',
+  bad_source: 'Amostra ou trabalho inexistente, não publicado ou de outra categoria',
+  fetch_failed: 'Não foi possível obter uma das imagens',
+  vertex_unavailable: 'Vertex AI indisponível (API, permissão ou erro)',
+  blocked: 'Bloqueado pelos filtros de segurança da Google',
+  no_image: 'O modelo não devolveu imagem',
+  upload_failed: 'O resultado não subiu para o Cloudinary',
+  timeout: 'Demorou demasiado (prazo da Function)',
+  error: 'Erro inesperado (ver logs das Functions)',
+};
 
 // Uma imagem no Cloudinary (foto do cliente ou resultado), no mesmo formato
 // das fotos dos pedidos. Tag `simulation_<id>`: é por ela que a Function
@@ -732,20 +761,26 @@ export interface Simulation {
   platform?: 'android' | 'ios' | 'web';
   // --- Cloud Function onSimulationWritten ---
   result?: SimulationImage;
-  error?: string;
+  error?: SimulationErrorCode | string;
   model?: string;
   durationMs?: number;
   processedAt?: Timestamp;
-  // --- app, ao enviar um pedido de orçamento com a simulação ---
+  // --- Cloud Function onRequestWritten, ao criar o pedido de orçamento
+  // com a simulação anexada (nunca a app — auditoria 2026-09-12, QUA-01) ---
   requestId?: string;
+  // --- app, "Apagar simulação": o cliente só esconde (regras); o job
+  // diário apaga de facto o doc e os ficheiros. As listas filtram
+  // `hiddenAt`; os tectos continuam a contar (SEG-A-01). ---
+  hiddenAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 // Limites partilhados entre a app, firestore.rules e as Functions.
 export const SIMULATION_LIMITS = {
-  // Por cliente em 24 h (decisão do Fábio, 2026-09-09). A app avisa antes;
-  // a Function marca 'limited' do lado dela.
+  // Por cliente e por dia (dia civil em Lisboa; decisão do Fábio,
+  // 2026-09-09). A app avisa antes; a Function marca 'limited' do lado
+  // dela, com contadores em `system/` que apagar simulações não altera.
   perDayMax: 5,
   // Simulações sem pedido de orçamento apagadas ao fim de N dias (job diário).
   retentionDays: 90,

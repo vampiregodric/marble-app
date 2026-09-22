@@ -23,10 +23,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { FieldPath, getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
+import { getFirestore, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where, limit } from 'firebase/firestore';
 
 const [keyPath, email = 'teste.seccao2@example.com'] = process.argv.slice(2);
 if (!keyPath) {
@@ -252,9 +252,12 @@ console.log(`  --   pedido de teste apagado (${spawned.size} alerta(s) da Functi
 
 // 8. Simulador "como ficaria" (Secção 16): amostras publicadas legíveis (a
 //    query com published == true, como a app), escrita recusada; a
-//    simulação bem formada é permitida, ligar ao pedido é permitido, mudar o
-//    estado/resultado é recusado, variantes inválidas recusadas, apagar a
-//    própria é permitido.
+//    simulação bem formada é permitida, mudar o estado/resultado é
+//    recusado, ligar ao pedido (requestId) é recusado — é a Function que o
+//    escreve —, variantes inválidas recusadas (incl. fotos fora do
+//    Cloudinary da Marble), esconder (hiddenAt) é permitido, apagar é
+//    recusado e os contadores em `system/` são ilegíveis (auditoria
+//    2026-09-12, Pacote 5).
 try {
   const snap = await getDocs(query(collection(db, 'samples'), where('published', '==', true)));
   pass(`samples: ${snap.size} amostra(s) publicada(s) legível(is)`);
@@ -279,16 +282,19 @@ try {
 } catch (e) {
   fail(`simulations: ler as do cliente: ${e.code ?? e.message}` + (e.code === 'failed-precondition' ? ' — índice em falta (firestore.indexes.json)' : ''));
 }
+// Só o Cloudinary da Marble (cloud name kr9bmaqh) passa nas regras — a
+// Function vai buscar estas imagens para o modelo.
+const CLOUDINARY = 'https://res.cloudinary.com/kr9bmaqh/image/upload';
 const img = (name) => ({
-  url: `https://res.cloudinary.com/demo/image/upload/c_limit,w_1600/${name}.jpg`,
-  thumbnailUrl: `https://res.cloudinary.com/demo/image/upload/c_fill,w_480,h_360/${name}.jpg`,
+  url: `${CLOUDINARY}/c_limit,w_1600/${name}.jpg`,
+  thumbnailUrl: `${CLOUDINARY}/c_fill,w_480,h_360/${name}.jpg`,
   publicId: `simulations/${name}`,
 });
 const validSimulation = {
   clientId: user.uid,
   kind: 'floor',
   photo: img('check-photo'),
-  source: { type: 'sample', id: 'sample-check', name: 'Amostra de teste', photoUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg', service: 'metallic-epoxy', brand: 'Xtreme' },
+  source: { type: 'sample', id: 'sample-check', name: 'Amostra de teste', photoUrl: `${CLOUDINARY}/samples/check.jpg`, service: 'metallic-epoxy', brand: 'Xtreme' },
   status: 'pending',
   platform: 'web',
   createdAt: serverTimestamp(),
@@ -296,21 +302,22 @@ const validSimulation = {
 };
 const simulationId = `check-${Date.now()}`;
 const simulationRef = doc(db, 'simulations', simulationId);
+const mustFailSim = async (label, patch) => {
+  try {
+    await updateDoc(simulationRef, patch);
+    fail(`simulations: ${label}: foi PERMITIDO — regras erradas`);
+  } catch (e) {
+    pass(`simulations: ${label}: recusado (${e.code}) — correto`);
+  }
+};
 try {
   await setDoc(simulationRef, validSimulation);
   pass('simulations: criar uma simulação válida — permitido');
-  try {
-    await updateDoc(simulationRef, { status: 'done', updatedAt: serverTimestamp() });
-    fail('simulations: o cliente conseguiu mudar o ESTADO — regras erradas');
-  } catch (e) {
-    pass(`simulations: mudar o estado: recusado (${e.code}) — correto`);
-  }
-  try {
-    await updateDoc(simulationRef, { requestId: requestId, updatedAt: serverTimestamp() });
-    pass('simulations: ligar ao pedido de orçamento (requestId) — permitido');
-  } catch (e) {
-    fail(`simulations: ligar ao pedido: ${e.code ?? e.message}`);
-  }
+  await mustFailSim('mudar o estado', { status: 'done', updatedAt: serverTimestamp() });
+  await mustFailSim('ligar ao pedido (requestId) pelo cliente', { requestId, updatedAt: serverTimestamp() });
+  await mustFailSim('esconder sem updatedAt', { hiddenAt: serverTimestamp() });
+  await mustFailSim('esconder com data inventada', { hiddenAt: new Date('2020-01-01'), updatedAt: serverTimestamp() });
+  await mustFailSim('esconder e mudar o resultado', { hiddenAt: serverTimestamp(), result: img('hack'), updatedAt: serverTimestamp() });
 } catch (e) {
   fail(`simulations: criar uma simulação válida: ${e.code ?? e.message}`);
 }
@@ -320,10 +327,19 @@ const invalidSimulations = {
   'campo da Function (result)': { ...validSimulation, result: img('hack') },
   'tipo inventado': { ...validSimulation, kind: 'boat' },
   'amostra sem foto': { ...validSimulation, source: { type: 'sample', id: 'x', name: 'x' } },
+  'foto fora do Cloudinary da Marble': { ...validSimulation, photo: { ...img('check-photo'), url: 'http://169.254.169.254/computeMetadata/v1/' } },
+  'miniatura fora do Cloudinary da Marble': { ...validSimulation, photo: { ...img('check-photo'), thumbnailUrl: 'https://tracker.example/pixel.gif' } },
+  'foto de outro cloud do Cloudinary': { ...validSimulation, photo: { ...img('check-photo'), url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg' } },
+  'amostra com foto fora do Cloudinary': { ...validSimulation, source: { ...validSimulation.source, photoUrl: 'https://speed.hetzner.de/10GB.bin' } },
+  'requestId na criação': { ...validSimulation, requestId },
+  'já escondida na criação': { ...validSimulation, hiddenAt: serverTimestamp() },
 };
+// Um id por caso: se um passasse, os seguintes no mesmo id seriam
+// `update` (recusado por outra regra) e o erro ficava escondido.
+let badN = 0;
 for (const [label, data] of Object.entries(invalidSimulations)) {
   try {
-    await setDoc(doc(db, 'simulations', `${simulationId}-bad`), data);
+    await setDoc(doc(db, 'simulations', `${simulationId}-bad-${++badN}`), data);
     fail(`simulations: simulação com ${label} foi PERMITIDA — regras erradas`);
   } catch (e) {
     pass(`simulations: simulação com ${label}: recusado (${e.code}) — correto`);
@@ -331,11 +347,41 @@ for (const [label, data] of Object.entries(invalidSimulations)) {
 }
 try {
   await deleteDoc(simulationRef);
-  pass('simulations: apagar a própria simulação — permitido (a Function limpa os ficheiros)');
+  fail('simulations: o cliente conseguiu APAGAR a simulação — regras erradas (os tectos e a ligação ao pedido dependiam disso)');
 } catch (e) {
-  fail(`simulations: apagar a própria: ${e.code ?? e.message}`);
-  await admin.collection('simulations').doc(simulationId).delete();
+  pass(`simulations: apagar a própria: recusado (${e.code}) — correto (só esconde)`);
 }
+try {
+  await updateDoc(simulationRef, { hiddenAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  pass('simulations: esconder a própria ("Apagar simulação" na app, hiddenAt) — permitido (o job diário apaga de facto)');
+} catch (e) {
+  fail(`simulations: esconder a própria: ${e.code ?? e.message}`);
+}
+// 9. Contadores dos tectos (system/): nem o próprio cliente lê os seus.
+try {
+  await getDoc(doc(db, 'system', 'simulationGuard'));
+  fail('system: o cliente conseguiu LER system/simulationGuard — regras erradas');
+} catch (e) {
+  pass(`system: ler system/simulationGuard: recusado (${e.code}) — correto`);
+}
+try {
+  await getDoc(doc(db, 'system', 'simulationUsage', 'clients', user.uid));
+  fail('system: o cliente conseguiu LER os seus contadores — regras erradas');
+} catch (e) {
+  pass(`system: ler system/simulationUsage/clients/<uid>: recusado (${e.code}) — correto`);
+}
+try {
+  await setDoc(doc(db, 'system', 'simulationUsage', 'clients', user.uid), { days: {} });
+  fail('system: o cliente conseguiu ZERAR os seus contadores — regras erradas');
+} catch (e) {
+  pass(`system: escrever nos contadores: recusado (${e.code}) — correto`);
+}
+// Limpeza (Admin SDK) das simulações de teste — no dev a Function pode
+// tê-las processado entretanto (ficam 'failed': bad_source, a amostra não
+// existe). Os "-bad-N" só existem se alguma regra tiver deixado passar.
+const testSims = await admin.collection('simulations').where(FieldPath.documentId(), '>=', simulationId).where(FieldPath.documentId(), '<', `${simulationId}~`).get();
+for (const d of testSims.docs) await d.ref.delete();
+console.log(`  --   ${testSims.size} simulação(ões) de teste apagada(s) (Admin SDK)`);
 
 console.log(ok ? 'Tudo certo.' : 'Há problemas — vê acima.');
 process.exit(ok ? 0 : 1);

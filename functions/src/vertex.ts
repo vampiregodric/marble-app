@@ -1,4 +1,5 @@
 import { GoogleAuth } from 'google-auth-library';
+import { SimulationError } from './types';
 
 // Modelo de imagem da Google pelo Vertex AI (Secção 16 — decisão do Fábio,
 // 2026-09-09: Vertex AI no MESMO projeto Google Cloud do Firebase, e não
@@ -9,13 +10,17 @@ import { GoogleAuth } from 'google-auth-library';
 //
 // O que o Fábio faz uma vez por projeto (ver DEVELOPMENT.md, "Simulador"):
 // ativar a API do Vertex AI e dar o papel "Vertex AI User" às contas de
-// serviço. Sem isso a chamada responde 403 e a simulação fica 'failed' —
-// a app mostra a comparação lado a lado.
+// serviço. Sem isso a chamada responde 403 e a simulação fica 'failed'
+// (`vertex_unavailable`) — a app mostra a comparação lado a lado.
 //
 // Sem SDK: um POST HTTPS a `generateContent` com as imagens em base64
 // (a foto do cliente e a amostra) e a instrução em texto; a resposta traz
 // a imagem editada em base64. Modelos com saída de imagem (Gemini
 // "Nano Banana"): gemini-3.1-flash-image (por defeito), gemini-3-pro-image.
+//
+// Erros: HTTP → SimulationError('vertex_unavailable') com a resposta na
+// mensagem (só para os logs — o cliente vê o código, auditoria 2026-09-12,
+// SEG-A-13); sem imagem → outcome com `code` 'blocked' ou 'no_image'.
 
 export type VertexConfig = {
   project: string;
@@ -29,7 +34,12 @@ export type VertexConfig = {
 
 export type ImageInput = { data: Buffer; mimeType: string };
 
-export type EditOutcome = { image: ImageInput; text?: string } | { image: null; reason: string };
+export type EditOutcome = { image: ImageInput; text?: string } | { image: null; code: 'blocked' | 'no_image'; reason: string };
+
+// Um pedido ao modelo demora 10–30 s; acima disto é o modelo a arrastar-se
+// e a Function tem um prazo interno (SIMULATION_DEADLINE_MS) que abrange
+// também as imagens e o upload.
+const VERTEX_TIMEOUT_MS = 120_000;
 
 let authCache: { key: string; auth: GoogleAuth } | null = null;
 
@@ -56,13 +66,17 @@ type GenerateResponse = {
   error?: { message?: string; status?: string };
 };
 
+// finishReason que significa "a Google recusou" e não "não saiu imagem".
+const BLOCKED_FINISH = new Set(['SAFETY', 'IMAGE_SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION', 'IMAGE_PROHIBITED_CONTENT', 'IMAGE_RECITATION']);
+
 // Pede ao modelo a foto editada. Devolve a imagem (bytes + mime) ou o
 // motivo de não haver imagem (bloqueio de segurança, resposta só com
-// texto). Lança em erro HTTP — quem chama marca a simulação como 'failed'.
-export async function generateEditedImage(cfg: VertexConfig, prompt: string, images: ImageInput[]): Promise<EditOutcome> {
+// texto). Lança SimulationError em erro HTTP — quem chama marca a
+// simulação como 'failed'. `signal` aborta o pedido (prazo interno).
+export async function generateEditedImage(cfg: VertexConfig, prompt: string, images: ImageInput[], signal?: AbortSignal): Promise<EditOutcome> {
   const client = await googleAuth(cfg).getClient();
   const token = (await client.getAccessToken()).token;
-  if (!token) throw new Error('Vertex AI: sem token de acesso (credenciais da conta de serviço)');
+  if (!token) throw new SimulationError('vertex_unavailable', 'Vertex AI: sem token de acesso (credenciais da conta de serviço)');
 
   const body = {
     contents: [
@@ -77,11 +91,19 @@ export async function generateEditedImage(cfg: VertexConfig, prompt: string, ima
     },
   };
 
-  const res = await fetch(vertexEndpoint(cfg), {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const signals = [AbortSignal.timeout(VERTEX_TIMEOUT_MS), ...(signal ? [signal] : [])];
+  let res: Response;
+  try {
+    res = await fetch(vertexEndpoint(cfg), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.any(signals),
+    });
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    throw new SimulationError('vertex_unavailable', `Vertex AI (${cfg.model}): ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
+  }
   const text = await res.text();
   if (!res.ok) {
     let msg = text.slice(0, 300);
@@ -91,17 +113,19 @@ export async function generateEditedImage(cfg: VertexConfig, prompt: string, ima
     } catch {
       /* corpo sem JSON */
     }
-    throw new Error(`Vertex AI (${cfg.model}) respondeu ${res.status} — ${msg}`);
+    throw new SimulationError('vertex_unavailable', `Vertex AI (${cfg.model}) respondeu ${res.status} — ${msg}`);
   }
   const parsed = JSON.parse(text) as GenerateResponse;
-  if (parsed.promptFeedback?.blockReason) return { image: null, reason: `bloqueado: ${parsed.promptFeedback.blockReason}` };
+  if (parsed.promptFeedback?.blockReason) return { image: null, code: 'blocked', reason: `bloqueado: ${parsed.promptFeedback.blockReason}` };
   const candidate = parsed.candidates?.[0];
   const parts = candidate?.content?.parts ?? [];
   const imagePart = parts.find((p) => p.inlineData?.data);
   const textPart = parts.find((p) => p.text)?.text;
   if (!imagePart?.inlineData?.data) {
-    const why = candidate?.finishReason && candidate.finishReason !== 'STOP' ? candidate.finishReason : textPart ? `só texto: ${textPart.slice(0, 120)}` : 'sem imagem na resposta';
-    return { image: null, reason: why };
+    const finish = candidate?.finishReason;
+    if (finish && BLOCKED_FINISH.has(finish)) return { image: null, code: 'blocked', reason: `bloqueado: ${finish}` };
+    const why = finish && finish !== 'STOP' ? finish : textPart ? `só texto: ${textPart.slice(0, 120)}` : 'sem imagem na resposta';
+    return { image: null, code: 'no_image', reason: why };
   }
   return {
     image: { data: Buffer.from(imagePart.inlineData.data, 'base64'), mimeType: imagePart.inlineData.mimeType || 'image/png' },

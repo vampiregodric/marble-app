@@ -60,6 +60,11 @@ export interface ClientConsent {
   termsAcceptedAt: Timestamp;
   marketing: boolean;
   marketingUpdatedAt: Timestamp | null;
+  // Simulador "como ficaria" (Secção 16): versão dos textos legais em que
+  // o cliente autorizou o uso das fotos. A Function onSimulationWritten
+  // recusa gerar sem isto (auditoria 2026-09-12, RGPD-07).
+  simulatorVersion?: string;
+  simulatorAcceptedAt?: Timestamp | null;
 }
 
 export interface Client {
@@ -119,6 +124,10 @@ export interface Work {
   description: string;
   photoUrl?: string;
   published: boolean;
+  // Tags da Secção 13 (ids de WORK_SERVICES da app) e marcas; o simulador
+  // usa a primeira de cada na instrução ao modelo.
+  services?: string[];
+  brands?: string[];
   completedAt?: Timestamp;
   followUp?: WorkFollowUp;
   newWorkNotifiedAt?: Timestamp;
@@ -235,10 +244,65 @@ export interface ServiceRequest {
 export type SimulationKind = 'floor' | 'car';
 export type SimulationStatus = 'pending' | 'done' | 'failed' | 'limited' | 'capped';
 
+// Motivo de um 'failed', em código curto (auditoria 2026-09-12, SEG-A-13):
+// o cliente lê o doc, por isso a mensagem completa do Vertex/Cloudinary
+// fica só nos logs da Function. A app mostra sempre o mesmo texto; o
+// backoffice traduz o código (SIMULATION_ERROR_LABEL em utils/format.ts).
+// - no_consent: clients/{uid}.consent.simulatorVersion em falta (RGPD-07)
+// - bad_photo: photo.url fora do Cloudinary da Marble (SEG-A-06)
+// - bad_source: amostra/trabalho inexistente, não publicado, de outra
+//   categoria ou com foto fora do Cloudinary (SEG-A-06/07)
+// - fetch_failed: não foi possível obter uma das imagens (estado, tamanho,
+//   15 s)
+// - vertex_unavailable: Vertex AI não configurado ou a responder erro
+// - blocked: filtros de segurança da Google
+// - no_image: resposta sem imagem
+// - upload_failed: o resultado não subiu para o Cloudinary
+// - timeout: prazo interno da Function (150 s) ou 'pending' há mais de
+//   1 h fechado pelo job diário (SEG-A-18)
+// - error: qualquer outra coisa
+export type SimulationErrorCode =
+  | 'no_consent'
+  | 'bad_photo'
+  | 'bad_source'
+  | 'fetch_failed'
+  | 'vertex_unavailable'
+  | 'blocked'
+  | 'no_image'
+  | 'upload_failed'
+  | 'timeout'
+  | 'error';
+
+// Erro com código: quem apanha grava `code` em `simulations.error` e a
+// mensagem no log.
+export class SimulationError extends Error {
+  readonly code: SimulationErrorCode;
+  constructor(code: SimulationErrorCode, message: string) {
+    super(message);
+    this.name = 'SimulationError';
+    this.code = code;
+  }
+}
+
 export interface SimulationImage {
   url: string;
   thumbnailUrl: string;
   publicId: string;
+}
+
+// Amostra do simulador (página Amostras do backoffice; Sample na app). A
+// Function lê-a para pôr na instrução ao modelo o texto da EQUIPA, e não a
+// cópia que o cliente escreveu em `simulations.source`.
+export interface Sample {
+  id: string;
+  name: string;
+  category: WorkCategory;
+  service?: string;
+  brand?: string;
+  finish?: 'gloss' | 'satin' | 'matte';
+  photoUrl: string;
+  thumbnailUrl?: string;
+  published: boolean;
 }
 
 // A amostra (ou a capa de um trabalho) aplicada — cópia na altura.
@@ -262,11 +326,17 @@ export interface Simulation {
   status: SimulationStatus;
   platform?: string;
   result?: SimulationImage;
-  error?: string;
+  error?: SimulationErrorCode | string;
   model?: string;
   durationMs?: number;
   processedAt?: Timestamp;
+  // Escrito pela Function onRequestWritten quando o pedido de orçamento
+  // com esta simulação é criado (QUA-01) — nunca pela app.
   requestId?: string;
+  // "Apagar simulação" na app: o cliente só esconde (regras); o job diário
+  // apaga de facto o doc e os ficheiros. Assim apagar não zera os tectos
+  // (SEG-A-01) nem tira ao pedido as imagens que ele mostra (QUA-01).
+  hiddenAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }

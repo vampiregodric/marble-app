@@ -467,7 +467,9 @@ export const pt = {
     tryAnother: 'Experimentar outra amostra',
     delete: 'Apagar simulação',
     deleteTitle: 'Apagar esta simulação?',
-    deleteDesc: 'A foto e o resultado são apagados. Se a tiveres anexado a um pedido de orçamento, a cópia no pedido fica com a equipa até o pedido fechar.',
+    deleteDesc: 'Deixa de aparecer no teu Perfil. A foto e o resultado são apagados dos nossos servidores no dia seguinte.',
+    deleteDescAttached:
+      'Deixa de aparecer no teu Perfil. Como a anexaste a um pedido de orçamento, a equipa continua a ver a foto e o resultado nesse pedido até ele fechar.',
     deleteYes: 'Sim, apagar',
     deleteFailed: 'Não foi possível apagar. Tenta outra vez.',
     unavailableTitle: 'Esta simulação já não está disponível.',

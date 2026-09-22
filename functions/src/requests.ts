@@ -105,6 +105,13 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   if (!fresh.exists || fresh.data()?.processedAt) return;
   const ts = Timestamp.fromDate(now);
 
+  // 0. Simulação anexada (Secção 16): a ligação `simulations.requestId` é
+  //    escrita aqui, com o Admin SDK, e não pela app — a rede do telemóvel
+  //    a cair entre as duas escritas deixava a simulação "sem pedido" e a
+  //    retenção apagava aos 90 dias os ficheiros que o pedido mostra
+  //    (auditoria 2026-09-12, QUA-01). Só se a simulação for deste cliente.
+  if (req.simulation?.id) await linkSimulation(db, req, ts, log);
+
   // 1. Anti-spam: o mesmo cliente com RATE_LIMIT_PER_DAY pedidos nas últimas
   //    24 h (além deste) fica marcado — aparece na página Pedidos com aviso,
   //    sem alerta interno nem email. Usa o índice clientId/createdAt.
@@ -175,6 +182,20 @@ export async function handleRequestCreated(db: Firestore, req: ServiceRequest, d
   }
   await ref.update(clean(patch));
   log(`pedido ${req.id} (${req.department}, ${req.name}): alerta interno ${teamAlertId}${confirmationId ? `, confirmação ${confirmationId}${locale === 'en' ? ' (en)' : ''}` : ' (cliente sem app)'}`);
+}
+
+async function linkSimulation(db: Firestore, req: ServiceRequest, ts: Timestamp, log: Log): Promise<void> {
+  const id = String(req.simulation?.id ?? '').slice(0, 100);
+  if (!id) return;
+  const simRef = db.collection('simulations').doc(id);
+  const sim = await simRef.get();
+  if (!sim.exists || sim.data()?.clientId !== req.clientId) {
+    log(`pedido ${req.id}: simulação ${id} ${sim.exists ? 'é de outro cliente' : 'não existe'} — ligação não escrita`);
+    return;
+  }
+  if (sim.data()?.requestId === req.id) return;
+  await simRef.update({ requestId: req.id, updatedAt: ts });
+  log(`pedido ${req.id}: simulação ${id} ligada (requestId)`);
 }
 
 // Um alerta interno por dia, não um por pedido: `system/requestGuard` guarda

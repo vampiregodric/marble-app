@@ -17,9 +17,12 @@
 //                                                                          #   partir do estado atual de vehicles/{id}.checkupRequest;
 //                                                                          #   --before none|pending|proposed|approved força o estado anterior
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --simulation <id>    # simula o trigger de uma simulação "como ficaria" acabada de criar
-//                                                                          #   (Secção 16): tectos, Vertex AI com a chave de dev (a conta de serviço
-//                                                                          #   precisa do papel "Vertex AI User"), resultado no Cloudinary; --daily-cap N
-//                                                                          #   liga o tecto global; VERTEX_LOCATION / VERTEX_IMAGE_MODEL no ambiente
+//                                                                          #   (Secção 16): consentimento, entradas, tectos (contadores em system/),
+//                                                                          #   Vertex AI com a chave de dev (a conta de serviço precisa do papel
+//                                                                          #   "Vertex AI User"), resultado no Cloudinary; --daily-cap N liga o tecto
+//                                                                          #   global; VERTEX_LOCATION / VERTEX_IMAGE_MODEL no ambiente. Um 'failed'
+//                                                                          #   mostra o código (no_consent, bad_photo, bad_source, …) — o detalhe
+//                                                                          #   está nas linhas do log acima
 //
 // ATENÇÃO: escreve a sério no Firestore de dev (cria alertas, marca passos
 // como enviados). É o mesmo código que corre no Firebase.

@@ -422,7 +422,9 @@ export const en: Strings = {
     tryAnother: 'Try another sample',
     delete: 'Delete simulation',
     deleteTitle: 'Delete this simulation?',
-    deleteDesc: 'The photo and the result are deleted. If you attached it to a quote request, the copy in the request stays with the team until the request is closed.',
+    deleteDesc: 'It disappears from your Profile. The photo and the result are deleted from our servers the next day.',
+    deleteDescAttached:
+      'It disappears from your Profile. Since you attached it to a quote request, the team keeps seeing the photo and the result in that request until it is closed.',
     deleteYes: 'Yes, delete',
     deleteFailed: 'Could not delete. Please try again.',
     unavailableTitle: 'This simulation is no longer available.',

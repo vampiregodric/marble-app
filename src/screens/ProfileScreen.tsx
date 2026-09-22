@@ -15,7 +15,7 @@ import { authErrorMessage } from '../auth/errors';
 import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
 import { checkupErrorMessage, checkupState, formatCheckupSlot } from '../data/checkups';
 import { useMyRequests } from '../data/requests';
-import { useMySimulations } from '../data/simulations';
+import { useMySimulations, visibleSimulations } from '../data/simulations';
 import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
@@ -110,7 +110,9 @@ export default function ProfileScreen() {
   const { data: requests } = useMyRequests(user?.uid);
   // Simulações "como ficaria" (Secção 16), em tempo real (o estado muda
   // quando a Cloud Function acaba).
-  const { data: simulations } = useMySimulations(user?.uid);
+  const { data: allSimulations } = useMySimulations(user?.uid);
+  // As "apagadas" pelo cliente ficam escondidas até o job diário as apagar.
+  const simulations = visibleSimulations(allSimulations);
 
   // Guarda o toggle localmente enquanto o Firestore confirma, para não saltar.
   const [pendingPrefs, setPendingPrefs] = useState<Partial<Client['notificationPrefs']>>({});
