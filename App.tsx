@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useFonts, AlexBrush_400Regular } from '@expo-google-fonts/alex-brush';
-import { Jost_400Regular, Jost_500Medium, Jost_600SemiBold } from '@expo-google-fonts/jost';
+import { Jost_500Medium } from '@expo-google-fonts/jost';
 import {
   Manrope_400Regular,
   Manrope_500Medium,
@@ -18,25 +19,41 @@ import { AuthProvider } from './src/auth/AuthContext';
 // Inicializa o Firebase no arranque (lê .env). Falha cedo se a config faltar.
 import './src/firebase/config';
 
+// O ecrã de arranque nativo (app.json → expo-splash-screen) fica visível até
+// as fontes estarem prontas, em vez de um ecrã intermédio com um indicador
+// (DES-09 da auditoria de 2026-09-12). Chama-se fora do componente, como a
+// documentação pede, para não chegar tarde. Na web não há splash — a função
+// é um no-op e o que se vê é o fundo preto (ver abaixo).
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    AlexBrush_400Regular,
-    Jost_400Regular,
+  // Só as faces usadas nos estilos (src/theme/theme.ts). As três que aqui
+  // estavam sem uso — AlexBrush, Jost 400 e Jost 600, 233 KB — saíram na
+  // auditoria de 2026-09-12; se uma voltar a fazer falta, entra aqui e no
+  // mapa `fonts` do tema.
+  const [fontsLoaded, fontError] = useFonts({
     Jost_500Medium,
-    Jost_600SemiBold,
     Manrope_400Regular,
     Manrope_500Medium,
     Manrope_600SemiBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
   });
+  // Com erro a app arranca na mesma, com as fontes do sistema — fica
+  // diferente, mas funciona. Antes ficava presa no indicador para sempre
+  // (QUA-07).
+  const ready = fontsLoaded || !!fontError;
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={colors.gold} />
-      </View>
-    );
+  useEffect(() => {
+    if (!ready) return;
+    if (fontError) console.warn('Fontes da app não carregaram; a usar as do sistema.', fontError);
+    SplashScreen.hideAsync().catch(() => undefined);
+  }, [ready, fontError]);
+
+  if (!ready) {
+    // No telemóvel o splash está por cima disto; na web é o fundo preto sem
+    // indicador durante o carregamento das fontes (menos de um segundo).
+    return <View style={styles.loading} />;
   }
 
   return (
@@ -57,7 +74,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.screen },
+  loading: { flex: 1, backgroundColor: colors.screen },
   webFrame: { flex: 1, backgroundColor: colors.screen, alignItems: 'center' },
   webColumn: {
     flex: 1,

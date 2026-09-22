@@ -38,10 +38,13 @@ export function EmptyState({ title, description, actionLabel, onAction }: EmptyP
 
 // Mensagem legível para o cliente; o código técnico fica em baixo, pequeno,
 // para o Fábio conseguir diagnosticar (ex: failed-precondition = índice em falta).
-export function ErrorState({ error }: { error: FirestoreError }) {
+// `compact` para quando o erro vive dentro de um bloco de um ecrã que
+// continua a funcionar (o carrossel do Início, os trabalhos recentes de um
+// departamento) e não pode ocupar o ecrã inteiro.
+export function ErrorState({ error, compact }: { error: FirestoreError; compact?: boolean }) {
   const friendly = error.code === 'unavailable' ? S.common.offline : S.errors.loadFailed;
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       <Text style={styles.title}>{friendly}</Text>
       <Text style={styles.code}>{error.code}</Text>
     </View>
@@ -50,6 +53,7 @@ export function ErrorState({ error }: { error: FirestoreError }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48, gap: 6 },
+  wrapCompact: { paddingVertical: 12 },
   title: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.inkMuted, textAlign: 'center' },
   desc: { fontFamily: fonts.body, fontSize: 11.5, lineHeight: 17, color: colors.inkFaint, textAlign: 'center' },
   code: { fontFamily: fonts.body, fontSize: 9, color: colors.inkFaint, marginTop: 4 },

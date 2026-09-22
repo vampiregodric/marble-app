@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { collection, doc, limit, orderBy, query, where } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { collection, doc, getCountFromServer, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { COLLECTIONS, Work, WorkServiceId, workServiceLabel } from '../firebase/models';
 import { useFirestoreDoc, useFirestoreList, DocState, ListState } from './firestoreHooks';
@@ -11,13 +11,82 @@ import { S } from '../i18n';
 // Índices compostos correspondentes em firestore.indexes.json.
 
 const worksCol = collection(db, COLLECTIONS.works);
+// Contagem do cabeçalho do Portfólio: uma leitura, não W documentos.
+const publishedCount = query(worksCol, where('published', '==', true));
 
-// Todos os trabalhos publicados, mais recentes primeiro. O filtro por
-// categoria faz-se no ecrã (uma só escuta; mudar de chip é instantâneo e o
-// cabeçalho mostra o total).
-export function usePublishedWorks(): ListState<Work> {
-  const q = useMemo(() => query(worksCol, where('published', '==', true), orderBy('completedAt', 'desc')), []);
-  return useFirestoreList<Work>(q);
+// Trabalhos por página do Portfólio (DES-01).
+export const WORKS_PAGE = 30;
+
+export type PublishedWorks = ListState<Work> & {
+  // Total de trabalhos publicados, venha ou não tudo na lista (o cabeçalho
+  // mostra-o); null enquanto não se sabe ou se a contagem falhar.
+  total: number | null;
+  // Há mais para lá do que já veio.
+  hasMore: boolean;
+  // Uma página nova está a caminho (a lista mantém o que já tinha).
+  loadingMore: boolean;
+  loadMore: () => void;
+};
+
+// Trabalhos publicados, mais recentes primeiro, `pageSize` de cada vez
+// (DES-01 da auditoria de 2026-09-12: antes lia a coleção inteira a cada
+// abertura). É UMA escuta cujo limite cresce em `loadMore()` (30 → 60 →
+// 90…): o SDK reabre-a com o limite novo e o ecrã mantém o que já tinha até
+// o snapshot seguinte chegar. Preferiu-se isto a uma escuta por página com
+// `startAfter`: em tempo real, um trabalho publicado a meio desloca a
+// fronteira entre páginas e um item desaparecia até recarregar; aqui há uma
+// lista só, e reler as primeiras N ao crescer custa nada à escala da Marble
+// (dezenas de trabalhos). O filtro por categoria/serviço/marca continua em
+// memória, sobre o que já veio — o Portfólio pede mais quando chega ao fim
+// ou quando o recorte fica vazio. Passar a filtrar na query (dois índices
+// novos) só quando o volume o pedir.
+// O total do cabeçalho vem do servidor (`getCountFromServer`, uma leitura)
+// só quando a lista está cheia; se vieram menos do que o limite, o total é
+// o tamanho da lista.
+export function usePublishedWorks(pageSize = WORKS_PAGE): PublishedWorks {
+  const [max, setMax] = useState(pageSize);
+  const q = useMemo(() => query(worksCol, where('published', '==', true), orderBy('completedAt', 'desc'), limit(max)), [max]);
+  const state = useFirestoreList<Work>(q);
+  const [total, setTotal] = useState<number | null>(null);
+  const full = state.data.length >= max;
+
+  useEffect(() => {
+    // Enquanto uma página nova está a caminho, `data` é a anterior — espera.
+    if (state.loading) return;
+    if (!full) {
+      setTotal(state.data.length);
+      return;
+    }
+    let alive = true;
+    getCountFromServer(publishedCount)
+      .then((snap) => {
+        if (alive) setTotal(snap.data().count);
+      })
+      .catch(() => {
+        if (alive) setTotal(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [state.data, state.loading, full]);
+
+  // Só cresce quando a página atual já chegou cheia — dois pedidos seguidos
+  // (fim da lista e recorte vazio) não saltam uma página.
+  const lengthRef = useRef(0);
+  lengthRef.current = state.data.length;
+  const loadMore = useCallback(() => setMax((m) => (lengthRef.current >= m ? m + pageSize : m)), [pageSize]);
+
+  const loadingMore = state.loading && state.data.length > 0;
+  return {
+    data: state.data,
+    // `loading` só na primeira carga: ao crescer, o ecrã mantém a grelha.
+    loading: state.loading && state.data.length === 0,
+    error: state.error,
+    total,
+    hasMore: !state.loading && (total !== null ? state.data.length < total : full),
+    loadingMore,
+    loadMore,
+  };
 }
 
 // Destaques escolhidos pela equipa para o carrossel do Início, na ordem que

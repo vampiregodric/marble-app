@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Pressable, ActivityIndicator, ListRenderItem } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,12 @@ import { enablePush, openNotificationSettings } from '../push/push';
 import { usePushPermission } from '../push/usePushPermission';
 import { timeAgo } from '../utils/dates';
 import { useT } from '../i18n';
+
+// Lado da miniatura de cada alerta (styles.thumb). Passa-se ao Photo para
+// pedir ao Cloudinary uma variante pequena em vez da foto de 1600 px.
+const THUMB = 44;
+
+const keyOf = (a: AppNotification) => a.id;
 
 // Alertas do cliente (lembretes de checkup, novos trabalhos, ofertas,
 // eventos), em tempo real. Tocar num alerta marca-o como lido e abre o que
@@ -52,16 +58,20 @@ export default function AlertsScreen() {
     }
   };
 
-  const open = (a: AppNotification) => {
-    if (!a.read) {
-      // Não bloqueia a navegação; se falhar (offline), o ponto volta a aparecer
-      // no próximo snapshot e o cliente pode tocar outra vez.
-      markNotificationRead(a.id).catch(() => {});
-    }
-    if (a.relatedWorkId) navigation.navigate('WorkDetail', { workId: a.relatedWorkId });
-    else if (a.relatedEventId) navigation.navigate('Tabs', { screen: 'Events' });
-    else if (a.relatedVehicleId || a.relatedRequestId) navigation.navigate('Tabs', { screen: 'Profile' });
-  };
+  const open = useCallback(
+    (a: AppNotification) => {
+      if (!a.read) {
+        // Não bloqueia a navegação; se falhar (offline), o ponto volta a aparecer
+        // no próximo snapshot e o cliente pode tocar outra vez.
+        markNotificationRead(a.id).catch(() => {});
+      }
+      if (a.relatedWorkId) navigation.navigate('WorkDetail', { workId: a.relatedWorkId });
+      else if (a.relatedEventId) navigation.navigate('Tabs', { screen: 'Events' });
+      else if (a.relatedVehicleId || a.relatedRequestId) navigation.navigate('Tabs', { screen: 'Profile' });
+    },
+    [navigation]
+  );
+  const renderItem: ListRenderItem<AppNotification> = useCallback(({ item }) => <AlertRow alert={item} onPress={open} />, [open]);
 
   const subtitle = loading ? T.common.loading : unreadCount === 0 ? T.alerts.allRead : T.alerts.unread(unreadCount);
   const pushCta = push === 'denied' ? T.alerts.openSettings : T.alerts.enable;
@@ -97,35 +107,47 @@ export default function AlertsScreen() {
       ) : alerts.length === 0 ? (
         <EmptyState title={T.alerts.emptyTitle} description={T.alerts.emptyDesc} />
       ) : (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {alerts.map((a) => (
-            <Pressable
-              key={a.id}
-              style={styles.row}
-              onPress={() => open(a)}
-              accessibilityRole="button"
-              accessibilityLabel={`${a.title}${a.read ? '' : T.alerts.unreadA11y}`}
-            >
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>{a.title}</Text>
-                <View style={styles.rowContent}>
-                  <View style={styles.rowText}>
-                    <Text style={styles.rowDesc}>{a.description}</Text>
-                    <Text style={styles.rowTime}>{timeAgo(a.createdAt)}</Text>
-                  </View>
-                  <View style={styles.thumb}>
-                    <Photo url={a.photoUrl} seed={a.type} />
-                  </View>
-                </View>
-              </View>
-              {!a.read && <View style={styles.unreadDot} />}
-            </Pressable>
-          ))}
-        </ScrollView>
+        // FlatList (DES-03): a query traz até 100 alertas; só os que estão à
+        // vista (e uma janela à volta) ficam montados e pedem a miniatura.
+        <FlatList
+          data={alerts}
+          keyExtractor={keyOf}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </SafeAreaView>
   );
 }
+
+// Uma linha. Memoizada: um snapshot novo (ex: um alerta marcado como lido)
+// só volta a desenhar as linhas cujo documento mudou.
+const AlertRow = memo(function AlertRow({ alert: a, onPress }: { alert: AppNotification; onPress: (a: AppNotification) => void }) {
+  const T = useT();
+  return (
+    <Pressable
+      style={styles.row}
+      onPress={() => onPress(a)}
+      accessibilityRole="button"
+      accessibilityLabel={`${a.title}${a.read ? '' : T.alerts.unreadA11y}`}
+    >
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle}>{a.title}</Text>
+        <View style={styles.rowContent}>
+          <View style={styles.rowText}>
+            <Text style={styles.rowDesc}>{a.description}</Text>
+            <Text style={styles.rowTime}>{timeAgo(a.createdAt)}</Text>
+          </View>
+          <View style={styles.thumb}>
+            <Photo url={a.photoUrl} seed={a.type} width={THUMB} />
+          </View>
+        </View>
+      </View>
+      {!a.read && <View style={styles.unreadDot} />}
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
@@ -161,7 +183,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   rowDesc: { fontFamily: fonts.body, fontSize: 10.5, color: colors.inkMuted, lineHeight: 15 },
   rowTime: { fontFamily: fonts.body, fontSize: 8.5, color: colors.inkFaint, marginTop: 6 },
-  thumb: { width: 44, height: 44, borderRadius: 9, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden', backgroundColor: colors.panel2 },
+  thumb: { width: THUMB, height: THUMB, borderRadius: 9, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden', backgroundColor: colors.panel2 },
   unreadDot: {
     position: 'absolute',
     top: 13,

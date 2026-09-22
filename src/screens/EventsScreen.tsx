@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Pressable, ListRenderItem } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
@@ -8,6 +8,7 @@ import { LocationIcon } from '../components/Icons';
 import { useEvents } from '../data/events';
 import { MarbleEvent } from '../firebase/models';
 import { monthShort, isSameDay } from '../utils/dates';
+import { useAppWidth } from '../utils/layout';
 import { S, useT } from '../i18n';
 
 const FILTERS = ['upcoming', 'past'] as const;
@@ -19,6 +20,8 @@ function statusOf(e: MarbleEvent, past: boolean): string {
   return S.events.statusSoon;
 }
 
+const keyOf = (e: MarbleEvent) => e.id;
+
 // Eventos onde a Marble Studios vai estar (feiras, car meets, open days).
 // Público, sem login. Só a equipa cria eventos (backoffice, Secção 5).
 export default function EventsScreen() {
@@ -27,6 +30,14 @@ export default function EventsScreen() {
   const showingPast = active === 'past';
   const list = showingPast ? past : upcoming;
   const T = useT();
+  // Largura da foto de cada cartão: o ecrã menos as margens da lista (18 de
+  // cada lado). Vai ao Photo para pedir a variante certa em vez dos 1600 px.
+  const photoW = useAppWidth() - 36;
+
+  const renderItem: ListRenderItem<MarbleEvent> = useCallback(
+    ({ item }) => <EventCard event={item} past={showingPast} width={photoW} />,
+    [showingPast, photoW]
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -53,41 +64,52 @@ export default function EventsScreen() {
           description={showingPast ? T.events.emptyPastDesc : T.events.emptyUpcomingDesc}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {list.map((e) => {
-            const d = e.date?.toDate();
-            return (
-              <View key={e.id} style={styles.card}>
-                <View style={styles.photo}>
-                  <Photo url={e.photoUrl} seed={e.id} />
-                  <View style={styles.photoOverlay} />
-                  {d ? (
-                    <View style={styles.dateBadge}>
-                      <Text style={styles.dateDay}>{String(d.getDate()).padStart(2, '0')}</Text>
-                      <Text style={styles.dateMon}>{monthShort(d.getMonth())}</Text>
-                    </View>
-                  ) : null}
-                  <View style={styles.statusBadge}>
-                    <Text style={[styles.statusText, showingPast && styles.statusTextPast]}>{statusOf(e, showingPast)}</Text>
-                  </View>
-                </View>
-                <View style={styles.body}>
-                  <Text style={styles.eventTitle}>{e.title}</Text>
-                  {e.location ? (
-                    <View style={styles.metaRow}>
-                      <LocationIcon size={11} color={colors.gold} />
-                      <Text style={styles.metaText}>{e.location}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+        // FlatList (DES-03): só os cartões à vista ficam montados e pedem a
+        // foto. Sem `getItemLayout`: a altura do cartão varia com o título
+        // (pode ocupar duas linhas) e com a linha do local.
+        <FlatList
+          data={list}
+          keyExtractor={keyOf}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </SafeAreaView>
   );
 }
+
+// Um cartão. Memoizado: um snapshot novo só volta a desenhar os cartões
+// cujo evento mudou.
+const EventCard = memo(function EventCard({ event: e, past, width }: { event: MarbleEvent; past: boolean; width: number }) {
+  const d = e.date?.toDate();
+  return (
+    <View style={styles.card}>
+      <View style={styles.photo}>
+        <Photo url={e.photoUrl} seed={e.id} width={width} />
+        <View style={styles.photoOverlay} />
+        {d ? (
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateDay}>{String(d.getDate()).padStart(2, '0')}</Text>
+            <Text style={styles.dateMon}>{monthShort(d.getMonth())}</Text>
+          </View>
+        ) : null}
+        <View style={styles.statusBadge}>
+          <Text style={[styles.statusText, past && styles.statusTextPast]}>{statusOf(e, past)}</Text>
+        </View>
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.eventTitle}>{e.title}</Text>
+        {e.location ? (
+          <View style={styles.metaRow}>
+            <LocationIcon size={11} color={colors.gold} />
+            <Text style={styles.metaText}>{e.location}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },

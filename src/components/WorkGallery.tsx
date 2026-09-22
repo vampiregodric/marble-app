@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { View, Text, FlatList, Pressable, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, ListRenderItem } from 'react-native';
 import { colors, fonts } from '../theme/theme';
 import Photo from './Photo';
 import { GalleryItem } from '../data/works';
@@ -20,15 +20,25 @@ type Props = {
   onOpen?: (index: number) => void;
 };
 
+const keyOf = (item: GalleryItem) => item.key;
+
 export default function WorkGallery({ items, seed, width, height, overlay, onOpen }: Props) {
   const [active, setActive] = useState(0);
   const many = items.length > 1;
-  const T = useT();
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.max(0, Math.min(items.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)));
     if (idx !== active) setActive(idx);
   };
+
+  const renderItem: ListRenderItem<GalleryItem> = useCallback(
+    ({ item, index }) => <GallerySlide item={item} index={index} count={items.length} seed={seed} width={width} height={height} onOpen={onOpen} />,
+    [items.length, seed, width, height, onOpen]
+  );
+  const getItemLayout = useCallback(
+    (_: ArrayLike<GalleryItem> | null | undefined, index: number) => ({ length: width, offset: width * index, index }),
+    [width]
+  );
 
   return (
     <View>
@@ -36,36 +46,24 @@ export default function WorkGallery({ items, seed, width, height, overlay, onOpe
         {items.length === 0 ? (
           <Photo url={null} seed={seed} />
         ) : (
-          <ScrollView
+          // FlatList em vez de ScrollView (DES-11 da auditoria de 2026-09-12):
+          // só o item à vista e os vizinhos ficam montados, por isso um
+          // trabalho com dez fotos descarrega uma ao abrir, não dez. O mesmo
+          // padrão do MediaViewer.
+          <FlatList
+            data={items}
+            keyExtractor={keyOf}
+            renderItem={renderItem}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            getItemLayout={getItemLayout}
+            initialNumToRender={1}
+            windowSize={3}
             onScroll={onScroll}
             scrollEventThrottle={16}
             style={{ width, height }}
-          >
-            {items.map((item, i) => (
-              <Pressable
-                key={item.key}
-                style={{ width, height }}
-                onPress={onOpen ? () => onOpen(i) : undefined}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={T.gallery.itemA11y(item.type, i + 1, items.length)}
-              >
-                {/* Foto INTEIRA (decisão do Fábio, 2026-09-09: no Detalhe a foto
-                    do trabalho tem de se ver completa); a margem fica no
-                    fundo escuro. A miniatura do vídeo segue a mesma regra. */}
-                <Photo url={item.type === 'video' ? item.thumbnailUrl : item.url} seed={`${seed}-${i}`} fit="contain" />
-                {item.type === 'video' ? (
-                  <View style={styles.videoPillWrap} pointerEvents="none">
-                    <View style={styles.videoPill}>
-                      <Text style={styles.videoPillText}>{T.gallery.seeVideo}</Text>
-                    </View>
-                  </View>
-                ) : null}
-              </Pressable>
-            ))}
-          </ScrollView>
+          />
         )}
         {overlay ? (
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -92,6 +90,49 @@ export default function WorkGallery({ items, seed, width, height, overlay, onOpe
     </View>
   );
 }
+
+// Um slide. Memoizado: deslizar muda `active` no pai e não deve voltar a
+// desenhar os slides (nem pedir as fotos outra vez).
+const GallerySlide = memo(function GallerySlide({
+  item,
+  index,
+  count,
+  seed,
+  width,
+  height,
+  onOpen,
+}: {
+  item: GalleryItem;
+  index: number;
+  count: number;
+  seed: string;
+  width: number;
+  height: number;
+  onOpen?: (index: number) => void;
+}) {
+  const T = useT();
+  return (
+    <Pressable
+      style={{ width, height }}
+      onPress={onOpen ? () => onOpen(index) : undefined}
+      accessibilityRole="imagebutton"
+      accessibilityLabel={T.gallery.itemA11y(item.type, index + 1, count)}
+    >
+      {/* Foto INTEIRA (decisão do Fábio, 2026-09-09: no Detalhe a foto do
+          trabalho tem de se ver completa); a margem fica no fundo escuro. A
+          miniatura do vídeo segue a mesma regra. `width` pede ao Cloudinary a
+          variante da largura do herói em vez dos 1600 px (DES-02). */}
+      <Photo url={item.type === 'video' ? item.thumbnailUrl : item.url} seed={`${seed}-${index}`} fit="contain" width={width} />
+      {item.type === 'video' ? (
+        <View style={styles.videoPillWrap} pointerEvents="none">
+          <View style={styles.videoPill}>
+            <Text style={styles.videoPillText}>{T.gallery.seeVideo}</Text>
+          </View>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   hero: { position: 'relative', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },

@@ -437,7 +437,7 @@ export default function ProfileScreen() {
                   accessibilityLabel={actionable ? T.checkup.rowA11y(v.name, T.checkup.rowStatus[state]) : undefined}
                 >
                   <View style={styles.assetThumb}>
-                    <Photo url={v.photoUrl} seed={v.id} />
+                    <Photo url={v.photoUrl} seed={v.id} width={38} />
                   </View>
                   <View style={styles.assetText}>
                     <Text style={styles.assetName} numberOfLines={1}>
@@ -562,8 +562,11 @@ export default function ProfileScreen() {
 
       <ActionSheet visible={avatarMenu} title={T.profile.avatarMenuTitle} actions={avatarActions} onClose={() => setAvatarMenu(false)} />
 
-      {/* Agendamento de checkup (Secção 8). */}
-      <CheckupSheet vehicle={sheetVehicle} onClose={() => setSheetVehicle(null)} />
+      {/* Agendamento de checkup (Secção 8). Só montada enquanto está aberta:
+          montada sempre, a escuta de settings/checkups que ela abre ficava
+          viva a sessão inteira, mesmo para quem nunca pede um checkup
+          (DES-14 da auditoria de 2026-09-12). */}
+      {sheetVehicle ? <CheckupSheet vehicle={sheetVehicle} onClose={() => setSheetVehicle(null)} /> : null}
       <ActionSheet visible={!!rowVehicle} title={rowVehicle?.name} actions={rowActions} onClose={() => setRowVehicle(null)} />
       <ActionSheet
         visible={!!cancelVehicle}

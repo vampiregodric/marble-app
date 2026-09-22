@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
 import PlaceholderThumb from '../components/PlaceholderThumb';
+import { ErrorState } from '../components/ListState';
 import { useFeaturedWorks } from '../data/works';
 import { useHomeSettings } from '../data/settings';
 import { DEPARTMENTS } from '../data/departments';
@@ -108,11 +109,17 @@ export default function HomeScreen() {
   const nameSizes = useMemo(() => deptNameSizes(DEPARTMENTS.map((d) => d.name), deptCardW - 26), [deptCardW]);
 
   // Carrossel: destaques escolhidos pela equipa (works.featured), em tempo real.
-  const { data: featured, loading } = useFeaturedWorks(5);
+  const { data: featured, loading, error: featuredError } = useFeaturedWorks(5);
   // Fotos dos cartões de departamento, escolhidas pela equipa no backoffice
   // (settings/home). Sem foto, o cartão fica no gradiente — nunca um ícone.
-  const { data: home } = useHomeSettings();
+  const { data: home, error: homeError } = useHomeSettings();
   const covers = home?.departmentCovers ?? {};
+  // Um erro do Firestore (regras, índice em falta no prod, sem rede) aparece
+  // no carrossel — antes era descartado e o Início parecia só "vazio", no
+  // ecrã que toda a gente vê primeiro (QUA-03 da auditoria de 2026-09-12).
+  // Se os destaques vieram e só as fotos dos cartões falharam, mostram-se os
+  // destaques: os cartões já caem no gradiente por si.
+  const loadError = featuredError ?? (featured.length === 0 ? homeError : null);
 
   // O carrossel é vertical: a página é a altura de um slide.
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -234,6 +241,10 @@ export default function HomeScreen() {
             {loading ? (
               <View style={[styles.slide, { width: slideW, height: slideH }]}>
                 <PlaceholderThumb variant={2} style={StyleSheet.absoluteFill} />
+              </View>
+            ) : loadError ? (
+              <View style={[styles.slide, { width: slideW, height: slideH }]}>
+                <ErrorState error={loadError} compact />
               </View>
             ) : featured.length === 0 ? (
               <Pressable style={[styles.slide, { width: slideW, height: slideH }]} onPress={() => openPortfolio()}>

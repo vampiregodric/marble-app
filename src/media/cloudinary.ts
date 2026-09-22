@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { PixelRatio, Platform } from 'react-native';
 import { RequestPhoto, SimulationImage } from '../firebase/models';
 import { S } from '../i18n';
 
@@ -65,6 +65,21 @@ export function cloudinaryWhole(url: string | undefined | null, width: number): 
     rest = rest.slice(first.length + 1);
   }
   return `${m[1]}c_limit,w_${width},q_auto,f_auto/${rest}`;
+}
+
+// Variante de uma foto para ser mostrada com `cssWidth` px de largura
+// (DES-02 da auditoria de 2026-09-12: as listas pediam a foto de 1600 px
+// para quadrados de 44). Pede-se a largura vezes a densidade do ecrã (entre
+// 2 e 3: a 1x na web fica um pouco a mais, a 3x no telemóvel fica nítido),
+// arredondada para cima ao múltiplo de 100 — dois telemóveis com cartões de
+// larguras ligeiramente diferentes pedem a MESMA variante e a CDN do
+// Cloudinary serve-a da cache em vez de gerar uma por tamanho. Nunca acima
+// dos 1600 px que o backoffice guarda (a partir daí seria ampliar).
+// URLs que não são do Cloudinary saem como entraram.
+export function cloudinaryForWidth(url: string | undefined | null, cssWidth: number): string | undefined {
+  const scale = Math.min(3, Math.max(2, PixelRatio.get()));
+  const px = Math.min(1600, Math.max(100, Math.ceil((cssWidth * scale) / 100) * 100));
+  return cloudinaryWhole(url, px);
 }
 
 type UploadResponse = {

@@ -23,6 +23,7 @@ import { useWork } from '../data/works';
 import { attachSimulationToRequest, useSimulation } from '../data/simulations';
 import { canUseCamera, pickRequestPhotos, takeRequestPhoto } from '../media/requestPhotos';
 import { requestUploadConfigured, uploadRequestPhoto } from '../media/cloudinary';
+import { mapWithConcurrency } from '../utils/concurrency';
 import { ContactPreference, DepartmentId, REQUEST_LIMITS, RequestField, RequestPhoto } from '../firebase/models';
 import { RootStackParamList } from '../navigation/types';
 import { useT } from '../i18n';
@@ -194,16 +195,21 @@ export default function RequestQuoteScreen() {
         }
       }
 
-      // 2. Fotos (opcionais), com a tag do pedido.
+      // 2. Fotos (opcionais), com a tag do pedido — três de cada vez em vez de
+      // uma a uma (DES-15), os resultados na ordem em que o cliente as
+      // escolheu (é a ordem que a equipa vê). O texto de espera conta as que
+      // já chegaram; o progresso de cada uma continua na própria miniatura.
       const id = newRequestId();
-      const uploaded: RequestPhoto[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        setBusy(T.request.busyPhoto(i + 1, photos.length));
-        const photo = await uploadRequestPhoto(photos[i].uri, id, (fraction) =>
-          setPhotos((p) => p.map((x, j) => (j === i ? { ...x, progress: fraction } : x)))
+      let sent = 0;
+      if (photos.length > 0) setBusy(T.request.busyPhoto(1, photos.length));
+      const uploaded: RequestPhoto[] = await mapWithConcurrency(photos, 3, async (p, i) => {
+        const photo = await uploadRequestPhoto(p.uri, id, (fraction) =>
+          setPhotos((prev) => prev.map((x, j) => (j === i ? { ...x, progress: fraction } : x)))
         );
-        uploaded.push(photo);
-      }
+        sent += 1;
+        if (sent < photos.length) setBusy(T.request.busyPhoto(sent + 1, photos.length));
+        return photo;
+      });
 
       // 3. O pedido. As etiquetas guardadas são as em português
       // (`storedLabel`), seja qual for o idioma da app.

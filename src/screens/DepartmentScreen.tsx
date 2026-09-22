@@ -6,7 +6,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../theme/theme';
 import Photo from '../components/Photo';
-import { EmptyState } from '../components/ListState';
+import { FirestoreError } from 'firebase/firestore';
+import { EmptyState, ErrorState } from '../components/ListState';
 import { BackIcon } from '../components/Icons';
 import { DEPARTMENTS } from '../data/departments';
 import { departmentContent, hasDepartmentContent, DepartmentCta, DepartmentLink } from '../data/departmentContent';
@@ -41,9 +42,13 @@ export default function DepartmentScreen() {
   const content = department ? departmentContent(department.id) : undefined;
   const { data: home } = useHomeSettings();
   const cover = home?.departmentCovers?.[params.id];
-  // Uma escuta só (a mesma do Portfólio) para os trabalhos recentes e para
-  // saber que cartões de serviço têm trabalhos.
-  const { data: works, loading: worksLoading } = usePublishedWorks();
+  // Uma escuta só para os trabalhos recentes (os 6 mais recentes da
+  // categoria) e para saber que cartões de serviço têm trabalhos. Limitada
+  // aos 24 mais recentes de todas as categorias (DES-01): chega para os
+  // recentes de qualquer departamento e não lê a coleção inteira; um serviço
+  // cujo único trabalho seja mais antigo do que isso fica sem ligação — é
+  // preferível a ler tudo em cada página.
+  const { data: works, loading: worksLoading, error: worksError } = usePublishedWorks(24);
   const screenW = useAppWidth();
   const heroW = screenW - 36;
   // 4:3 como o Detalhe, para a foto respirar.
@@ -90,7 +95,7 @@ export default function DepartmentScreen() {
         <View style={[styles.hero, { width: heroW, height: heroH }]}>
           {/* A foto enche o cabeçalho (cover) — o Fábio experimentou a foto
               inteira aqui e voltou atrás (2026-09-09). */}
-          <Photo url={cover?.photoUrl || cover?.thumbnailUrl} seed={department.id} />
+          <Photo url={cover?.photoUrl || cover?.thumbnailUrl} seed={department.id} width={heroW} />
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.9)']}
             locations={[0.3, 0.6, 1]}
@@ -166,6 +171,7 @@ export default function DepartmentScreen() {
             category={department.category}
             works={works}
             loading={worksLoading}
+            error={worksError}
             onOpen={(workId) => navigation.navigate('WorkDetail', { workId })}
             onSeeAll={() => openPortfolio(department.category!)}
           />
@@ -218,19 +224,27 @@ function SectionLabel({ text, action, onAction }: { text: string; action?: strin
   );
 }
 
+// Largura de cada cartão dos trabalhos recentes (styles.recentCard); vai ao
+// Photo para pedir a variante certa em vez dos 1600 px.
+const RECENT_CARD_W = 156;
+
 // Trabalhos publicados mais recentes da categoria do departamento — fotos
-// reais em vez de ilustrações. A lista vem do ecrã (a escuta do Portfólio,
-// uma query, sem índice novo) e filtra-se em memória.
+// reais em vez de ilustrações. A lista vem do ecrã (a mesma query do
+// Portfólio, limitada, sem índice novo) e filtra-se em memória. Um erro do
+// Firestore mostra-se aqui, discreto, em vez de a secção desaparecer em
+// silêncio (QUA-03).
 function RecentWorks({
   category,
   works,
   loading,
+  error,
   onOpen,
   onSeeAll,
 }: {
   category: WorkCategory;
   works: Work[];
   loading: boolean;
+  error: FirestoreError | null;
   onOpen: (workId: string) => void;
   onSeeAll: () => void;
 }) {
@@ -241,13 +255,15 @@ function RecentWorks({
   return (
     <>
       <SectionLabel text={T.department.recentWorks} action={T.department.seePortfolio} onAction={onSeeAll} />
-      {recent.length === 0 ? (
+      {error ? (
+        <ErrorState error={error} compact />
+      ) : recent.length === 0 ? (
         <Text style={styles.recentEmpty}>{T.department.recentEmpty}</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
           {recent.map((w) => (
             <Pressable key={w.id} style={styles.recentCard} onPress={() => onOpen(w.id)} accessibilityRole="button" accessibilityLabel={w.title}>
-              <Photo url={w.photoUrl} seed={w.id} />
+              <Photo url={w.photoUrl} seed={w.id} width={RECENT_CARD_W} />
               <LinearGradient
                 colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
                 locations={[0.45, 1]}
@@ -380,7 +396,7 @@ const styles = StyleSheet.create({
   stepBody: { flex: 1, paddingBottom: 18, paddingTop: 3 },
   stepBodyLast: { paddingBottom: 0 },
   recentRow: { paddingHorizontal: 18, gap: 10 },
-  recentCard: { width: 156, height: 110, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },
+  recentCard: { width: RECENT_CARD_W, height: 110, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.panel2 },
   recentCaption: { position: 'absolute', left: 10, right: 10, bottom: 9 },
   recentTitle: { fontFamily: fonts.bodyBold, fontSize: 11, lineHeight: 14, color: colors.ink },
   recentTime: { fontFamily: fonts.body, fontSize: 9, color: colors.inkMuted, marginTop: 2 },

@@ -15,10 +15,13 @@ export const colors = {
   danger: '#e0a08f',
 };
 
+// Só faces usadas em estilos: cada uma aqui é carregada no arranque (App.tsx)
+// antes do primeiro ecrã. A AlexBrush (`script`) e a Jost 400
+// (`eyebrowLight`) não eram usadas em lado nenhum e saíram na auditoria de
+// 2026-09-12 (DES-09) — se uma voltar a fazer falta, junta-se aqui E ao
+// useFonts do App.tsx.
 export const fonts = {
-  script: 'AlexBrush_400Regular',
   eyebrow: 'Jost_500Medium',
-  eyebrowLight: 'Jost_400Regular',
   body: 'Manrope_400Regular',
   bodyMedium: 'Manrope_500Medium',
   bodySemibold: 'Manrope_600SemiBold',
