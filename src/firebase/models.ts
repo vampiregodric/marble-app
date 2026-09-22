@@ -64,6 +64,9 @@ export interface ClientConsent {
   // legais em que aceitou — se a política mudar, o simulador pede outra vez.
   simulatorVersion?: string;
   simulatorAcceptedAt?: Timestamp | null;
+  // Quando retirou a autorização no Perfil (os dois campos acima são
+  // apagados nessa altura). Fica como prova — artigo 7.º n.º 3 do RGPD.
+  simulatorWithdrawnAt?: Timestamp | null;
 }
 
 export interface Client {

@@ -19,8 +19,9 @@ import { GoogleAuth } from 'google-auth-library';
 
 export type VertexConfig = {
   project: string;
-  // 'global' (endpoint global) ou uma região (ex: europe-west1) — nem
-  // todos os modelos de imagem existem em todas as regiões.
+  // 'global' (endpoint global), uma multi-região ('us' | 'eu') ou uma
+  // região (ex: europe-west1) — nem todos os modelos de imagem existem em
+  // todas; ver vertexHost().
   location: string;
   model: string;
   // Só local: ficheiro da chave de service account.
@@ -41,9 +42,22 @@ function googleAuth(cfg: VertexConfig): GoogleAuth {
   return authCache.auth;
 }
 
+// Três tipos de endpoint (Google, "Deployment and endpoint locations" e
+// "Data residency", lidos a 2026-09-13): 'global' processa em qualquer
+// parte do mundo, sem garantia de residência; as multi-regiões 'us' e 'eu'
+// (host aiplatform.<x>.rep.googleapis.com) garantem que o processamento
+// fica dentro dessa jurisdição — 'eu' = só Estados-membros da UE; uma
+// região (ex: europe-west1, host <região>-aiplatform.googleapis.com) fica
+// nessa região. O gemini-3.1-flash-image existe em 'global', 'us' e 'eu',
+// não em regiões soltas (auditoria 2026-09-12, RGPD-01).
+export function vertexHost(location: string): string {
+  if (location === 'global') return 'aiplatform.googleapis.com';
+  if (location === 'us' || location === 'eu') return `aiplatform.${location}.rep.googleapis.com`;
+  return `${location}-aiplatform.googleapis.com`;
+}
+
 export function vertexEndpoint(cfg: VertexConfig): string {
-  const host = cfg.location === 'global' ? 'aiplatform.googleapis.com' : `${cfg.location}-aiplatform.googleapis.com`;
-  return `https://${host}/v1/projects/${cfg.project}/locations/${cfg.location}/publishers/google/models/${cfg.model}:generateContent`;
+  return `https://${vertexHost(cfg.location)}/v1/projects/${cfg.project}/locations/${cfg.location}/publishers/google/models/${cfg.model}:generateContent`;
 }
 
 type GenerateResponse = {

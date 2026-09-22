@@ -191,8 +191,19 @@ if (isWorktree) {
   else if (existsSync(envMain)) faltaWorktree('.env', `copia-o do checkout principal para esta pasta: Copy-Item "${envMain}" .env`);
   else faltaWorktree('.env', 'quando o .env do checkout principal existir, copia-o para esta pasta.');
 }
-if (existsSync(join(here, '.env.production'))) ok('.env.production (vem do git)');
-else aviso('.env.production não existe', 'devia vir do git — confirma que o checkout está completo (git status).');
+// O .env.production vem do git, mas ninguém o lê no dia a dia: uma variável
+// que entre no .env.example e não chegue aqui desliga a funcionalidade nas
+// builds das lojas sem erro nenhum (auditoria 2026-09-12, ARQ-01: o preset
+// do simulador). Por isso compara-se com o .env.example nas duas direções.
+const envProd = join(here, '.env.production');
+if (!existsSync(envProd)) {
+  aviso('.env.production não existe', 'devia vir do git — confirma que o checkout está completo (git status).');
+} else if (existsSync(example)) {
+  const prod = parseEnv(envProd);
+  const semValor = Object.keys(parseEnv(example)).filter((k) => !prod[k]);
+  if (semValor.length) aviso(`.env.production sem: ${semValor.join(', ')}`, 'as builds do EAS (preview/production) só leem este ficheiro: sem a variável, a funcionalidade correspondente não existe na app das lojas (e nada avisa). Acrescenta-a com o valor de produção — ver os comentários em .env.example.');
+  else ok('.env.production com todas as variáveis de .env.example');
+} else ok('.env.production (vem do git)');
 
 const chaves = [
   ['serviceAccountKey.dev.json', 'aviso', 'precisa dela: seed, check:firestore:auth, functions:jobs, dev-token, demo:account. Copia do outro PC por pen ou gestor de passwords — nunca por email/chat; ou gera outra na consola Firebase (dev) > Service accounts.'],

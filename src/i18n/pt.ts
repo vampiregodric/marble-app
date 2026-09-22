@@ -236,6 +236,14 @@ export const pt = {
     simulationsEmpty: 'Ainda não fizeste nenhuma simulação.',
     simulationsEmptyDesc: 'Fotografa o teu chão ou o teu carro e vê como ficaria com uma amostra da Marble.',
     openSimulator: 'Abrir o simulador',
+    // Retirar a autorização das fotos (RGPD, artigo 7.º n.º 3: tem de ser tão
+    // fácil como dá-la). Apaga as simulações e a caixa volta a aparecer.
+    simulatorConsentWithdraw: 'Retirar a autorização do simulador',
+    simulatorConsentWithdrawHint: 'Apaga as tuas simulações. Se voltares a usar o simulador, a app pede-te a autorização outra vez.',
+    simulatorConsentWithdrawTitle: 'Retirar a autorização do simulador?',
+    simulatorConsentWithdrawDesc: 'As tuas simulações — fotografias e imagens geradas — são apagadas de imediato. Se anexaste alguma a um pedido de orçamento, a cópia no pedido fica com a equipa até o pedido fechar.',
+    simulatorConsentWithdrawYes: 'Retirar e apagar',
+    simulatorConsentWithdrawFailed: 'Não foi possível retirar a autorização. Tenta outra vez.',
     simulationA11y: (name: string, status: string) => `Simulação ${name}: ${status.toLowerCase()}`,
     notificationsTitle: 'Notificações',
     operationalLabel: 'Lembretes dos teus carros e chãos',
@@ -437,7 +445,7 @@ export const pt = {
     finish: { gloss: 'Brilhante', satin: 'Acetinado', matte: 'Mate' } satisfies Record<SampleFinish, string>,
     // Checkbox de consentimento (uma vez por conta): "Autorizo … {Política de privacidade}. …"
     consentPrefix: 'Autorizo que a foto que escolhi seja usada para gerar a simulação, como descrito na ',
-    consentSuffix: '. A equipa da Marble Studios vê as simulações; posso apagá-las quando quiser.',
+    consentSuffix: '. A equipa da Marble Studios vê as simulações; posso apagá-las e retirar a autorização quando quiser, no Perfil.',
     consentRequired: 'Para gerar a simulação precisamos da tua autorização para usar a foto.',
     consentNote: 'A foto é usada só para a simulação. A equipa vê-a; apagas quando quiseres, no Perfil.',
     needPhoto: 'Escolhe ou tira uma foto primeiro.',

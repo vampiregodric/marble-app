@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
-import { collection, deleteDoc, doc, limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import {
   COLLECTIONS,
@@ -119,6 +119,21 @@ export async function attachSimulationToRequest(id: string, requestId: string): 
 // Apagar: a Function apaga os ficheiros no Cloudinary pela tag.
 export async function deleteSimulation(id: string): Promise<void> {
   await deleteDoc(doc(simulationsCol, id));
+}
+
+// "Retirar a autorização do simulador" no Perfil (auditoria 2026-09-12,
+// RGPD-17): apaga TODAS as simulações do cliente, não só as 30 da lista —
+// cada doc apagado dispara a limpeza dos ficheiros na Function. As regras
+// deixam o dono apagar. Devolve quantas foram.
+export async function deleteAllMySimulations(uid: string): Promise<number> {
+  const snap = await getDocs(query(simulationsCol, where('clientId', '==', uid)));
+  const CHUNK = 400;
+  for (let i = 0; i < snap.docs.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    for (const d of snap.docs.slice(i, i + CHUNK)) batch.delete(d.ref);
+    await batch.commit();
+  }
+  return snap.docs.length;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

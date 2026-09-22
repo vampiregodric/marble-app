@@ -19,7 +19,9 @@
 //   npm run run-jobs -- ../serviceAccountKey.dev.json --simulation <id>    # simula o trigger de uma simulação "como ficaria" acabada de criar
 //                                                                          #   (Secção 16): tectos, Vertex AI com a chave de dev (a conta de serviço
 //                                                                          #   precisa do papel "Vertex AI User"), resultado no Cloudinary; --daily-cap N
-//                                                                          #   liga o tecto global; VERTEX_LOCATION / VERTEX_IMAGE_MODEL no ambiente
+//                                                                          #   liga o tecto global; VERTEX_LOCATION / VERTEX_IMAGE_MODEL no ambiente;
+//                                                                          #   --force repete uma simulação já processada sem mexer no doc (o trigger
+//                                                                          #   publicado no dev continua a ignorá-la — é como se testa outro endpoint)
 //
 // ATENÇÃO: escreve a sério no Firestore de dev (cria alertas, marca passos
 // como enviados). É o mesmo código que corre no Firebase.
@@ -45,7 +47,7 @@ const flag = (name: string): string | undefined => {
 };
 
 if (!keyPath) {
-  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--request id] [--vehicle id [--before estado]] [--simulation id]');
+  console.error('Uso: npm run run-jobs -- <chave-service-account.json> [--now AAAA-MM-DD] [--only job] [--push id] [--work id] [--avatar uid] [--request id] [--vehicle id [--before estado]] [--simulation id [--force]]');
   process.exit(1);
 }
 const key = JSON.parse(readFileSync(keyPath, 'utf8')) as { project_id: string; client_email?: string };
@@ -87,8 +89,8 @@ async function main(): Promise<void> {
   if (simulationId) {
     const snap = await db.collection('simulations').doc(simulationId).get();
     if (!snap.exists) throw new Error(`simulations/${simulationId} não existe`);
-    // Como o trigger: se já foi processada, não repete (apaga `processedAt`
-    // e põe status 'pending' no doc para forçar).
+    // Como o trigger: se já foi processada, não repete — a não ser com
+    // --force (repõe status/processedAt no fim, como se fosse a primeira vez).
     const vertex: VertexConfig = {
       project: key.project_id,
       location: process.env.VERTEX_LOCATION || 'global',
@@ -101,7 +103,7 @@ async function main(): Promise<void> {
       db,
       null,
       { id: snap.id, ...snap.data() } as Simulation,
-      { vertex, cloudinary, cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'kr9bmaqh', uploadPreset: process.env.CLOUDINARY_SIMULATION_PRESET || 'marble-simulations', dailyCap },
+      { vertex, cloudinary, cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'kr9bmaqh', uploadPreset: process.env.CLOUDINARY_SIMULATION_PRESET || 'marble-simulations', dailyCap, force: args.includes('--force') },
       now,
       log
     );

@@ -15,7 +15,7 @@ import { authErrorMessage } from '../auth/errors';
 import { cancelCheckupRequest, confirmCheckupProposal, pendingCheckup, useVehicles } from '../data/vehicles';
 import { checkupErrorMessage, checkupState, formatCheckupSlot } from '../data/checkups';
 import { useMyRequests } from '../data/requests';
-import { useMySimulations } from '../data/simulations';
+import { deleteAllMySimulations, useMySimulations } from '../data/simulations';
 import { DEPARTMENTS } from '../data/departments';
 import { CATEGORIES } from '../data/categories';
 import { AvatarSource, canUseCamera, pickAvatar } from '../media/avatarPicker';
@@ -102,7 +102,7 @@ function SimulationRow({ simulation: s, onPress }: { simulation: Simulation; onP
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const T = useT();
-  const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, signOut } = useAuth();
+  const { user, client, updateClient, setMarketingConsent, acceptTerms, needsTermsAcceptance, withdrawSimulatorConsent, signOut } = useAuth();
   const { data: vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(user?.uid);
   const pending = pendingCheckup(vehicles);
   // Pedidos de orçamento (Secção 7), em tempo real — o estado muda quando a
@@ -117,6 +117,12 @@ export default function ProfileScreen() {
   const [pendingMarketing, setPendingMarketing] = useState<boolean | null>(null);
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  // Retirar a autorização do simulador (auditoria 2026-09-12, RGPD-17):
+  // confirmação numa folha; depois limpa o consentimento e apaga as
+  // simulações. A linha só existe enquanto houver autorização dada.
+  const [withdrawSheet, setWithdrawSheet] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   // Foto de perfil (Secção 5b): menu no avatar → galeria/câmara → redução
   // no telemóvel → upload para o Cloudinary → clients/{uid}.avatarUrl.
@@ -227,6 +233,23 @@ export default function ProfileScreen() {
       await setMarketingConsent(next);
     } finally {
       setPendingMarketing(null);
+    }
+  };
+
+  const onWithdrawSimulator = async () => {
+    if (!user) return;
+    setWithdrawSheet(false);
+    setWithdrawing(true);
+    setWithdrawError(null);
+    try {
+      // Primeiro o consentimento (é o que a política promete), depois as
+      // simulações — cada doc apagado dispara a limpeza dos ficheiros.
+      await withdrawSimulatorConsent();
+      await deleteAllMySimulations(user.uid);
+    } catch {
+      setWithdrawError(T.profile.simulatorConsentWithdrawFailed);
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -471,8 +494,8 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Simulador (Secção 16): só quando está configurado, ou quando já há simulações. */}
-        {simulationUploadConfigured || simulations.length > 0 ? (
+        {/* Simulador (Secção 16): só quando está configurado, quando já há simulações, ou quando há autorização a retirar. */}
+        {simulationUploadConfigured || simulations.length > 0 || !!client?.consent?.simulatorVersion ? (
           <>
             <Text style={styles.secTitle}>{T.profile.simulationsTitle}</Text>
             <View style={styles.assetList}>
@@ -487,6 +510,18 @@ export default function ProfileScreen() {
               <Pressable style={styles.ghostBtn} onPress={() => navigation.navigate('Simulator')} accessibilityRole="button">
                 <Text style={styles.ghostBtnText}>{T.profile.openSimulator}</Text>
               </Pressable>
+              {client?.consent?.simulatorVersion ? (
+                <Pressable
+                  style={[styles.withdrawRow, withdrawing && { opacity: 0.6 }]}
+                  onPress={() => setWithdrawSheet(true)}
+                  disabled={withdrawing}
+                  accessibilityRole="button"
+                  accessibilityLabel={T.profile.simulatorConsentWithdraw}
+                >
+                  <Text style={styles.withdrawLabel}>{T.profile.simulatorConsentWithdraw}</Text>
+                  <Text style={[styles.withdrawHint, withdrawError && styles.withdrawErrorText]}>{withdrawError ?? T.profile.simulatorConsentWithdrawHint}</Text>
+                </Pressable>
+              ) : null}
             </View>
           </>
         ) : null}
@@ -561,6 +596,13 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <ActionSheet visible={avatarMenu} title={T.profile.avatarMenuTitle} actions={avatarActions} onClose={() => setAvatarMenu(false)} />
+      <ActionSheet
+        visible={withdrawSheet}
+        title={T.profile.simulatorConsentWithdrawTitle}
+        description={T.profile.simulatorConsentWithdrawDesc}
+        actions={[{ label: T.profile.simulatorConsentWithdrawYes, destructive: true, onPress: onWithdrawSimulator }]}
+        onClose={() => setWithdrawSheet(false)}
+      />
 
       {/* Agendamento de checkup (Secção 8). */}
       <CheckupSheet vehicle={sheetVehicle} onClose={() => setSheetVehicle(null)} />
@@ -667,6 +709,10 @@ const styles = StyleSheet.create({
   ghostBtnText: { fontFamily: fonts.eyebrow, fontSize: 10.5, letterSpacing: 0.8, color: colors.goldBright, textTransform: 'uppercase' },
   assetEmptyTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.inkMuted, textAlign: 'center' },
   assetEmptyDesc: { fontFamily: fonts.body, fontSize: 10.5, lineHeight: 15, color: colors.inkFaint, textAlign: 'center' },
+  withdrawRow: { paddingVertical: 10, paddingHorizontal: 4, gap: 2 },
+  withdrawLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted },
+  withdrawHint: { fontFamily: fonts.body, fontSize: 10, lineHeight: 14, color: colors.inkFaint },
+  withdrawErrorText: { color: colors.danger },
   prefList: { paddingHorizontal: 18 },
   prefRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.hairline },
   prefRowSub: { paddingLeft: 14, paddingVertical: 9 },

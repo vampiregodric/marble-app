@@ -61,6 +61,10 @@ type AuthValue = {
   // política mudar.
   needsSimulatorConsent: boolean;
   acceptSimulatorConsent: () => Promise<void>;
+  // Retirar a autorização (Perfil, auditoria 2026-09-12 RGPD-17): apaga a
+  // prova de consentimento e regista quando foi retirada; a caixa volta a
+  // aparecer na próxima simulação. Quem chama apaga também as simulações.
+  withdrawSimulatorConsent: () => Promise<void>;
   // true enquanto a conta do utilizador atual tiver sido criada NESTA
   // sessão da app (registo, ou pedido de orçamento sem conta). O passo
   // "Recebe os alertas no telemóvel" (Secção 15, src/push/onboarding.ts)
@@ -263,6 +267,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await updateDoc(clientRef(user.uid), {
           'consent.simulatorVersion': LEGAL_VERSION,
           'consent.simulatorAcceptedAt': serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      },
+      async withdrawSimulatorConsent() {
+        if (!user) throw new Error('Sem sessão.');
+        await updateDoc(clientRef(user.uid), {
+          'consent.simulatorVersion': deleteField(),
+          'consent.simulatorAcceptedAt': deleteField(),
+          'consent.simulatorWithdrawnAt': serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       },

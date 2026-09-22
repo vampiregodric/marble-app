@@ -18,8 +18,11 @@
 // (pedidos de orçamento: conta criada a partir do pedido, fotos do pedido,
 // prazo de 12 meses, emails via Resend — Secção 7); 2026-09-09 (simulador
 // "como ficaria": fotos do chão/carro do cliente, Vertex AI da Google como
-// subcontratante, 90 dias de retenção, a equipa vê as simulações — Secção 16).
-export const LEGAL_VERSION = '2026-09-09';
+// subcontratante, 90 dias de retenção, a equipa vê as simulações — Secção 16);
+// 2026-09-13 (auditoria 2026-09-12, Pacote 6: notas da equipa e mais dados
+// técnicos declarados na secção 2, retirar a autorização do simulador no
+// Perfil, e onde o Vertex AI processa a fotografia — secção 5).
+export const LEGAL_VERSION = '2026-09-13';
 
 // Dados da empresa (preenchidos pelo Fábio a 2026-09-03). A marca é
 // "Marble Studios"; a entidade legal é a Cacto Elegante, Lda. Se algum
@@ -98,7 +101,8 @@ const PRIVACY: LegalText = {
         'Pedidos de orçamento e de checkup, que tu fazes na app: o que pretendes, o teu carro, espaço ou empresa, a tua mensagem, a forma como preferes ser contactado e, se as juntares, fotografias do carro ou do espaço. Se ainda não tiveres conta, o pedido cria-a com o nome, email e telemóvel que indicares, e recebes um email para definires a password.',
         'Simulações "como ficaria", só se usares o simulador: a fotografia do teu chão ou do teu carro que escolheres, a amostra que aplicaste e a imagem gerada.',
         'Preferências: que notificações queres receber, e se aceitaste receber ofertas e novidades.',
-        'Dados técnicos mínimos: um identificador do dispositivo para entregar notificações push (só se as ativares no telemóvel) e registos de erros da app, sem conteúdo pessoal.',
+        'Notas da equipa sobre o teu acompanhamento, escritas por nós na tua ficha interna (por exemplo, o que combinámos numa chamada). Podes pedir uma cópia por email.',
+        'Dados técnicos mínimos: um identificador do dispositivo para entregar notificações push (só se as ativares no telemóvel), o idioma do teu telemóvel e a plataforma que usaste (Android, iPhone ou web), a data da última vez que abriste a app (para a regra das contas inativas), o endereço IP e o tipo de dispositivo que o serviço de autenticação regista por segurança, e registos de erros da app, sem conteúdo pessoal.',
       ],
       after: [
         'Não recolhemos localização, contactos nem dados de pagamento, e não acedemos às fotografias do teu telemóvel além das que escolheres para a foto de perfil, para um pedido de orçamento ou para uma simulação. A app não tem pagamentos.',
@@ -113,7 +117,7 @@ const PRIVACY: LegalText = {
         'Responder a um pedido de orçamento ou de checkup que fizeste na app, incluindo a confirmação de que o recebemos: diligências pré-contratuais a teu pedido (artigo 6.º, n.º 1, alínea b) do RGPD).',
         'Enviar-te ofertas e novidades (novos trabalhos no portfólio, eventos, promoções): apenas com o teu consentimento, que dás e retiras no Perfil, em "Ofertas e novidades". Está desligado por defeito.',
         'Mostrar a tua foto de perfil na tua conta: consentimento, que dás ao escolher a foto e retiras ao removê-la.',
-        'Gerar uma simulação "como ficaria" a partir de uma fotografia tua, guardá-la na tua conta e mostrá-la à equipa para preparar uma proposta: consentimento, que dás na primeira vez que usas o simulador (numa caixa não pré-marcada) e retiras apagando as simulações no Perfil ou escrevendo-nos. A imagem é gerada por um modelo de inteligência artificial (ver secção 5) e é uma simulação, não uma proposta de cor ou acabamento exatos. Se a equipa te contactar por causa de uma simulação sem lhe teres pedido orçamento, isso é marketing e só acontece com "Ofertas e novidades" ligado.',
+        'Gerar uma simulação "como ficaria" a partir de uma fotografia tua, guardá-la na tua conta e mostrá-la à equipa para preparar uma proposta: consentimento, que dás na primeira vez que usas o simulador (numa caixa não pré-marcada) e retiras quando quiseres no Perfil, em "Retirar a autorização do simulador" (as tuas simulações são apagadas ao mesmo tempo), ou escrevendo-nos. Apagar uma simulação apaga a fotografia e a imagem gerada, mas não retira a autorização. A imagem é gerada por um modelo de inteligência artificial (ver secção 5) e é uma simulação, não uma proposta de cor ou acabamento exatos. Se a equipa te contactar por causa de uma simulação sem lhe teres pedido orçamento, isso é marketing e só acontece com "Ofertas e novidades" ligado.',
         'Emitir faturas e cumprir obrigações fiscais e de garantia: obrigação legal.',
         'Manter a app segura e prevenir abusos: interesse legítimo.',
       ],
@@ -159,7 +163,7 @@ const PRIVACY: LegalText = {
         'Aceder aos teus dados e receber uma cópia.',
         'Retificar dados errados. Nome e telemóvel corrigem-se em Perfil > Dados pessoais; a foto de perfil troca-se ou remove-se tocando no avatar, no Perfil.',
         'Apagar a conta e os dados, em Perfil > Apagar conta, ou pedindo-nos por email.',
-        'Retirar o consentimento para marketing a qualquer momento, em Perfil > Ofertas e novidades, e o consentimento do simulador apagando as tuas simulações (no Perfil ou na própria simulação). Isso não afeta a legalidade do que foi feito antes.',
+        'Retirar o consentimento para marketing a qualquer momento, em Perfil > Ofertas e novidades, e o consentimento do simulador em Perfil > Retirar a autorização do simulador, que apaga também as tuas simulações. Isso não afeta a legalidade do que foi feito antes.',
         'Opor-te ou pedir a limitação do tratamento, e receber os teus dados num formato de uso corrente (portabilidade).',
         'Apresentar reclamação à Comissão Nacional de Proteção de Dados (CNPD), em www.cnpd.pt.',
       ],

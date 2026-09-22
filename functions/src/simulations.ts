@@ -45,6 +45,9 @@ export type SimulationDeps = {
   uploadPreset: string;
   // Tecto global por 24 h (SIMULATION_DAILY_CAP); 0/ausente = desligado.
   dailyCap?: number | null;
+  // Só no runner local (--force): repete uma simulação já processada sem
+  // tocar no doc, para testar outro endpoint/modelo. O trigger nunca o usa.
+  force?: boolean;
 };
 
 export type SimulationSummary = { checked: number; deleted: number };
@@ -182,7 +185,7 @@ export async function handleSimulationCreated(db: Firestore, sim: Simulation, de
   const ref = db.collection('simulations').doc(sim.id);
   // O trigger pode repetir-se: relê e sai se já foi processado.
   const fresh = await ref.get();
-  if (!fresh.exists || fresh.data()?.processedAt || fresh.data()?.status !== 'pending') return;
+  if (!fresh.exists || (!deps.force && (fresh.data()?.processedAt || fresh.data()?.status !== 'pending'))) return;
   const ts = Timestamp.fromDate(now);
   const since = addDays(now, -1).getTime();
 
