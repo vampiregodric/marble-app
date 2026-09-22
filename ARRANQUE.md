@@ -32,16 +32,40 @@ ao lado, Python/uv). Repete-o até estar tudo OK; a última linha dá o endereç
 `exp://<IP>:8081` para o telemóvel. Falta o Node ou o Git? `DEVELOPMENT.md`,
 "Segundo PC (escritório)", tem os instaladores e a ordem certa.
 
-## 2. O que o git não traz (tens de levar contigo)
+## 2. O que o git não traz — e não, não precisas de levar nada
 
-Não estão no GitHub de propósito — são segredos ou coisas da máquina:
+Primeiro: **o que é que queres fazer neste PC?**
 
-- `.env` (app) e `.env` + `.env.production` (backoffice)
-- `serviceAccountKey.dev.json` e `serviceAccountKey.prod.json`
-- `docs/store/acesso-revisao.local.md` (password da conta de revisão das lojas)
-- Sessões da Firebase CLI e do EAS (`login` em cada PC), SDK/AVD do Android
+| Quero… | Preciso de… |
+|---|---|
+| Ver a app e o backoffice | **Nada.** Os dois URLs acima abrem em qualquer browser |
+| Escrever código, commitar, fazer push, `npm run typecheck` | **Nada** além do clone |
+| Correr a app (`npm start`, servidor para o telemóvel) | o `.env` |
+| Deploys, seeds, `dev-token`, scripts de admin | o `.env` + `serviceAccountKey.dev.json` + login na Firebase CLI |
+| Builds da app (EAS) | login no EAS (abre o browser) |
 
-Viajam por pen ou gestor de passwords — nunca por chat, nunca por git.
+E o que falta **refaz-se no próprio PC**, com o teu login Google — a pen é só
+o atalho:
+
+- **`.env` (app):** copia o `.env.example` para `.env`. Os seis valores do
+  Firebase tiram-se da consola (Definições do projeto → As tuas apps → SDK
+  setup) do projeto `marble-studios-dev`; os do Cloudinary estão no
+  `.env.production`, que vai no git (é a mesma conta Cloudinary). Estes
+  valores **não são segredos** — o Firebase inclui-os no bundle de qualquer
+  app publicada; quem protege os dados são as Firestore Rules.
+- **`.env` e `.env.production` (backoffice):** o mesmo, a partir do
+  `.env.example` do repositório do backoffice.
+- **`serviceAccountKey.dev.json` / `.prod.json`:** consola do Firebase →
+  Definições do projeto → Contas de serviço → *Gerar nova chave privada*.
+  Gerar uma nova **não invalida a antiga**, por isso o PC de casa continua a
+  funcionar. Estes sim são segredos reais: ficam fora do git (já estão no
+  `.gitignore`) e nunca se colam num chat.
+- **`docs/store/acesso-revisao.local.md`:** é só a password da conta de
+  revisão das lojas. Está no teu gestor de passwords; se não estiver, define
+  outra com `npm run demo:account` (ver `DEVELOPMENT.md`).
+- **Sessões da Firebase CLI e do EAS:** `login` em cada PC, abre o browser.
+- **SDK/AVD do Android:** só se quiseres o emulador — passos no
+  `DEVELOPMENT.md`, "Segundo PC", 1c.
 
 ## 3. Primeira conversa do Claude nesse PC
 
@@ -78,6 +102,8 @@ fundes ou deitas fora.
   <https://github.com/vampiregodric/marble-app/settings> → Danger Zone →
   *Change repository visibility* → Private. É o último achado por resolver da
   auditoria de 2026-09-12.
-- Levar as chaves e os `.env` do ponto 2 para o PC do escritório.
+- Repor o `.env` e as chaves no PC do escritório (ponto 2) — só quando
+  quiseres correr a app ou fazer deploys; para ver e para escrever código não
+  é preciso nada.
 - Decidir se a app de **produção** alguma vez fica num URL público (hoje só o
   dev está publicado, e é o suficiente para ver a app de qualquer lado).
