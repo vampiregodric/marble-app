@@ -1622,8 +1622,11 @@ práticas, e ambas já estão feitas:
    `serviceAccountKey.dev.json`, `serviceAccountKey.prod.json`,
    `docs/store/acesso-revisao.local.md`, as sessões da Firebase CLI e do
    EAS CLI, o SDK/AVD do Android, e as conversas e memória do Claude.
-   As chaves viajam por pen ou gestor de passwords — nunca por chat, nunca
-   por git.
+   Nada disto obriga a levar uma pen: os `.env` refazem-se a partir dos
+   `.env.example` (valores públicos, da consola Firebase) e as chaves de
+   service account geram-se de novo na consola sem invalidar as antigas —
+   ver o passo 4 de "Instalar uma vez (PC novo)". Se as copiares, que seja
+   por pen ou pelo gestor de passwords: nunca por chat, nunca por git.
 
 **Trabalhar de qualquer lado (telemóvel incluído).** O que já tem endereço
 público: o backoffice do dev em
