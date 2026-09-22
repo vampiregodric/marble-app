@@ -48,6 +48,30 @@
         { "fieldPath": "clientId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consent.marketing", "order": "ASCENDING" },
+        { "fieldPath": "notificationPrefs.automotive", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consent.marketing", "order": "ASCENDING" },
+        { "fieldPath": "notificationPrefs.epoxy", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consent.marketing", "order": "ASCENDING" },
+        { "fieldPath": "notificationPrefs.graphic", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

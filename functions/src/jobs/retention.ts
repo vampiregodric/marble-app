@@ -3,9 +3,10 @@ import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { CloudinaryConfig, deleteAvatarFiles } from '../cloudinary';
 import { hasAppAccount } from '../consent';
 import { createNotification } from '../notify';
+import { queryIn } from '../reads';
 import { clientLocale, TEXTS } from '../texts';
 import { addDays } from '../time';
-import { Client } from '../types';
+import { Client, Vehicle, Work } from '../types';
 import { JobLog } from './followUps';
 
 // Retenção (RGPD, Secção 3 → src/legal/texts.ts RETENTION): contas sem
@@ -18,11 +19,19 @@ import { JobLog } from './followUps';
 // "Atividade" = a data mais recente entre: última abertura da app com
 // sessão (`lastActiveAt`), alterações ao perfil, aceitação de termos, e
 // serviços feitos (carros/chãos e trabalhos ligados ao cliente).
+//
+// Escala (auditoria 2026-09-12, DES-07): em vez de ler `clients`, `vehicles`
+// e `works` inteiras todos os dias, o job pede ao Firestore só os
+// candidatos — contas cujo `updatedAt` já passou o corte do aviso (a app
+// escreve `updatedAt` em tudo menos em `lastActiveAt`, que se confere a
+// seguir em memória) e contas com aviso pendente (para o cancelar se
+// voltaram) — e lê os carros/chãos e trabalhos só de quem continua
+// candidato depois das datas do próprio doc, em lotes de 30 (`where in`).
 
 export const INACTIVE_YEARS = 3;
 export const WARNING_DAYS = 30;
 
-export type RetentionSummary = { checked: number; warned: number; deleted: number; unwarned: number };
+export type RetentionSummary = { candidates: number; checked: number; warned: number; deleted: number; unwarned: number };
 
 export type RetentionDeps = {
   auth: Auth;
@@ -39,7 +48,13 @@ function latest(...dates: (Timestamp | Date | null | undefined)[]): Date | null 
   return best;
 }
 
-async function lastServiceByClient(db: Firestore): Promise<Map<string, Date>> {
+// Datas do próprio doc do cliente (sem os serviços).
+function ownActivity(client: Client): Date | null {
+  return latest(client.lastActiveAt, client.updatedAt, client.createdAt, client.clientSince, client.consent?.termsAcceptedAt, client.consent?.marketingUpdatedAt);
+}
+
+// Última data de serviço (carro/chão ou trabalho) de cada um destes clientes.
+async function lastServiceByClient(db: Firestore, clientIds: string[]): Promise<Map<string, Date>> {
   const map = new Map<string, Date>();
   const bump = (clientId: string | undefined, d: Timestamp | undefined) => {
     if (!clientId || !d) return;
@@ -47,10 +62,24 @@ async function lastServiceByClient(db: Firestore): Promise<Map<string, Date>> {
     const cur = map.get(clientId);
     if (!cur || date > cur) map.set(clientId, date);
   };
-  const [vehicles, works] = await Promise.all([db.collection('vehicles').get(), db.collection('works').get()]);
-  vehicles.docs.forEach((v) => bump(v.data().clientId, v.data().lastServiceAt ?? v.data().createdAt));
-  works.docs.forEach((w) => bump(w.data().clientId, w.data().completedAt));
+  if (clientIds.length === 0) return map;
+  const [vehicles, works] = await Promise.all([queryIn<Vehicle & { createdAt?: Timestamp }>(db, 'vehicles', 'clientId', clientIds), queryIn<Work>(db, 'works', 'clientId', clientIds)]);
+  vehicles.forEach((v) => bump(v.clientId, v.lastServiceAt ?? v.createdAt));
+  works.forEach((w) => bump(w.clientId, w.completedAt));
   return map;
+}
+
+// Candidatos: `updatedAt` antes do corte do aviso (superconjunto de quem está
+// inativo — quem só abriu a app tem `lastActiveAt` recente e sai a seguir)
+// mais quem tem aviso pendente. Cada um uma vez, mesmo que venha nas duas.
+async function loadCandidates(db: Firestore, warnCutoff: Date): Promise<Client[]> {
+  const [stale, warned] = await Promise.all([
+    db.collection('clients').where('updatedAt', '<=', Timestamp.fromDate(warnCutoff)).get(),
+    db.collection('clients').orderBy('retentionWarnedAt').get(),
+  ]);
+  const byId = new Map<string, Client>();
+  for (const d of [...stale.docs, ...warned.docs]) byId.set(d.id, { id: d.id, ...d.data() } as Client);
+  return [...byId.values()].filter(hasAppAccount);
 }
 
 export async function anonymizeClient(db: Firestore, deps: RetentionDeps, client: Client, now: Date, log: JobLog): Promise<void> {
@@ -85,32 +114,40 @@ export async function anonymizeClient(db: Firestore, deps: RetentionDeps, client
   }
 }
 
-export async function runRetention(db: Firestore, deps: RetentionDeps, now: Date, log: JobLog = () => {}, clients?: Client[]): Promise<RetentionSummary> {
-  const summary: RetentionSummary = { checked: 0, warned: 0, deleted: 0, unwarned: 0 };
-  const all = clients ?? (await db.collection('clients').get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Client);
-  const services = await lastServiceByClient(db);
+export async function runRetention(db: Firestore, deps: RetentionDeps, now: Date, log: JobLog = () => {}): Promise<RetentionSummary> {
+  const summary: RetentionSummary = { candidates: 0, checked: 0, warned: 0, deleted: 0, unwarned: 0 };
   const deleteCutoff = addDays(now, -INACTIVE_YEARS * 365);
   const warnCutoff = addDays(deleteCutoff, WARNING_DAYS);
 
-  for (const client of all) {
-    if (!hasAppAccount(client)) continue;
+  const unwarn = async (client: Client) => {
+    // Ativo. Se tinha aviso pendente, voltou — limpa.
+    if (!client.retentionWarnedAt) return;
+    await db.collection('clients').doc(client.id).update({ retentionWarnedAt: FieldValue.delete() });
+    summary.unwarned++;
+    log(`aviso cancelado (voltou) · ${client.email || client.id}`);
+  };
+
+  // 1. Pelas datas do próprio doc: quem abriu a app ou mexeu no perfil
+  //    depois do corte está ativo e não precisa de mais leituras.
+  const candidates = await loadCandidates(db, warnCutoff);
+  summary.candidates = candidates.length;
+  const inactive: Client[] = [];
+  for (const client of candidates) {
+    const own = ownActivity(client);
+    if (own && own > warnCutoff) await unwarn(client);
+    else inactive.push(client);
+  }
+
+  // 2. Só para esses, os serviços (carros/chãos e trabalhos) contam também.
+  const services = await lastServiceByClient(
+    db,
+    inactive.map((c) => c.id)
+  );
+  for (const client of inactive) {
     summary.checked++;
-    const activity = latest(
-      client.lastActiveAt,
-      client.updatedAt,
-      client.createdAt,
-      client.clientSince,
-      client.consent?.termsAcceptedAt,
-      client.consent?.marketingUpdatedAt,
-      services.get(client.id)
-    );
-    if (!activity || activity > warnCutoff) {
-      // Ativo. Se tinha aviso pendente, voltou — limpa.
-      if (client.retentionWarnedAt) {
-        await db.collection('clients').doc(client.id).update({ retentionWarnedAt: FieldValue.delete() });
-        summary.unwarned++;
-        log(`aviso cancelado (voltou) · ${client.email || client.id}`);
-      }
+    const activity = latest(ownActivity(client), services.get(client.id));
+    if (activity && activity > warnCutoff) {
+      await unwarn(client);
       continue;
     }
     if (!client.retentionWarnedAt) {
@@ -118,10 +155,10 @@ export async function runRetention(db: Firestore, deps: RetentionDeps, now: Date
       await createNotification(db, { clientId: client.id, type: 'message', ...TEXTS.retentionWarning(clientLocale(client), deleteOn) }, now);
       await db.collection('clients').doc(client.id).update({ retentionWarnedAt: Timestamp.fromDate(now) });
       summary.warned++;
-      log(`aviso de eliminação → ${client.email || client.id} (inativo desde ${activity.toISOString().slice(0, 10)})`);
+      log(`aviso de eliminação → ${client.email || client.id} (inativo desde ${activity ? activity.toISOString().slice(0, 10) : 'sempre'})`);
       continue;
     }
-    if (activity <= deleteCutoff && addDays(client.retentionWarnedAt.toDate(), WARNING_DAYS) <= now) {
+    if ((!activity || activity <= deleteCutoff) && addDays(client.retentionWarnedAt.toDate(), WARNING_DAYS) <= now) {
       log(`a apagar por inatividade · ${client.email || client.id}`);
       await anonymizeClient(db, deps, client, now, log);
       summary.deleted++;

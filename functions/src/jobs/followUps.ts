@@ -1,6 +1,7 @@
 import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { canReceive, hasAppAccount } from '../consent';
 import { createNotification } from '../notify';
+import { getAllByIds } from '../reads';
 import { clientLocale, TEXTS } from '../texts';
 import { addDays, daysBetween } from '../time';
 import { Client, Vehicle, Work, WorkFollowUp } from '../types';
@@ -10,23 +11,17 @@ import { Client, Vehicle, Work, WorkFollowUp } from '../types';
 // `works.followUp`, definidos pela equipa em cada trabalho (ver models.ts).
 // Corre uma vez por dia (10:00 Lisboa); cada passo é executado uma só vez,
 // marcado com `*At`, e `active` passa a false quando não resta nada.
+//
+// Escala (auditoria 2026-09-12, DES-05): no máximo FOLLOW_UP_LIMIT
+// trabalhos por dia — o job é idempotente, o que sobrar é apanhado amanhã
+// — e os clientes e carros/chãos são lidos em bloco antes do ciclo, em vez
+// de duas leituras por trabalho lá dentro.
 
 export type JobLog = (msg: string) => void;
 
+export const FOLLOW_UP_LIMIT = 500;
+
 export type FollowUpSummary = { works: number; checkups: number; teamAlerts: number; offers: number; skippedOffers: number; closed: number };
-
-type Loaded = { client: Client | null; vehicle: Vehicle | null };
-
-async function load(db: Firestore, work: Work): Promise<Loaded> {
-  const [c, v] = await Promise.all([
-    work.clientId ? db.collection('clients').doc(work.clientId).get() : null,
-    work.vehicleId ? db.collection('vehicles').doc(work.vehicleId).get() : null,
-  ]);
-  return {
-    client: c?.exists ? ({ id: c.id, ...c.data() } as Client) : null,
-    vehicle: v?.exists ? ({ id: v.id, ...v.data() } as Vehicle) : null,
-  };
-}
 
 function hasStep(days: number | null | undefined): days is number {
   return typeof days === 'number' && days >= 0;
@@ -42,8 +37,14 @@ export function followUpFinished(fu: WorkFollowUp): boolean {
 
 export async function runFollowUps(db: Firestore, now: Date, log: JobLog = () => {}): Promise<FollowUpSummary> {
   const summary: FollowUpSummary = { works: 0, checkups: 0, teamAlerts: 0, offers: 0, skippedOffers: 0, closed: 0 };
-  const snap = await db.collection('works').where('followUp.active', '==', true).get();
+  const snap = await db.collection('works').where('followUp.active', '==', true).limit(FOLLOW_UP_LIMIT).get();
+  if (snap.size === FOLLOW_UP_LIMIT) log(`${FOLLOW_UP_LIMIT} trabalhos com acompanhamento ativo (limite do dia) — o resto fica para amanhã`);
   const ts = Timestamp.fromDate(now);
+  const works = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Work);
+  const [clients, vehicles] = await Promise.all([
+    getAllByIds<Client>(db, 'clients', works.map((w) => w.clientId)),
+    getAllByIds<Vehicle>(db, 'vehicles', works.map((w) => w.vehicleId)),
+  ]);
 
   for (const doc of snap.docs) {
     const work = { id: doc.id, ...doc.data() } as Work;
@@ -51,7 +52,8 @@ export async function runFollowUps(db: Firestore, now: Date, log: JobLog = () =>
     if (!fu || !work.completedAt) continue;
     summary.works++;
     const completed = work.completedAt.toDate();
-    const { client, vehicle } = await load(db, work);
+    const client = (work.clientId && clients.get(work.clientId)) || null;
+    const vehicle = (work.vehicleId && vehicles.get(work.vehicleId)) || null;
     const patch: Record<string, unknown> = {};
     const next: WorkFollowUp = { ...fu };
 

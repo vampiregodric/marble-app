@@ -1,6 +1,6 @@
 import { FieldValue, Firestore, Timestamp } from 'firebase-admin/firestore';
 import { CloudinaryConfig, deleteAvatarFiles, publicIdFromUrl } from './cloudinary';
-import { canReceive, hasAppAccount } from './consent';
+import { canReceive, hasAppAccount, marketingRecipients } from './consent';
 import { followUpFinished } from './jobs/followUps';
 import { createNotification, notificationDoc } from './notify';
 import { anonymizeClientRequests } from './requests';
@@ -13,11 +13,33 @@ import { CheckupRequest, Client, Vehicle, Work, WorkFollowUp } from './types';
 
 export type Log = (msg: string) => void;
 
+// Reserva o envio do `new_work` deste trabalho: numa transação, relê o doc
+// e só marca `newWorkNotifiedAt` se ainda não estava marcado (e continua
+// publicado). Os triggers v2 entregam "pelo menos uma vez" — duas entregas
+// do mesmo evento chegam aqui as duas, mas só uma sai com `true`; a outra
+// vê a marca e não repete os alertas a toda a gente (auditoria 2026-09-12,
+// DES-04 / SEG-A-14). A marca fica escrita ANTES dos lotes: se a Function
+// morrer a meio, faltam alertas a alguns clientes (fica nos logs), o que é
+// preferível a mandar dois a todos.
+async function claimNewWork(db: Firestore, workId: string, ts: Timestamp): Promise<boolean> {
+  const ref = db.collection('works').doc(workId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = snap.data();
+    if (!snap.exists || !cur || cur.published !== true || cur.newWorkNotifiedAt) return false;
+    tx.update(ref, { newWorkNotifiedAt: ts });
+    return true;
+  });
+}
+
 // works/{id} criado ou alterado.
 // 1. Passou a publicado → alerta `new_work` a quem tem "Ofertas e
 //    novidades" ligado E a categoria ligada, no idioma de cada cliente
-//    (Secção 12b). Uma vez por trabalho (`newWorkNotifiedAt`):
-//    despublicar e voltar a publicar não repete.
+//    (Secção 12b). Uma vez por trabalho (`newWorkNotifiedAt`, reservado
+//    numa transação): despublicar e voltar a publicar não repete, e uma
+//    entrega repetida do evento também não. Os destinatários vêm de uma
+//    query filtrada e paginada (consent.ts → marketingRecipients), não da
+//    coleção inteira.
 // 2. Tem carro/chão ligado → a "última visita" do carro/chão passa a ser a
 //    data de conclusão, se for mais recente (o Perfil mostra-a).
 export async function handleWorkWritten(db: Firestore, before: Work | null, after: Work | null, now: Date, log: Log = () => {}): Promise<void> {
@@ -26,18 +48,21 @@ export async function handleWorkWritten(db: Firestore, before: Work | null, afte
 
   const justPublished = after.published === true && before?.published !== true;
   if (justPublished && !after.newWorkNotifiedAt) {
-    const clients = (await db.collection('clients').get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Client);
-    const recipients = clients.filter((c) => canReceive(c, 'new_work', after.category).ok);
-    const text = forLocales((l) => TEXTS.newWork(l, after));
-    for (let i = 0; i < recipients.length; i += 450) {
-      const batch = db.batch();
-      for (const c of recipients.slice(i, i + 450)) {
-        batch.set(db.collection('notifications').doc(), notificationDoc({ clientId: c.id, type: 'new_work', ...text[clientLocale(c)], photoUrl: after.photoUrl, relatedWorkId: after.id }, now));
+    if (!(await claimNewWork(db, after.id, ts))) {
+      log(`new_work "${after.title}": já enviado ou já não está publicado — não repete`);
+    } else {
+      const text = forLocales((l) => TEXTS.newWork(l, after));
+      let sent = 0;
+      for await (const page of marketingRecipients(db, 'new_work', after.category)) {
+        const batch = db.batch();
+        for (const c of page) {
+          batch.set(db.collection('notifications').doc(), notificationDoc({ clientId: c.id, type: 'new_work', ...text[clientLocale(c)], photoUrl: after.photoUrl, relatedWorkId: after.id }, now));
+        }
+        await batch.commit();
+        sent += page.length;
       }
-      await batch.commit();
+      log(`new_work "${after.title}" → ${sent} cliente(s)`);
     }
-    await db.collection('works').doc(after.id).update({ newWorkNotifiedAt: ts });
-    log(`new_work "${after.title}" → ${recipients.length} cliente(s)`);
   }
 
   const vehicleChanged = after.vehicleId && (before?.vehicleId !== after.vehicleId || !before?.completedAt?.isEqual(after.completedAt ?? ts));

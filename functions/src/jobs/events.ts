@@ -1,25 +1,22 @@
 import { Firestore, Timestamp } from 'firebase-admin/firestore';
-import { canReceive } from '../consent';
+import { marketingRecipients } from '../consent';
 import { notificationDoc } from '../notify';
 import { clientLocale, forLocales, TEXTS } from '../texts';
 import { addDays, lisbonDay } from '../time';
-import { Client, MarbleEvent } from '../types';
+import { MarbleEvent } from '../types';
 import { JobLog } from './followUps';
 
 // Lembrete "Amanhã: <evento>" a quem ligou "Ofertas e novidades" (é
 // marketing), no idioma de cada cliente (Secção 12b). Corre às 10:00 de
 // Lisboa e apanha os eventos cujo dia, no calendário de Lisboa, é amanhã.
 // Um evento só lembra uma vez (`reminderSentAt`), mesmo que a equipa lhe
-// mexa depois.
+// mexa depois. Os destinatários vêm de uma query filtrada e paginada
+// (consent.ts → marketingRecipients), lida uma só vez por dia mesmo que
+// haja vários eventos amanhã: cada página dá um lote por evento.
 
 export type EventsSummary = { events: number; notifications: number };
 
-export async function loadAppClients(db: Firestore): Promise<Client[]> {
-  const snap = await db.collection('clients').get();
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Client);
-}
-
-export async function runEventReminders(db: Firestore, now: Date, log: JobLog = () => {}, clients?: Client[]): Promise<EventsSummary> {
+export async function runEventReminders(db: Firestore, now: Date, log: JobLog = () => {}): Promise<EventsSummary> {
   const summary: EventsSummary = { events: 0, notifications: 0 };
   const tomorrow = lisbonDay(addDays(now, 1));
   // Janela larga em UTC (ontem → depois de amanhã) e depois filtra pelo dia de Lisboa.
@@ -33,26 +30,27 @@ export async function runEventReminders(db: Firestore, now: Date, log: JobLog = 
     .filter((e) => !e.reminderSentAt && e.date && lisbonDay(e.date.toDate()) === tomorrow);
   if (events.length === 0) return summary;
 
-  const all = clients ?? (await loadAppClients(db));
-  const recipients = all.filter((c) => canReceive(c, 'event_reminder').ok);
-
-  for (const event of events) {
-    summary.events++;
-    const text = forLocales((l) => TEXTS.eventReminder(l, event));
-    // Lotes de 500 (limite do Firestore). O push de cada doc vem do trigger.
-    for (let i = 0; i < recipients.length; i += 450) {
+  const texts = events.map((event) => forLocales((l) => TEXTS.eventReminder(l, event)));
+  const sent = events.map(() => 0);
+  for await (const page of marketingRecipients(db, 'event_reminder')) {
+    // Lotes de 500 (limite do Firestore): uma página (≤ 450) por evento. O push de cada doc vem do trigger.
+    for (const [i, event] of events.entries()) {
       const batch = db.batch();
-      for (const c of recipients.slice(i, i + 450)) {
+      for (const c of page) {
         batch.set(
           db.collection('notifications').doc(),
-          notificationDoc({ clientId: c.id, type: 'event_reminder', ...text[clientLocale(c)], photoUrl: event.photoUrl, relatedEventId: event.id }, now)
+          notificationDoc({ clientId: c.id, type: 'event_reminder', ...texts[i][clientLocale(c)], photoUrl: event.photoUrl, relatedEventId: event.id }, now)
         );
       }
       await batch.commit();
+      sent[i] += page.length;
     }
-    summary.notifications += recipients.length;
+  }
+  for (const [i, event] of events.entries()) {
+    summary.events++;
+    summary.notifications += sent[i];
     await db.collection('events').doc(event.id).update({ reminderSentAt: Timestamp.fromDate(now) });
-    log(`evento "${event.title}" → ${recipients.length} cliente(s)`);
+    log(`evento "${event.title}" → ${sent[i]} cliente(s)`);
   }
   return summary;
 }

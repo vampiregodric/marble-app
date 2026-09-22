@@ -3,7 +3,11 @@ import { CloudinaryConfig, deleteFilesByTag } from './cloudinary';
 import { createNotification } from './notify';
 import { addDays } from './time';
 import { Simulation, SimulationImage, SimulationSource } from './types';
-import { generateEditedImage, ImageInput, VertexConfig } from './vertex';
+// Só os tipos: `generateEditedImage` é importado dinamicamente em
+// handleSimulationCreated, para o google-auth-library (~3 MB) só entrar
+// no processo que faz simulações e não no arranque a frio de todas as
+// Functions (auditoria 2026-09-12, DES-10).
+import type { ImageInput, VertexConfig } from './vertex';
 
 // Simulador "como ficaria" (Secção 16). Reage a `simulations/{id}`:
 // - criado (pela app, com a foto do cliente já no Cloudinary e estado
@@ -222,7 +226,7 @@ export async function handleSimulationCreated(db: Firestore, sim: Simulation, de
   // 3. O modelo: foto do cliente + amostra → foto editada.
   const started = Date.now();
   try {
-    const [photo, sample] = await Promise.all([fetchImage(modelInputUrl(sim.photo.url)), fetchImage(modelInputUrl(sim.source.photoUrl))]);
+    const [{ generateEditedImage }, photo, sample] = await Promise.all([import('./vertex'), fetchImage(modelInputUrl(sim.photo.url)), fetchImage(modelInputUrl(sim.source.photoUrl))]);
     const outcome = await generateEditedImage(deps.vertex, buildPrompt(sim.kind, sim.source), [photo, sample]);
     const durationMs = Date.now() - started;
     if (!outcome.image) {

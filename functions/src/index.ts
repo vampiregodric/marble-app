@@ -23,7 +23,10 @@ import { pushNotification } from './push';
 import { handleRequestWritten, RequestEmailConfig } from './requests';
 import { handleSimulationWritten } from './simulations';
 import { AppNotification, Client, ServiceRequest, Simulation, Vehicle, Work } from './types';
-import { VertexConfig } from './vertex';
+// Só o tipo: o módulo do Vertex (google-auth-library, ~3 MB) é carregado
+// pela onSimulationWritten quando precisa dele, não no arranque a frio de
+// todas as funções (auditoria 2026-09-12, DES-10).
+import type { VertexConfig } from './vertex';
 
 initializeApp();
 // Firestore está em eur3 (Europa); europe-west1 (Bélgica) é a região v2
@@ -99,7 +102,10 @@ export const onNotificationCreated = onDocumentCreated('notifications/{id}', asy
 });
 
 // Novo trabalho publicado → alertas `new_work`; sincroniza a última visita do carro/chão.
-export const onWorkWritten = onDocumentWritten('works/{id}', async (event) => {
+// 5 minutos em vez dos 60 s por defeito: os alertas saem em páginas de 450
+// (uma leitura filtrada + um lote por página), e com muitos clientes
+// aquilo demora mais do que um minuto.
+export const onWorkWritten = onDocumentWritten({ document: 'works/{id}', timeoutSeconds: 300 }, async (event) => {
   const before = event.data?.before.exists ? ({ id: event.params.id, ...event.data.before.data() } as Work) : null;
   const after = event.data?.after.exists ? ({ id: event.params.id, ...event.data.after.data() } as Work) : null;
   await handleWorkWritten(getFirestore(), before, after, new Date(), log);

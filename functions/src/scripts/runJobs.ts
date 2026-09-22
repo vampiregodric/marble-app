@@ -35,7 +35,7 @@ import { pushNotification } from '../push';
 import { handleRequestWritten, RequestEmailConfig } from '../requests';
 import { handleSimulationWritten } from '../simulations';
 import { AppNotification, CheckupRequestStatus, Client, ServiceRequest, Simulation, Vehicle, Work } from '../types';
-import { VertexConfig } from '../vertex';
+import type { VertexConfig } from '../vertex';
 
 const args = process.argv.slice(2);
 const keyPath = args.find((a) => !a.startsWith('--'));
