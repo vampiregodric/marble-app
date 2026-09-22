@@ -36,6 +36,18 @@ código, lê `SPEC.md` (requisitos), `DEVELOPMENT.md` (como correr, avisos) e
    colar texto à mão quando as outras conversas já abriam a secção seguinte
    com um botão.)
 
+7. **Verifica antes de dizer.** Não respondas de cor nem repitas o que um
+   documento diz sem confirmar que continua certo — se a resposta está num
+   ficheiro do projeto ou numa consola, vai lá ver primeiro e só depois fala.
+   Uma resposta errada custa-lhe mais tempo do que os trinta segundos que
+   demoraria a confirmar, porque o obriga a perguntar segunda vez para
+   apanhar o erro. Se não deu para confirmar, diz que não confirmaste em vez
+   de arredondar.
+   (Dito por ele a 2026-09-22, depois de eu lhe ter mandado levar uma pen
+   com as chaves para o escritório — repeti o que o `DEVELOPMENT.md` dizia
+   sem reparar que o `.env.example` ao lado explica que aqueles valores não
+   são segredos e se refazem na consola. Só se soube por ele perguntar.)
+
 ## Como se abre a secção seguinte
 
 Quando uma secção fica pronta a arrancar, **não** peças ao Fábio para colar

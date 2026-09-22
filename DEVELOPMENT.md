@@ -1795,14 +1795,26 @@ URL é do Fábio.
    a pasta local tem de se chamar `marble-backoffice`, com hífen)
 3. Dependências: `npm ci` em `marble-app`, em `marble-app/functions` e em
    `marble-backoffice`.
-4. Ficheiros que o git não leva, copiados do PC de casa **por pen ou pelo
-   gestor de passwords** (nunca por email/chat — são chaves):
-   `marble-app/.env`, `marble-app/serviceAccountKey.dev.json` e o `.env`
-   do backoffice. Os do prod (`serviceAccountKey.prod.json`,
-   `google-services.prod.json`) só quando houver uma tarefa de prod nesse
-   PC. Se não tiveres o `.env` à mão, preenche-o a partir do
-   `.env.example` com os valores da consola Firebase (projeto
-   `marble-studios-dev` → Project settings → Your apps) e do Cloudinary.
+4. Ficheiros que o git não leva. **Não é preciso levar pen nenhuma** — todos
+   se refazem no próprio PC com o login Google (corrigido a 2026-09-22: até
+   aqui este passo mandava copiá-los de casa, e isso fez o Fábio sair de casa
+   a achar que tinha de os levar):
+   - `marble-app/.env` e o `.env` do backoffice: copia o `.env.example` de
+     cada repositório e preenche com os valores da consola Firebase (projeto
+     `marble-studios-dev` → Project settings → Your apps → SDK setup). Os do
+     Cloudinary estão no `.env.production`, que vai no git — é a mesma conta.
+     Estes valores **não são segredos**: o Firebase inclui-os no bundle de
+     qualquer app publicada, e quem protege os dados são as Firestore Rules
+     (está escrito no cabeçalho do próprio `.env.example`).
+   - `serviceAccountKey.dev.json`: consola do Firebase → Definições do projeto
+     → Contas de serviço → *Gerar nova chave privada*. Gerar uma nova **não
+     invalida as antigas**, por isso os outros PCs continuam a funcionar.
+     Estas sim são segredos reais: ficam fora do git e nunca se colam num chat
+     nem se mandam por email.
+   - Os do prod (`serviceAccountKey.prod.json`, `google-services.prod.json`)
+     só quando houver mesmo uma tarefa de prod nesse PC.
+   Copiar de casa por pen ou pelo gestor de passwords continua a ser válido —
+   é só mais rápido, não é obrigatório.
 5. Logins das CLIs, no PowerShell do próprio PC: `npx.cmd firebase-tools login`
    (deploys) e `npx.cmd eas-cli login` (só para builds). O `git push` pede
    a janela "Connect to GitHub" na primeira vez.
