@@ -311,6 +311,9 @@ export const TEXTS = {
     };
   },
   // Email à equipa (quotes@marble.pt) com tudo o que o cliente escreveu.
+  // Sem URLs de fotos (auditoria 2026-09-12, RGPD-13): os URLs do Cloudinary
+  // são públicos e o email passa por caixas e reencaminhamentos que não
+  // pedem sessão — as fotos veem-se no backoffice, pelo link do fim.
   requestTeamEmail(r: ServiceRequest, backofficeUrl: string) {
     const dept = DEPARTMENT_NAME[r.department] ?? r.department;
     const lines = [
@@ -328,8 +331,8 @@ export const TEXTS = {
       'Mensagem:',
       r.message.trim() || '—',
       '',
-      r.photos?.length ? `Fotos (${r.photos.length}):\n${r.photos.map((p) => p.url).join('\n')}` : '',
-      r.simulation ? `Simulação "como ficaria" (${r.simulation.name}):\nFoto do cliente: ${r.simulation.photoUrl}${r.simulation.resultUrl ? `\nResultado: ${r.simulation.resultUrl}` : '\n(sem resultado da IA — só a comparação)'}` : '',
+      r.photos?.length ? `Fotos: ${r.photos.length} (ver no backoffice, link abaixo)` : '',
+      r.simulation ? `Simulação "como ficaria" (${r.simulation.name}): ${r.simulation.resultUrl ? 'com resultado da IA' : 'sem resultado da IA — só a comparação'} (ver no backoffice)` : '',
       '',
       `Ver no backoffice: ${backofficeUrl}`,
       r.platform ? `Enviado pela app (${r.platform}) a ${formatDay(r.createdAt.toDate(), 'pt', true)}.` : '',
